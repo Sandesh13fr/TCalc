@@ -107,10 +107,16 @@ a manual `workflow_dispatch` trigger and defaults to `dry_run=true`.
 ### Prerequisites
 
 - An Open VSX account at <https://open-vsx.org/>.
-- A publisher namespace matching the `publisher` field in
-  `apps/vscode-extension/package.json` (`workspace-model-advisor`).
+- A publisher namespace **already created** on open-vsx.org and matching
+  the `publisher` field in `apps/vscode-extension/package.json`
+  (`workspace-model-advisor`). Create it once per account via the web UI
+  (<https://open-vsx.org/user-settings/namespaces>) or via
+  `npx -y ovsx create-namespace workspace-model-advisor --pat <token>`.
+  The namespace is permanent; pick carefully.
 - A personal access token from
-  <https://open-vsx.org/user-settings/tokens>.
+  <https://open-vsx.org/user-settings/tokens> with the
+  `publish:extension` scope. The token must be issued by the account that
+  owns the namespace above.
 - A GitHub repository secret named `OPEN_VSX_TOKEN` containing that token.
   *Settings → Secrets and variables → Actions → New repository secret.*
 

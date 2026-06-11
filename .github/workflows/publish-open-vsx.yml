@@ -114,6 +114,26 @@ jobs:
       - name: List downloaded VSIX
         run: ls -la dist-vsix
 
+      - name: Preflight: verify PAT can publish to namespace
+        env:
+          OPEN_VSX_TOKEN: ${{ secrets.OPEN_VSX_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Read the publisher from the manifest. The namespace on open-vsx.org
+          # must match this value exactly.
+          PUBLISHER=$(node -e 'console.log(require("./apps/vscode-extension/package.json").publisher)')
+          echo "Publisher: $PUBLISHER"
+          if ! npx -y ovsx verify-pat "$PUBLISHER" --pat "$OPEN_VSX_TOKEN"; then
+            echo "::error::Token cannot publish to namespace '$PUBLISHER'."
+            echo "::error::Make sure:"
+            echo "::error::  1. The namespace '$PUBLISHER' exists at https://open-vsx.org/"
+            echo "::error::     (or run: npx ovsx create-namespace $PUBLISHER --pat <token>)"
+            echo "::error::  2. Your OPEN_VSX_TOKEN is associated with that namespace's owner."
+            echo "::error::  3. The token has the 'publish:extension' scope."
+            exit 1
+          fi
+          echo "PAT verified for namespace '$PUBLISHER'."
+
       - name: Publish to Open VSX
         env:
           OPEN_VSX_TOKEN: ${{ secrets.OPEN_VSX_TOKEN }}

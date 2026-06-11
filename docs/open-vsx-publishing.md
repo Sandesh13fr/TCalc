@@ -24,15 +24,31 @@ To publish to Open VSX you need:
 
 1. **An Open VSX account.** Sign in at <https://open-vsx.org/> with a GitHub
    account.
-2. **A publisher namespace.** Pick a namespace (e.g. `workspace-model-advisor`)
-   and claim it under your account settings. This must match the `publisher`
-   field in `apps/vscode-extension/package.json` (`workspace-model-advisor`).
+2. **A publisher namespace.** Pick a namespace (e.g. `workspace-model-advisor`).
+   This **must match exactly** the `publisher` field in
+   `apps/vscode-extension/package.json` (currently `workspace-model-advisor`).
+   Create the namespace once per account, either:
+   - Via the web UI: <https://open-vsx.org/user-settings/namespaces> → *New
+     namespace*, or
+   - Via the CLI:
+     ```bash
+     npx -y ovsx create-namespace workspace-model-advisor --pat <token>
+     ```
+   > The namespace is permanent: there is no rename. Pick carefully.
 3. **A personal access token (PAT).** Generate one at
-   <https://open-vsx.org/user-settings/tokens>.
+   <https://open-vsx.org/user-settings/tokens> with the `publish:extension`
+   scope. The token must be associated with an account that **owns** the
+   namespace from step 2.
 4. **A GitHub Actions secret named `OPEN_VSX_TOKEN`.** Add it in your
    repository settings under
    *Settings → Secrets and variables → Actions → New repository secret*.
    Paste the PAT from step 3 as the value. **Never commit the token.**
+
+The publish workflow runs `ovsx verify-pat <publisher>` as a preflight
+before publishing. If the namespace does not exist, the token does not
+own it, or the token is missing the right scope, the workflow fails with
+a clear `::error::` message and a `create-namespace` hint instead of the
+generic `Unknown publisher` error from `ovsx publish`.
 
 > The token only needs the `publish:extension` scope. The Open VSX web UI
 > will tell you which scopes are selected when you generate it.
@@ -195,6 +211,40 @@ If a token is leaked, **revoke it immediately** in your Open VSX
 *User Settings → Access Tokens*, then issue a new token and update the
 GitHub secret.
 
+## Troubleshooting
+
+### `Unknown publisher: <name>`
+
+The namespace `<name>` does not exist on open-vsx.org, or your token does
+not own it. Both the GitHub Actions workflow and the local helper script
+now run `ovsx verify-pat <publisher>` as a preflight and surface this case
+with an actionable `::error::` message. To fix:
+
+1. Sign in to <https://open-vsx.org/> with the account you want to own the
+   namespace.
+2. Go to <https://open-vsx.org/user-settings/namespaces> and create
+   `<name>`. The namespace must match the `publisher` field in
+   `apps/vscode-extension/package.json` exactly.
+3. Regenerate the token (or confirm the existing one) under the **same
+   account** that now owns the namespace. Tokens are bound to the issuing
+   user; a token from a different account will not be able to publish
+   even if the namespace exists.
+4. Update the `OPEN_VSX_TOKEN` secret if you regenerated.
+5. Re-run the publish.
+
+The `verify-pat` command exits 0 once the token/namespace pair is valid,
+and the workflow proceeds straight to `ovsx publish`.
+
+### `403 Forbidden` on `ovsx publish`
+
+The token is valid but lacks the `publish:extension` scope. Regenerate it
+at <https://open-vsx.org/user-settings/tokens> with the right scope.
+
+### Network timeouts
+
+The Open VSX API occasionally rate-limits aggressive publishers. Wait a
+few minutes and retry. There is no exponential backoff built in.
+
 ## Limitations and checklist
 
 Open VSX has a few constraints to be aware of:
@@ -220,9 +270,13 @@ Open VSX has a few constraints to be aware of:
 - [ ] `CHANGELOG.md` reflects the version being published
 - [ ] `apps/vscode-extension/package.json` `version` matches the release tag
 - [ ] `OPEN_VSX_TOKEN` secret is set in GitHub
-- [ ] Publisher namespace on open-vsx.org is owned by the token issuer
+- [ ] Publisher namespace exists on open-vsx.org (run
+      `npx -y ovsx verify-pat workspace-model-advisor --pat $OPEN_VSX_TOKEN`
+      to confirm)
+- [ ] Token's owning user account owns the namespace
+- [ ] Token has the `publish:extension` scope
 - [ ] Dry run completed cleanly via
-  `Actions → Publish to Open VSX → Run workflow (dry_run=true)`
+      `Actions → Publish to Open VSX → Run workflow (dry_run=true)`
 
 ## What this guide does **not** cover
 
