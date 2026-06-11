@@ -67,6 +67,35 @@ This is a pnpm monorepo with the following packages:
 | `@wma/reports` | HTML/markdown report generation |
 | `apps/cli` | CLI tool (Commander-based) |
 | `@wma/vscode-extension` | VS Code extension UI |
+| `@wma/mcp-server` | MCP (Model Context Protocol) server for coding agents |
+
+## MCP Server (Experimental / MVP)
+
+> **Status: Experimental / MVP** — stdio transport only, no hosted mode.
+
+The `@wma/mcp-server` package exposes Workspace Model Advisor capabilities to
+AI coding agents (Claude Code, Cursor, etc.) through the
+[Model Context Protocol](https://modelcontextprotocol.io/) over **stdio**.
+
+```bash
+# Run via the WMA CLI
+wma mcp
+
+# Or run the standalone binary
+wma-mcp
+```
+
+It exposes tools (`scan_workspace`, `recommend_models`, `create_repo_map`,
+`generate_agent_rules`, `generate_report`, `validate_model_catalog`),
+resources (`workspace://summary`, `model-catalog://models`), and a prompt
+(`optimize_coding_agent_for_workspace`).
+
+All processing is **local-first**: no code is uploaded, no network calls are
+made, and no telemetry is collected. Repo maps are always structural — full
+source file bodies are never exposed.
+
+See [docs/mcp-server.md](./docs/mcp-server.md) for full documentation,
+example client configs, security limitations, and MVP limitations.
 
 ## Core Principles
 

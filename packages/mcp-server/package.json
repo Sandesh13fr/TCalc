@@ -1,33 +1,31 @@
 {
-  "name": "@wma/cli",
+  "name": "@wma/mcp-server",
   "version": "0.1.0",
   "private": true,
-  "description": "Command-line interface for Workspace Model Advisor.",
+  "description": "MCP server for Workspace Model Advisor",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "wma": "./dist/index.js"
+    "wma-mcp": "./dist/index.js"
   },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "start": "node dist/index.js",
     "lint": "eslint src/"
   },
   "dependencies": {
-    "@wma/core": "workspace:*",
-    "@wma/scanner": "workspace:*",
-    "@wma/tokenizers": "workspace:*",
-    "@wma/model-catalog": "workspace:*",
-    "@wma/recommender": "workspace:*",
-    "@wma/reports": "workspace:*",
-    "@wma/repo-map": "workspace:*",
+    "@modelcontextprotocol/sdk": "^0.4.0",
     "@wma/agent-rules": "workspace:*",
-    "@wma/mcp-server": "workspace:*",
-    "commander": "^13.0.0"
+    "@wma/core": "workspace:*",
+    "@wma/model-catalog": "workspace:*",
+    "@wma/repo-map": "workspace:*",
+    "@wma/reports": "workspace:*",
+    "@wma/recommender": "workspace:*",
+    "@wma/scanner": "workspace:*",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "@types/node": "latest",

@@ -1,297 +1,365 @@
-You are a senior TypeScript monorepo engineer and VS Code extension developer.
+You are a senior TypeScript monorepo engineer, MCP server developer, and AI coding-tool integration engineer.
 
 Project: Workspace Model Advisor
 Repo root: TCalc
-Current state:
 
-* pnpm monorepo
-* 6 shared packages:
+Current verified state:
 
-  * packages/core
-  * packages/scanner
-  * packages/tokenizers
-  * packages/model-catalog
-  * packages/recommender
-  * packages/reports
-* 1 VS Code extension:
-
-  * apps/vscode-extension
-* 91 tests passing
-* Current extension commands:
-
-  * Scan Workspace
-  * Open Dashboard
-  * Export Report
-* Current dashboard:
-
-  * summary cards
-  * recommendation cards
-  * top files/folders/languages
-  * warnings
-  * assumptions
-  * export button
-* No cloud calls
-* Local-first architecture
+* Build passes.
+* Tests pass: 183 tests.
+* VSIX packaging works.
+* VSIX inspection passes.
+* CLI works.
+* VS Code extension works.
+* Scanner works.
+* Token estimator works.
+* Model recommender works.
+* Reports work.
+* Agent rules work.
+* Repo map works.
+* Code-aware repo map symbol extraction works.
+* CLI repo-map works with symbols.
+* CLI repo-map works with --no-symbols.
+* No cloud calls.
+* No telemetry.
 
 Your task:
-Perform Phase 2 stabilization and command completion. Do not add MCP, CLI, Tree-sitter, or hosted updates yet.
+Implement **Phase 7: MCP Server MVP**.
 
-Main objective:
-Make the existing extension reliable, package-safe, and more complete by fixing known issues and adding missing VS Code command scaffolding.
+Main goal:
+Create a local-first MCP server that exposes Workspace Model Advisor capabilities to AI coding agents through stdio transport.
 
-Critical rules:
+Do not implement:
 
-* Preserve all existing tests.
-* Add tests for every bug fix where practical.
-* Keep core packages independent from VS Code APIs.
-* Do not add telemetry.
-* Do not add network calls.
-* Do not upload source code.
-* Do not overbuild UI.
-* Keep implementation simple and maintainable.
-* Run build/typecheck/tests after changes.
+* hosted MCP server
+* Streamable HTTP server
+* authentication
+* cloud calls
+* telemetry
+* live model pricing fetches
+* payments
+* marketplace publishing changes
+* arbitrary shell command execution
 
-Fix these known issues:
+Create package:
 
-1. Catalog path resolution is fragile.
-   Current issue:
+* packages/mcp-server
 
-* Hardcoded relative paths like "../../catalogs" may break after VSIX packaging.
+Package name:
 
-Expected fix:
+* @wma/mcp-server
 
-* Resolve catalog paths using VS Code extension context.
-* Prefer bundled extension catalog path first.
-* Then allow workspace override at:
+Executable:
 
-  * <workspaceRoot>/catalogs/models.json
-  * <workspaceRoot>/.workspace-model-advisor/models.json
-* If workspace catalog is invalid, fall back to bundled catalog and show a warning.
-* Do not crash extension.
+* wma-mcp
 
-2. Broken root scan:fixtures script.
-   Current issue:
+Use:
 
-* Root script references @wma/cli, but CLI package does not exist.
+* TypeScript
+* @modelcontextprotocol/sdk
+* zod if required by the SDK
+* existing @wma packages
+* stdio transport only for MVP
 
-Expected fix:
+Security rules:
 
-* Either remove scan:fixtures for now or replace it with an existing package test/dev script.
-* Do not create CLI in this phase.
+* Never upload source code.
+* Never make network calls.
+* Never execute shell commands.
+* Never expose full source file bodies through MCP tools.
+* Repo map must stay structural.
+* Risky files must be listed by path only, never by content.
+* Validate rootPath as a local filesystem path.
+* Do not allow tool input to become a shell command.
+* No telemetry.
 
-3. Synchronous scanning blocks VS Code.
-   Current issue:
+Create MCP tools:
 
-* scanner uses readdirSync/statSync/readFileSync.
+1. scan_workspace
 
-Expected fix:
+Input:
 
-* Convert scanner file walking and reading to async fs.promises APIs.
-* Add a concurrency limit to avoid too many open files.
-* Keep behavior compatible with existing tests.
-* Add progress reporting in the VS Code scan command using vscode.window.withProgress.
-* Allow cancellation if reasonable, but do not overcomplicate.
+* rootPath?: string
+* goal?: WorkspaceGoal
+* privacyMode?: "local-first" | "cloud-ok"
+* maxFiles?: number
+* tokenBudget?: number
 
-4. SVG classification conflict.
-   Current issue:
+Behavior:
 
-* .svg is listed as both binary and language.
+* Default rootPath to process.cwd().
+* Run scanner locally.
+* Return compact JSON summary:
 
-Expected fix:
+  * rootPath
+  * totalFiles
+  * includedFiles
+  * excludedFiles
+  * totalEstimatedTokens
+  * topFiles
+  * topFolders
+  * languages
+  * warnings
+* Store latest scan result in memory.
 
-* Treat SVG as text/XML-like by default unless file appears binary or too large.
-* Keep SVG token estimation possible.
-* Add a test.
+2. recommend_models
 
-5. Token heuristic underestimates.
-   Current issue:
+Input:
 
-* estimateTokensHeuristic uses min(chars/4, words*1.3), causing underestimation.
+* rootPath?: string
+* goal?: WorkspaceGoal
+* privacyMode?: "local-first" | "cloud-ok"
+* catalogPath?: string
+* tokenBudget?: number
 
-Expected fix:
+Behavior:
 
-* Replace with a safer weighted estimate.
-* Suggested:
+* Scan workspace.
+* Load catalog.
+* Run recommender.
+* Return:
 
-  * charEstimate = ceil(chars / 4)
-  * wordEstimate = ceil(words * 1.3)
-  * tokenEstimate = max(charEstimate, wordEstimate)
-  * apply extension-specific multipliers afterward
-* Add tests for whitespace-heavy files, markdown, JSON, and code.
+  * cheapestSufficient
+  * balanced
+  * highConfidence
+  * rejected models summary
+  * assumptions
+  * estimated 1-turn, 10-turn, and 50-turn costs
+* Store latest recommendation in memory.
 
-6. Markdown export null recommendation risk.
-   Current issue:
+3. create_repo_map
 
-* generateMarkdownReport receives null as any.
+Input:
 
-Expected fix:
+* rootPath?: string
+* goal?: WorkspaceGoal
+* tokenBudget?: number
+* enableSymbolExtraction?: boolean
+* maxSymbols?: number
+* format?: "markdown" | "json"
 
-* Make report generator accept RecommendationResult | null safely.
-* If recommendation is missing, render a “Recommendations unavailable” section.
-* Remove unsafe any.
-* Add test.
+Behavior:
 
-7. Duplicate local/free model recommendations.
-   Current issue:
+* Scan workspace.
+* Generate repo map.
+* Return Markdown or compact JSON.
+* Never include full source bodies.
+* Store latest repo map in memory.
 
-* cheapest, balanced, and high-confidence may all select the same free local model.
+4. generate_agent_rules
 
-Expected fix:
+Input:
 
-* Deduplicate tiers where possible.
-* If same model wins multiple tiers, choose next-best distinct fitting model.
-* If there are not enough distinct fitting models, allow duplication but display a reason.
-* Add test.
+* rootPath?: string
+* target: "generic" | "cursor" | "claude-code"
+* mode: "normal" | "concise" | "patch-only" | "repo-map-first" | "ask-before-reading-large-files"
+* goal?: WorkspaceGoal
+* privacyMode?: "local-first" | "cloud-ok"
 
-8. Max file-size threshold mismatch.
-   Current issue:
+Behavior:
 
-* ignore resolver caps at 10MB; scanSingleFile switches to byte-only at 5MB.
+* Scan workspace.
+* Recommend models.
+* Generate agent rules.
+* Return:
 
-Expected fix:
+  * target
+  * mode
+  * suggestedFileName
+  * content
 
-* Create one shared config value:
+5. generate_report
 
-  * maxTextFileBytes
-  * maxScanFileBytes
-* Use it consistently.
-* Add tests.
+Input:
 
-Add missing VS Code commands as functional MVP commands:
+* rootPath?: string
+* goal?: WorkspaceGoal
+* privacyMode?: "local-first" | "cloud-ok"
+* includeRepoMap?: boolean
+* format?: "markdown" | "json"
 
-Commands to implement:
+Behavior:
 
-* workspaceModelAdvisor.setWorkspaceGoal
-* workspaceModelAdvisor.compareModels
-* workspaceModelAdvisor.generateAgentRules
-* workspaceModelAdvisor.updateModelCatalog
-* workspaceModelAdvisor.openSettings
+* Scan workspace.
+* Recommend models.
+* Optionally generate repo map.
+* Generate report.
+* Return report content.
+* Markdown and JSON formats must both work.
 
-Command behavior:
+6. validate_model_catalog
 
-A. Set Workspace Goal
+Input:
 
-* Show quick pick with the 10 existing goals from wma.defaultGoal.
-* Save selected goal to workspace configuration.
-* Re-run recommendation if latest scan exists.
-* Refresh/open dashboard.
+* catalogPath?: string
 
-B. Compare Models
+Behavior:
 
-* If no scan exists, ask user to scan first.
-* Show a model comparison Webview or dashboard section using current scan.
-* Include:
+* Validate model catalog.
+* Return:
 
-  * model name
-  * provider
-  * context window
-  * input/output cost
-  * estimated one-turn cost
-  * estimated 10-turn session cost
-  * fit/rejected reason
+  * valid: boolean
+  * modelCount
+  * errors
+* Invalid catalog should not crash server.
 
-C. Generate Agent Rules
+Create MCP resources:
 
-* For this phase, create a minimal implementation inside a new package:
+1. workspace://summary
 
-  * packages/agent-rules
-* Generate rules for:
+Behavior:
 
-  * generic AGENTS.md
-  * Cursor rules
-  * Claude Code CLAUDE.md
-* Use existing types if already defined.
-* Include optimization modes:
+* Returns latest scan summary if available.
+* If no scan has run, return a helpful message.
 
-  * normal
-  * concise
-  * patch-only
-  * repo-map-first
-  * ask-before-reading-large-files
-* Command should ask target via quick pick.
-* Command should ask mode via quick pick.
-* Write generated file to workspace root after confirmation.
-* Do not implement every agent yet.
+2. model-catalog://models
 
-D. Update Model Catalog
+Behavior:
 
-* Since no network calls are allowed, do not fetch live data.
-* Implement as:
+* Returns loaded model catalog summary.
+* Do not expose secrets or API keys.
 
-  * validate current catalog
-  * reload from workspace override if present
-  * show result summary
-* Add message: “Live catalog updates are not implemented yet.”
+Create MCP prompt:
 
-E. Open Settings
+optimize_coding_agent_for_workspace
 
-* Open VS Code settings filtered to Workspace Model Advisor settings.
+Arguments:
 
-Update package.json:
+* goal
+* tokenBudget
+* privacyMode
 
-* Register all new commands under contributes.commands.
-* Add activation events if required by current VS Code target.
-* Ensure command titles are clean:
+Prompt output should instruct the coding agent to:
 
-  * Workspace Model Advisor: Set Workspace Goal
-  * Workspace Model Advisor: Compare Models
-  * Workspace Model Advisor: Generate Agent Rules
-  * Workspace Model Advisor: Update Model Catalog
-  * Workspace Model Advisor: Open Settings
+* scan the workspace first
+* create a repo map
+* avoid risky/generated/large files
+* prefer targeted reads
+* use patch-only output for code changes
+* ask before reading large files
+* recommend model tier before long work
 
-Webview improvements:
+State:
 
-* Keep existing dashboard.
-* Add buttons:
+* Keep latest scan result in memory.
+* Keep latest recommendation result in memory.
+* Keep latest repo map in memory.
+* Do not persist MCP state to disk in MVP.
 
-  * Re-scan Workspace
-  * Change Goal
-  * Compare Models
-  * Generate Agent Rules
-  * Export Markdown Report
-* Use secure message passing between webview and extension.
-* Keep CSP with nonce.
-* Do not load external scripts/styles.
-* Use asWebviewUri for local resources if any are loaded.
+Package structure:
 
-Add tests:
+packages/mcp-server/
 
-* agent-rules generation tests
-* JSON report tests
-* async scanner behavior where practical
-* catalog fallback/path tests if feasible without VS Code dependency
-* token heuristic tests
-* duplicate recommendation tests
-* null recommendation report test
-* SVG classification test
+* package.json
+* tsconfig.json
+* src/index.ts
+* src/server.ts
+* src/state.ts
+* src/tools/scanWorkspaceTool.ts
+* src/tools/recommendModelsTool.ts
+* src/tools/createRepoMapTool.ts
+* src/tools/generateAgentRulesTool.ts
+* src/tools/generateReportTool.ts
+* src/tools/validateModelCatalogTool.ts
+* src/resources/workspaceSummaryResource.ts
+* src/resources/modelCatalogResource.ts
+* src/prompts/optimizeCodingAgentPrompt.ts
+* src/utils/safeRootPath.ts
+* src/utils/compactResults.ts
+
+CLI integration:
+
+Update apps/cli:
+
+Add command:
+
+* wma mcp
+
+Behavior:
+
+* Starts MCP server over stdio.
+* No extra logs should be printed to stdout because stdio is used for MCP protocol.
+* Warnings/errors should go to stderr only.
+
+Also support direct binary:
+
+* wma-mcp
+
+Tests:
+
+Add tests for tool handlers without requiring a live MCP client where practical.
+
+Test files:
+
+* packages/mcp-server/tests/scanWorkspaceTool.test.ts
+* packages/mcp-server/tests/recommendModelsTool.test.ts
+* packages/mcp-server/tests/createRepoMapTool.test.ts
+* packages/mcp-server/tests/generateAgentRulesTool.test.ts
+* packages/mcp-server/tests/generateReportTool.test.ts
+* packages/mcp-server/tests/validateCatalogTool.test.ts
+* packages/mcp-server/tests/security.test.ts
+
+Test requirements:
+
+* Use fixtures/small-node-app.
+* Confirm scan_workspace returns compact summary.
+* Confirm recommend_models returns three recommendation tiers when possible.
+* Confirm create_repo_map supports markdown and json.
+* Confirm create_repo_map does not include full source bodies.
+* Confirm generate_agent_rules returns target, mode, suggested filename, and content.
+* Confirm generate_report supports markdown and json.
+* Confirm invalid catalog returns errors.
+* Confirm invalid rootPath is handled safely.
+* Confirm no shell execution utility is introduced.
+* Confirm no network calls are introduced.
+
+Docs:
+
+Add:
+
+* docs/mcp-server.md
+
+Include:
+
+* what the MCP server does
+* how to run with `wma mcp`
+* how to run with `wma-mcp`
+* example MCP client config using stdio
+* list of tools
+* list of resources
+* list of prompts
+* privacy statement
+* security limitations
+* MVP limitations
+
+README:
+
+* Add MCP Server section.
+* Mark it experimental/MVP.
 
 Acceptance criteria:
 
 * pnpm build passes.
 * pnpm test passes.
-* Existing 91 tests still pass.
-* New tests are added.
-* VS Code extension launches.
-* All commands appear in Command Palette.
-* Scan command still works.
-* Dashboard still opens.
-* Goal can be changed.
-* Model comparison can be opened.
-* Agent rules can be generated.
-* Markdown export works.
-* No cloud/network calls are introduced.
-* No telemetry is introduced.
+* existing 183 tests still pass.
+* new MCP tests pass.
+* pnpm --filter @wma/mcp-server build works.
+* node packages/mcp-server/dist/index.js starts stdio server.
+* node apps/cli/dist/index.js mcp starts stdio server.
+* no cloud calls are introduced.
+* no telemetry is introduced.
+* no source file bodies are exposed by MCP tools.
+* no shell execution is introduced.
+* VSIX packaging still works.
+* VSIX inspection still passes.
+* CLI smoke tests still pass.
 
-After implementation:
-Print:
+After implementation, print:
 
 1. Summary of files changed.
-2. Tests added.
-3. Commands added.
-4. Known remaining TODOs.
-5. Exact commands to run:
-
-   * pnpm install
-   * pnpm build
-   * pnpm test
-   * how to launch extension in VS Code Extension Development Host.
+2. Dependencies added.
+3. MCP tools/resources/prompts added.
+4. Tests added.
+5. Example MCP client config.
+6. Remaining TODOs.
+7. Commands to run.
