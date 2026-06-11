@@ -1,5 +1,9 @@
 # Workspace Model Advisor
 
+[![CI](https://github.com/Sandesh13fr/TCalc/actions/workflows/ci.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/ci.yml)
+[![Release](https://github.com/Sandesh13fr/TCalc/actions/workflows/release.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/release.yml)
+[![Workspace Advisor Report](https://github.com/Sandesh13fr/TCalc/actions/workflows/workspace-advisor-report.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/workspace-advisor-report.yml)
+
 Local-first workspace token calculator, model recommender, and coding-agent optimizer.
 
 ## What It Does
@@ -42,6 +46,30 @@ pnpm package:vscode:inspect      # verify VSIX contents
 
 See [docs/install-vsix.md](./docs/install-vsix.md) for installation instructions.
 
+## Open VSX
+
+> **Status: prepared, not yet published.** Publishing is gated behind a
+> manual `workflow_dispatch` workflow (`publish-open-vsx.yml`) that defaults
+> to `dry_run=true`. There is no automatic publish on tag push.
+
+When a release is published, the extension will be installable from Open
+VSX in any editor that uses it (VSCodium, Eclipse Theia, Gitpod, etc.):
+
+```
+workspace-model-advisor
+```
+
+To publish:
+
+1. Add an `OPEN_VSX_TOKEN` secret in the repository
+   *Settings → Secrets and variables → Actions*.
+2. Open **Actions → Publish to Open VSX → Run workflow**.
+3. Uncheck **dry_run** to publish for real.
+
+See [docs/open-vsx-publishing.md](./docs/open-vsx-publishing.md) for the
+full guide and [docs/release-checklist.md](./docs/release-checklist.md) for
+the Open VSX section of the release flow.
+
 ## CLI
 
 ```bash
@@ -68,6 +96,26 @@ This is a pnpm monorepo with the following packages:
 | `apps/cli` | CLI tool (Commander-based) |
 | `@wma/vscode-extension` | VS Code extension UI |
 | `@wma/mcp-server` | MCP (Model Context Protocol) server for coding agents |
+
+## CI & Automation
+
+GitHub Actions workflows live in `.github/workflows/`:
+
+- **`ci.yml`** — runs on every push to `main` and every PR. Builds, tests, packages the VSIX, inspects it, runs the no-telemetry guard, and validates extension metadata.
+- **`release.yml`** — runs on `v*.*.*` tag pushes. Builds, tests, packages the VSIX, and attaches it to a **draft** GitHub Release. Never publishes to the Marketplace or Open VSX.
+- **`workspace-advisor-report.yml`** — runs on every PR. Uses the WMA CLI to generate a workspace model report, repo map, and model recommendations, then uploads them as artifacts. Posts a short comment on trusted (non-fork) PRs only.
+- **`publish-open-vsx.yml`** — manual `workflow_dispatch` only. Defaults to `dry_run=true`; only publishes when a human explicitly clears the dry-run flag and the `OPEN_VSX_TOKEN` secret is set.
+
+Local equivalents:
+
+```bash
+pnpm ci                 # full local CI pass
+pnpm ci:smoke           # CLI smoke tests
+pnpm ci:workspace-report  # generate WMA report on the current repo
+```
+
+See [docs/ci-reporter.md](./docs/ci-reporter.md) and
+[docs/release-checklist.md](./docs/release-checklist.md) for details.
 
 ## MCP Server (Experimental / MVP)
 

@@ -1,0 +1,137 @@
+name: Publish to Open VSX
+
+# Manual trigger only. Never auto-publishes.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Extension version to publish (informational; uses the version in apps/vscode-extension/package.json)"
+        required: false
+        default: ""
+      dry_run:
+        description: "Dry run: package and validate, do not publish to Open VSX"
+        type: boolean
+        required: false
+        default: true
+
+concurrency:
+  group: publish-open-vsx-${{ github.workflow }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-package:
+    name: Build, test, package
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup pnpm (corepack)
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.5.2 --activate
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        run: echo "dir=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.dir }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Check extension metadata
+        run: pnpm check:extension-metadata
+
+      - name: Build all packages
+        run: pnpm build
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Package VSIX
+        run: pnpm package:vscode
+
+      - name: Inspect VSIX
+        run: pnpm package:vscode:inspect
+
+      - name: Log publish inputs
+        run: |
+          echo "inputs.version: ${{ inputs.version }}"
+          echo "inputs.dry_run: ${{ inputs.dry_run }}"
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: open-vsx-vsix
+          path: dist-vsix/*.vsix
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-open-vsx:
+    name: Publish to Open VSX
+    needs: build-test-package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Only runs when the human explicitly set dry_run to false.
+    if: ${{ inputs.dry_run == false }}
+    steps:
+      - name: Verify OPEN_VSX_TOKEN is set
+        env:
+          OPEN_VSX_TOKEN: ${{ secrets.OPEN_VSX_TOKEN }}
+        run: |
+          if [ -z "$OPEN_VSX_TOKEN" ]; then
+            echo "::error::OPEN_VSX_TOKEN secret is not configured for this repository."
+            echo "::error::Add it at: Settings -> Secrets and variables -> Actions -> New repository secret"
+            echo "::error::Name: OPEN_VSX_TOKEN"
+            echo "::error::Value: your access token from https://open-vsx.org/ (User Settings -> Access Tokens)"
+            exit 1
+          fi
+          # Do not echo the token. Just confirm length.
+          echo "OPEN_VSX_TOKEN present (length=${#OPEN_VSX_TOKEN})"
+
+      - name: Download VSIX artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: open-vsx-vsix
+          path: dist-vsix
+
+      - name: List downloaded VSIX
+        run: ls -la dist-vsix
+
+      - name: Publish to Open VSX
+        env:
+          OPEN_VSX_TOKEN: ${{ secrets.OPEN_VSX_TOKEN }}
+        run: |
+          set -euo pipefail
+          # Use npx to fetch ovsx on demand. We pipe the PAT via --pat; we never echo it.
+          npx -y ovsx publish dist-vsix/*.vsix --pat "$OPEN_VSX_TOKEN"
+
+  publish-dry-run-summary:
+    name: Dry-run summary
+    needs: build-test-package
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    # Only runs when the human kept dry_run enabled (the default).
+    if: ${{ inputs.dry_run == true }}
+    steps:
+      - name: Dry run notice
+        run: |
+          echo "dry_run=true; no publish performed."
+          echo "To publish for real, re-run this workflow with dry_run=false."
+          echo "Required secret: OPEN_VSX_TOKEN"

@@ -21,7 +21,13 @@
     "package:vscode:preflight": "node scripts/check-no-telemetry.mjs && pnpm --dir apps/vscode-extension typecheck && pnpm --dir apps/vscode-extension test",
     "publish:vscode:dry-run": "pnpm --dir apps/vscode-extension exec vsce package --no-dependencies --out ../../dist-vsix/",
     "smoke:cli": "node scripts/smoke-cli.mjs",
-    "smoke:all": "pnpm smoke:cli"
+    "smoke:all": "pnpm smoke:cli",
+    "ci": "node scripts/check-no-telemetry.mjs && pnpm build && pnpm test && pnpm scan:fixtures && pnpm package:vscode && pnpm package:vscode:inspect && pnpm smoke:cli",
+    "ci:smoke": "pnpm smoke:cli",
+    "ci:workspace-report": "node scripts/workspace-report.mjs",
+    "check:extension-metadata": "node scripts/check-extension-metadata.mjs",
+    "publish:open-vsx:dry-run": "node scripts/check-extension-metadata.mjs && pnpm build && pnpm test && pnpm package:vscode && pnpm package:vscode:inspect && echo \"Dry run OK. To publish, run 'pnpm publish:open-vsx:local' with the OPEN_VSX_TOKEN env var set.\"",
+    "publish:open-vsx:local": "node scripts/publish-open-vsx.mjs"
   },
   "devDependencies": {
     "@changesets/cli": "latest",

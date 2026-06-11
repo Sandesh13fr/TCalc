@@ -1,0 +1,116 @@
+name: Workspace Advisor Report
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: wma-report-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    name: Generate workspace advisor report
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Avoid pulling blobless history issues; we only need the working tree.
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup pnpm (corepack)
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.5.2 --activate
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        run: echo "dir=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.dir }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        run: pnpm build
+
+      - name: Generate workspace report
+        run: pnpm ci:workspace-report
+
+      - name: Quick summary (token totals)
+        id: summary
+        run: node scripts/workspace-report-summary.mjs
+
+      - name: Upload workspace model report
+        uses: actions/upload-artifact@v4
+        with:
+          name: workspace-model-report
+          path: dist-ci/workspace-model-report.md
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload repo map
+        uses: actions/upload-artifact@v4
+        with:
+          name: repo-map
+          path: dist-ci/repo-map.md
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload model recommendations
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-recommendations
+          path: dist-ci/model-recommendations.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      # IMPORTANT: This step only runs for PRs that originate from the same
+      # repository (trusted PRs). Pull requests from forks run with read-only
+      # tokens and cannot post comments, so we skip this step there. The
+      # reports are still produced and uploaded as artifacts in both cases.
+      - name: Comment PR summary (trusted PRs only)
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const total = process.env.REPORT_TOTAL || '${{ steps.summary.outputs.total }}';
+            const goal = process.env.REPORT_GOAL || '${{ steps.summary.outputs.goal }}';
+            const tiers = process.env.REPORT_TIERS || '${{ steps.summary.outputs.tiers }}';
+            const body = [
+              '### Workspace Model Advisor report',
+              '',
+              `- **Goal**: \`${goal}\``,
+              `- **Total tokens**: ${total}`,
+              `- **Recommended model tiers**: ${tiers}`,
+              '',
+              'Full report, repo map, and model recommendations are uploaded as workflow artifacts.',
+            ].join('\n');
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              body,
+            });
+        env:
+          REPORT_TOTAL: ${{ steps.summary.outputs.total }}
+          REPORT_GOAL: ${{ steps.summary.outputs.goal }}
+          REPORT_TIERS: ${{ steps.summary.outputs.tiers }}
