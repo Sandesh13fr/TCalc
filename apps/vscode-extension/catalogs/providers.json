@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "updatedAt": "2026-06-09",
+  "providers": [
+    {
+      "id": "openai",
+      "displayName": "OpenAI",
+      "website": "https://platform.openai.com",
+      "apiKeyDocs": "https://platform.openai.com/api-keys",
+      "supportsLocal": false,
+      "defaultBaseUrl": "https://api.openai.com/v1"
+    },
+    {
+      "id": "anthropic",
+      "displayName": "Anthropic",
+      "website": "https://anthropic.com",
+      "apiKeyDocs": "https://docs.anthropic.com/en/docs/api-keys",
+      "supportsLocal": false,
+      "defaultBaseUrl": "https://api.anthropic.com/v1"
+    },
+    {
+      "id": "google",
+      "displayName": "Google AI",
+      "website": "https://ai.google.dev",
+      "apiKeyDocs": "https://aistudio.google.com/app/apikey",
+      "supportsLocal": false,
+      "defaultBaseUrl": "https://generativelanguage.googleapis.com/v1beta"
+    },
+    {
+      "id": "local",
+      "displayName": "Local / Ollama",
+      "website": "https://ollama.ai",
+      "apiKeyDocs": null,
+      "supportsLocal": true,
+      "defaultBaseUrl": "http://localhost:11434"
+    },
+    {
+      "id": "openrouter",
+      "displayName": "OpenRouter",
+      "website": "https://openrouter.ai",
+      "apiKeyDocs": "https://openrouter.ai/keys",
+      "supportsLocal": false,
+      "defaultBaseUrl": "https://openrouter.ai/api/v1"
+    }
+  ]
+}

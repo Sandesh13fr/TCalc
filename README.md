@@ -25,6 +25,30 @@ pnpm build
 
 # Run tests
 pnpm test
+
+# Scan a fixture workspace via CLI
+pnpm scan:fixtures
+```
+
+## VS Code Extension (VSIX)
+
+Build and install locally:
+
+```bash
+pnpm build
+pnpm package:vscode              # produces dist-vsix/*.vsix
+pnpm package:vscode:inspect      # verify VSIX contents
+```
+
+See [docs/install-vsix.md](./docs/install-vsix.md) for installation instructions.
+
+## CLI
+
+```bash
+pnpm cli --help
+pnpm wma scan ./my-project
+pnpm wma recommend ./my-project --goal build-mvp
+pnpm wma repo-map ./my-project --budget 8000
 ```
 
 ## Architecture
@@ -38,6 +62,10 @@ This is a pnpm monorepo with the following packages:
 | `@wma/tokenizers` | Token estimation (heuristic and provider-specific) |
 | `@wma/model-catalog` | Model metadata catalog loader |
 | `@wma/recommender` | Model scoring and recommendation engine |
+| `@wma/agent-rules` | Agent behavior rules generation |
+| `@wma/repo-map` | Context-aware repo map generation |
+| `@wma/reports` | HTML/markdown report generation |
+| `apps/cli` | CLI tool (Commander-based) |
 | `@wma/vscode-extension` | VS Code extension UI |
 
 ## Core Principles

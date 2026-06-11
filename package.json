@@ -16,14 +16,20 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "format": "prettier --write .",
-    "package:vscode": "pnpm --filter @wma/vscode-extension package"
+    "package:vscode": "pnpm --filter @wma/vscode-extension run package",
+    "package:vscode:inspect": "node scripts/inspect-vsix.mjs",
+    "package:vscode:preflight": "node scripts/check-no-telemetry.mjs && pnpm --filter @wma/vscode-extension typecheck && pnpm --filter @wma/vscode-extension test",
+    "smoke:cli": "node scripts/smoke-cli.mjs",
+    "smoke:all": "pnpm smoke:cli"
   },
   "devDependencies": {
     "@changesets/cli": "latest",
     "@types/node": "latest",
     "eslint": "latest",
+    "glob": "latest",
     "prettier": "latest",
     "typescript": "latest",
-    "vitest": "latest"
+    "vitest": "latest",
+    "yauzl": "latest"
   }
 }

@@ -1,10 +1,13 @@
 {
-  "name": "@wma/vscode-extension",
+  "name": "workspace-model-advisor",
   "displayName": "Workspace Model Advisor",
   "version": "0.1.0",
   "private": true,
   "description": "Local-first workspace token calculator, model recommender, and coding-agent optimizer.",
   "publisher": "workspace-model-advisor",
+  "author": {
+    "name": "Workspace Model Advisor"
+  },
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -12,8 +15,33 @@
   },
   "categories": [
     "Programming Languages",
-    "Other"
+    "Other",
+    "Machine Learning"
   ],
+  "keywords": [
+    "tokens",
+    "model",
+    "llm",
+    "workspace",
+    "tokenizer",
+    "recommender",
+    "cost",
+    "coding-agent",
+    "opencode",
+    "cursor"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/workspace-model-advisor/wma"
+  },
+  "bugs": {
+    "url": "https://github.com/workspace-model-advisor/wma/issues"
+  },
+  "homepage": "https://github.com/workspace-model-advisor/wma#readme",
+  "galleryBanner": {
+    "color": "#1e1e1e",
+    "theme": "dark"
+  },
   "activationEvents": [
     "onCommand:workspaceModelAdvisor.scanWorkspace",
     "onCommand:workspaceModelAdvisor.openDashboard",
@@ -26,6 +54,12 @@
     "onCommand:workspaceModelAdvisor.generateRepoMap"
   ],
   "main": "dist/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited"
+    },
+    "virtualWorkspaces": true
+  },
   "contributes": {
     "commands": [
       {
@@ -95,10 +129,12 @@
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "pnpm copy:assets && tsc",
+    "copy:assets": "node scripts/copy-assets.mjs",
     "dev": "tsc --watch",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "package": "pnpm copy:assets && vsce package --out ../../dist-vsix/ --allow-missing-repository --no-dependencies"
   },
   "dependencies": {
     "@wma/core": "workspace:*",
@@ -112,6 +148,7 @@
   },
   "devDependencies": {
     "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "latest",
     "typescript": "latest"
   }
 }
