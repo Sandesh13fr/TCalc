@@ -129,12 +129,12 @@
     }
   },
   "scripts": {
-    "build": "pnpm copy:assets && tsc",
+    "build": "pnpm copy:assets && tsc -b",
     "copy:assets": "node scripts/copy-assets.mjs",
-    "dev": "tsc --watch",
-    "typecheck": "tsc --noEmit",
+    "dev": "tsc -b --watch",
+    "typecheck": "tsc -b --noEmit",
     "lint": "eslint src/",
-    "package": "pnpm copy:assets && vsce package --out ../../dist-vsix/ --allow-missing-repository --no-dependencies"
+    "package": "pnpm copy:assets && node scripts/package-vsix.mjs"
   },
   "dependencies": {
     "@wma/core": "workspace:*",

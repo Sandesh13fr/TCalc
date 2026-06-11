@@ -4,5 +4,15 @@
     "outDir": "dist",
     "rootDir": "src"
   },
-  "include": ["src"]
+  "include": ["src"],
+  "references": [
+    { "path": "../../packages/core" },
+    { "path": "../../packages/scanner" },
+    { "path": "../../packages/tokenizers" },
+    { "path": "../../packages/model-catalog" },
+    { "path": "../../packages/recommender" },
+    { "path": "../../packages/reports" },
+    { "path": "../../packages/agent-rules" },
+    { "path": "../../packages/repo-map" }
+  ]
 }

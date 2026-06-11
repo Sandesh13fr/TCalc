@@ -10,9 +10,9 @@
     "wma": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc",
-    "dev": "tsc --watch",
-    "typecheck": "tsc --noEmit",
+    "build": "tsc -b",
+    "dev": "tsc -b --watch",
+    "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
     "start": "node dist/index.js",
     "lint": "eslint src/"
