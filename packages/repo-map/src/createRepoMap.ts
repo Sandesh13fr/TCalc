@@ -1,6 +1,7 @@
 import type { WorkspaceScanResult, RepoMapOptions, RepoMapResult, RepoMapFolder, RepoMapLanguage } from "@wma/core";
 import { selectImportantFiles } from "./selectImportantFiles.js";
 import { budgetRepoMap } from "./budgetRepoMap.js";
+import { extractSymbols } from "./symbols/extractSymbols.js";
 
 export function createRepoMap(
   scanResult: WorkspaceScanResult,
@@ -39,6 +40,19 @@ export function createRepoMap(
     options,
   );
 
+  const symbolResult = extractSymbols(scanResult, selected.importantFiles, options);
+
+  const symbolSummary = symbolResult.symbols.length > 0
+    ? [
+        `${symbolResult.symbols.length} symbols extracted from ${new Set(symbolResult.symbols.map((s) => s.relativePath)).size} files`,
+        `Exports: ${symbolResult.symbols.filter((s) => s.exported).length}`,
+        `Functions: ${symbolResult.symbols.filter((s) => s.kind === "function" || s.kind === "component").length}`,
+        `Classes: ${symbolResult.symbols.filter((s) => s.kind === "class").length}`,
+        `Interfaces/Types: ${symbolResult.symbols.filter((s) => s.kind === "interface" || s.kind === "type").length}`,
+        `Routes: ${symbolResult.routes.length}`,
+      ]
+    : [];
+
   let result: RepoMapResult = {
     rootPath: scanResult.rootPath,
     generatedAt: new Date().toISOString(),
@@ -61,6 +75,10 @@ export function createRepoMap(
     recommendedExclude: selected.recommendedExclude,
     agentInstructions,
     overflowNotes: [],
+    symbols: symbolResult.symbols,
+    imports: symbolResult.imports,
+    routes: symbolResult.routes,
+    symbolSummary,
   };
 
   result = budgetRepoMap(result, options.tokenBudget);

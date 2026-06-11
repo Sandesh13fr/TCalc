@@ -11,6 +11,9 @@ export interface RepoMapOptions {
   output?: string;
   format?: string;
   debug?: boolean;
+  noSymbols?: boolean;
+  maxSymbols?: number;
+  maxParseBytes?: number;
 }
 
 export async function executeRepoMap(options: RepoMapOptions): Promise<string> {
@@ -22,6 +25,9 @@ export async function executeRepoMap(options: RepoMapOptions): Promise<string> {
   const repoMap = createRepoMap(scanResult, {
     tokenBudget: options.budget ?? config.tokenBudget.defaultContextBudget,
     goal: (options.goal ?? config.defaultGoal) as any,
+    enableSymbolExtraction: !options.noSymbols,
+    maxSymbols: options.maxSymbols,
+    maxParseFileBytes: options.maxParseBytes,
   });
 
   const fmt = options.format ?? "markdown";

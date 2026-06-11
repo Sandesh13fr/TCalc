@@ -5,7 +5,7 @@
   "description": "Local-first workspace token calculator, model recommender, and coding-agent optimizer.",
   "type": "module",
   "license": "MIT",
-  "packageManager": "pnpm@latest",
+  "packageManager": "pnpm@11.5.2",
   "scripts": {
     "dev": "pnpm -r dev",
     "build": "pnpm -r build",
@@ -16,9 +16,10 @@
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
     "format": "prettier --write .",
-    "package:vscode": "pnpm --filter @wma/vscode-extension run package",
+    "package:vscode": "pnpm --dir apps/vscode-extension run package",
     "package:vscode:inspect": "node scripts/inspect-vsix.mjs",
-    "package:vscode:preflight": "node scripts/check-no-telemetry.mjs && pnpm --filter @wma/vscode-extension typecheck && pnpm --filter @wma/vscode-extension test",
+    "package:vscode:preflight": "node scripts/check-no-telemetry.mjs && pnpm --dir apps/vscode-extension typecheck && pnpm --dir apps/vscode-extension test",
+    "publish:vscode:dry-run": "pnpm --dir apps/vscode-extension exec vsce package --no-dependencies --out ../../dist-vsix/",
     "smoke:cli": "node scripts/smoke-cli.mjs",
     "smoke:all": "pnpm smoke:cli"
   },

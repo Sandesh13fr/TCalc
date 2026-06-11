@@ -15,6 +15,9 @@ export function formatRepoMapMarkdown(repoMap: RepoMapResult): string {
   appendDocumentation(lines, repoMap);
   appendLargeNoisyFiles(lines, repoMap);
   appendRiskSensitiveFiles(lines, repoMap);
+  appendKeySymbols(lines, repoMap);
+  appendRoutes(lines, repoMap);
+  appendImportHints(lines, repoMap);
   appendRecommendedAgentContext(lines, repoMap);
   appendSuggestedPromptPrefix(lines, repoMap);
   appendOverflowNotes(lines, repoMap);
@@ -242,6 +245,63 @@ function appendOverflowNotes(lines: string[], repoMap: RepoMapResult): void {
 
   for (const note of repoMap.overflowNotes) {
     lines.push(`- ${note}`);
+  }
+  lines.push("");
+}
+
+function appendKeySymbols(lines: string[], repoMap: RepoMapResult): void {
+  if (!repoMap.symbols || repoMap.symbols.length === 0) return;
+
+  lines.push("## Key Symbols");
+  lines.push("");
+  lines.push("| Symbol | Kind | File | Exported | Priority |");
+  lines.push("| --- | --- | --- | --- | ---:|");
+
+  const top = repoMap.symbols.slice(0, 30);
+  for (const sym of top) {
+    const exported = sym.exported ? "yes" : "";
+    lines.push(`| \`${sym.name}\` | ${sym.kind} | \`${sym.relativePath}\` | ${exported} | ${sym.priority} |`);
+  }
+  if (repoMap.symbols.length > 30) {
+    lines.push(`| *... and ${repoMap.symbols.length - 30} more* | | | |`);
+  }
+  lines.push("");
+}
+
+function appendRoutes(lines: string[], repoMap: RepoMapResult): void {
+  if (!repoMap.routes || repoMap.routes.length === 0) return;
+
+  lines.push("## Routes / Entry Handlers");
+  lines.push("");
+  lines.push("| File | Route / Framework | Reason |");
+  lines.push("| --- | --- | --- |");
+  for (const route of repoMap.routes) {
+    lines.push(`| \`${route.relativePath}\` | ${route.routePattern ?? route.framework ?? "unknown"} | ${route.reason} |`);
+  }
+  lines.push("");
+}
+
+function appendImportHints(lines: string[], repoMap: RepoMapResult): void {
+  if (!repoMap.imports || repoMap.imports.length === 0) return;
+
+  lines.push("## Import / Dependency Hints");
+  lines.push("");
+
+  const importCount = new Map<string, number>();
+  for (const imp of repoMap.imports) {
+    importCount.set(imp.source, (importCount.get(imp.source) ?? 0) + 1);
+  }
+
+  const topImports = [...importCount.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 15);
+
+  if (topImports.length === 0) return;
+
+  lines.push("| Module | Files Importing |");
+  lines.push("| --- | ---:|");
+  for (const [mod, count] of topImports) {
+    lines.push(`| \`${mod}\` | ${count} |`);
   }
   lines.push("");
 }

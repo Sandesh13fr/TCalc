@@ -12,6 +12,7 @@ import { executeCatalogValidate } from "./commands/catalog.js";
 import { resolveTargetPath } from "./utils/paths.js";
 import { handleError, CliError } from "./utils/errors.js";
 import type { AgentTarget, OptimizationMode } from "@wma/core";
+import { startServer } from "@wma/mcp-server";
 
 const program = new Command();
 
@@ -78,6 +79,9 @@ program
   .option("--budget <number>", "Token budget")
   .option("--output <file>", "Write output to file")
   .option("--format <format>", "Output format (markdown|json)", "markdown")
+  .option("--no-symbols", "Disable code-aware symbol extraction")
+  .option("--max-symbols <number>", "Maximum symbols to include")
+  .option("--max-parse-bytes <number>", "Maximum file bytes to parse for symbols")
   .action(async (target, opts) => {
     try {
       const output = await executeRepoMap({
@@ -87,6 +91,9 @@ program
         output: opts.output,
         format: opts.format,
         debug: program.opts().debug,
+        noSymbols: opts.symbols === false,
+        maxSymbols: opts.maxSymbols ? Number(opts.maxSymbols) : undefined,
+        maxParseBytes: opts.maxParseBytes ? Number(opts.maxParseBytes) : undefined,
       });
       await writeOutput(output, opts.output);
     } catch (err) {
@@ -153,6 +160,18 @@ program
       await writeOutput(output, opts.output);
     } catch (err) {
       handleError(err, program.opts().debug);
+    }
+  });
+
+program
+  .command("mcp")
+  .description("Start MCP (Model Context Protocol) server")
+  .action(async () => {
+    try {
+      await startServer();
+    } catch (err) {
+      console.error("Failed to start MCP server:", err);
+      process.exit(1);
     }
   });
 

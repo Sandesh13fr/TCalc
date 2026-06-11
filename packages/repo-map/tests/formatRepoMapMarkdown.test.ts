@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { RepoMapResult, RepoMapFile, RepoMapFolder, RepoMapLanguage } from "@wma/core";
+import type { RepoMapResult, RepoMapFile, RepoMapFolder, RepoMapLanguage, RepoMapSymbol, RepoMapImport, RepoMapRoute } from "@wma/core";
 import { formatRepoMapMarkdown } from "../src/formatRepoMapMarkdown.js";
 
 function makeFile(relativePath: string, priority: number, estimatedTokens: number, reason?: string): RepoMapFile {
@@ -74,6 +74,24 @@ function makeFixtureRepoMap(): RepoMapResult {
       "Key entry points to read first: src/index.ts, src/main.ts",
     ],
     overflowNotes: [],
+    symbols: [
+      { name: "serve", kind: "function", relativePath: "src/server.ts", lineStart: 1, exported: true, priority: 7 },
+      { name: "AppConfig", kind: "interface", relativePath: "src/types.ts", lineStart: 1, exported: true, priority: 7 },
+      { name: "Button", kind: "component", relativePath: "src/components/Button.tsx", lineStart: 7, exported: false, priority: 5 },
+    ],
+    imports: [
+      { source: "express", relativePath: "src/server.ts", kind: "import" },
+      { source: "react", relativePath: "src/components/Button.tsx", kind: "import" },
+    ],
+    routes: [
+      { relativePath: "src/server.ts", routePattern: "/api/health", framework: "express", reason: "GET /api/health" },
+      { relativePath: "app/page.tsx", routePattern: "/", framework: "nextjs", reason: "Next.js App Router page: app/page.tsx" },
+    ],
+    symbolSummary: [
+      "3 symbols extracted from 3 files",
+      "Exports: 2",
+      "Functions/Components: 2",
+    ],
   };
 }
 
@@ -107,10 +125,9 @@ describe("formatRepoMapMarkdown", () => {
 
     expect(md).not.toContain("```ts");
     expect(md).not.toContain("```javascript");
-    const sourcePatterns = ["export function", "import ", "const ", "function "];
-    for (const pat of sourcePatterns) {
-      expect(md).not.toMatch(new RegExp(pat, "i"));
-    }
+    expect(md).not.toContain("export function");
+    expect(md).not.toMatch(/\bconst \w+ = /);
+    expect(md).not.toMatch(/\bfunction \w+\(/);
   });
 
   it("includes suggested prompt prefix", () => {
@@ -169,5 +186,52 @@ describe("formatRepoMapMarkdown", () => {
     const md = formatRepoMapMarkdown(repoMap);
 
     expect(md).toContain("No budget trimming applied");
+  });
+
+  it("includes Key Symbols section", () => {
+    const repoMap = makeFixtureRepoMap();
+    const md = formatRepoMapMarkdown(repoMap);
+
+    expect(md).toContain("## Key Symbols");
+    expect(md).toContain("`serve`");
+    expect(md).toContain("`AppConfig`");
+    expect(md).toContain("`Button`");
+  });
+
+  it("includes Routes / Entry Handlers section", () => {
+    const repoMap = makeFixtureRepoMap();
+    const md = formatRepoMapMarkdown(repoMap);
+
+    expect(md).toContain("## Routes / Entry Handlers");
+    expect(md).toContain("/api/health");
+  });
+
+  it("includes Import / Dependency Hints section", () => {
+    const repoMap = makeFixtureRepoMap();
+    const md = formatRepoMapMarkdown(repoMap);
+
+    expect(md).toContain("## Import / Dependency Hints");
+    expect(md).toContain("express");
+  });
+
+  it("does not include source bodies", () => {
+    const repoMap = makeFixtureRepoMap();
+    const md = formatRepoMapMarkdown(repoMap);
+
+    expect(md).not.toContain("```");
+    expect(md).not.toContain("export function");
+  });
+
+  it("does not include Key Symbols when symbols are empty", () => {
+    const repoMap = makeFixtureRepoMap();
+    repoMap.symbols = [];
+    repoMap.symbolSummary = [];
+    repoMap.routes = [];
+    repoMap.imports = [];
+    const md = formatRepoMapMarkdown(repoMap);
+
+    expect(md).not.toContain("## Key Symbols");
+    expect(md).not.toContain("## Routes / Entry Handlers");
+    expect(md).not.toContain("## Import / Dependency Hints");
   });
 });

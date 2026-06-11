@@ -7,6 +7,11 @@ export interface RepoMapOptions {
   includeDocs?: boolean;
   includeConfigs?: boolean;
   maxFiles?: number;
+  enableSymbolExtraction?: boolean;
+  maxParseFileBytes?: number;
+  maxSymbols?: number;
+  includeImports?: boolean;
+  includeRoutes?: boolean;
 }
 
 export interface RepoMapFile {
@@ -27,6 +32,31 @@ export interface RepoMapLanguage {
   language: string;
   estimatedTokens: number;
   fileCount: number;
+}
+
+export interface RepoMapSymbol {
+  name: string;
+  kind: "function" | "class" | "interface" | "type" | "enum" | "variable" | "method" | "component" | "route" | "unknown";
+  relativePath: string;
+  lineStart?: number;
+  lineEnd?: number;
+  exported?: boolean;
+  async?: boolean;
+  priority: number;
+}
+
+export interface RepoMapImport {
+  source: string;
+  importedFrom?: string;
+  relativePath: string;
+  kind: "import" | "require" | "dynamic-import" | "export-from";
+}
+
+export interface RepoMapRoute {
+  relativePath: string;
+  routePattern?: string;
+  framework?: "nextjs" | "express" | "fastify" | "react-router" | "unknown";
+  reason: string;
 }
 
 export interface RepoMapResult {
@@ -51,4 +81,8 @@ export interface RepoMapResult {
   recommendedExclude: RepoMapFile[];
   agentInstructions: string[];
   overflowNotes: string[];
+  symbols: RepoMapSymbol[];
+  imports: RepoMapImport[];
+  routes: RepoMapRoute[];
+  symbolSummary: string[];
 }
