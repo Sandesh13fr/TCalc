@@ -1,0 +1,23 @@
+{
+  "name": "@wma/recommender",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Model scoring, cost estimation, and recommendation engine.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@wma/core": "workspace:*",
+    "@wma/model-catalog": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "latest"
+  }
+}

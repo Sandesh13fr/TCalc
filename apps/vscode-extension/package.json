@@ -1,0 +1,111 @@
+{
+  "name": "@wma/vscode-extension",
+  "displayName": "Workspace Model Advisor",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local-first workspace token calculator, model recommender, and coding-agent optimizer.",
+  "publisher": "workspace-model-advisor",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:workspaceModelAdvisor.scanWorkspace",
+    "onCommand:workspaceModelAdvisor.openDashboard",
+    "onCommand:workspaceModelAdvisor.exportReport",
+    "onCommand:workspaceModelAdvisor.setWorkspaceGoal",
+    "onCommand:workspaceModelAdvisor.compareModels",
+    "onCommand:workspaceModelAdvisor.generateAgentRules",
+    "onCommand:workspaceModelAdvisor.updateModelCatalog",
+    "onCommand:workspaceModelAdvisor.openSettings"
+  ],
+  "main": "dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "workspaceModelAdvisor.scanWorkspace",
+        "title": "Workspace Model Advisor: Scan Workspace"
+      },
+      {
+        "command": "workspaceModelAdvisor.openDashboard",
+        "title": "Workspace Model Advisor: Open Dashboard"
+      },
+      {
+        "command": "workspaceModelAdvisor.exportReport",
+        "title": "Workspace Model Advisor: Export Report"
+      },
+      {
+        "command": "workspaceModelAdvisor.setWorkspaceGoal",
+        "title": "Workspace Model Advisor: Set Workspace Goal"
+      },
+      {
+        "command": "workspaceModelAdvisor.compareModels",
+        "title": "Workspace Model Advisor: Compare Models"
+      },
+      {
+        "command": "workspaceModelAdvisor.generateAgentRules",
+        "title": "Workspace Model Advisor: Generate Agent Rules"
+      },
+      {
+        "command": "workspaceModelAdvisor.updateModelCatalog",
+        "title": "Workspace Model Advisor: Update Model Catalog"
+      },
+      {
+        "command": "workspaceModelAdvisor.openSettings",
+        "title": "Workspace Model Advisor: Open Settings"
+      }
+    ],
+    "configuration": {
+      "title": "Workspace Model Advisor",
+      "properties": {
+        "wma.defaultGoal": {
+          "type": "string",
+          "default": "build-mvp",
+          "enum": [
+            "build-mvp",
+            "add-feature",
+            "debug",
+            "refactor",
+            "migration",
+            "security-review",
+            "test-generation",
+            "documentation",
+            "architecture-planning",
+            "cleanup"
+          ],
+          "description": "Default workspace goal for model recommendations."
+        },
+        "wma.privacyMode": {
+          "type": "string",
+          "default": "local-first",
+          "enum": ["local-first", "cloud-ok"],
+          "description": "Privacy mode: prefer local models or allow cloud."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@wma/core": "workspace:*",
+    "@wma/scanner": "workspace:*",
+    "@wma/tokenizers": "workspace:*",
+    "@wma/model-catalog": "workspace:*",
+    "@wma/recommender": "workspace:*",
+    "@wma/reports": "workspace:*",
+    "@wma/agent-rules": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "typescript": "latest"
+  }
+}

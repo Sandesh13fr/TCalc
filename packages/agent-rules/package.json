@@ -1,0 +1,22 @@
+{
+  "name": "@wma/agent-rules",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agent rule file generation for coding agents.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@wma/core": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "latest"
+  }
+}

@@ -1,0 +1,81 @@
+# Workspace Model Advisor ignore patterns
+# Files matching these patterns will be excluded from workspace scanning.
+
+# Dependencies
+node_modules/
+bower_components/
+vendor/
+.pnp/
+.pnp.js
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Build output
+dist/
+build/
+out/
+.next/
+.nuxt/
+.output/
+.svelte-kit/
+
+# Coverage and test artifacts
+coverage/
+.nyc_output/
+__snapshots__/
+
+# Lockfiles
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lockb
+
+# IDE and OS
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Environment and secrets
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Large generated files
+*.min.js
+*.min.css
+*.bundle.js
+*.chunk.js
+*.map
+
+# Binary and media
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.webp
+*.mp4
+*.mp3
+*.woff
+*.woff2
+*.ttf
+*.eot
+
+# Database dumps
+*.sql
+*.dump
+*.sqlite
+*.db
+
+# Logs
+*.log
+logs/

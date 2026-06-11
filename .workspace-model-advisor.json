@@ -1,0 +1,30 @@
+{
+  "defaultGoal": "build-mvp",
+  "privacyMode": "local-first",
+  "currency": "USD",
+  "tokenBudget": {
+    "defaultContextBudget": 64000,
+    "maxFullWorkspaceScan": 1000000,
+    "warnAt": 200000
+  },
+  "exclude": [
+    "node_modules/**",
+    "dist/**",
+    "build/**",
+    ".next/**",
+    "coverage/**",
+    "package-lock.json",
+    "pnpm-lock.yaml"
+  ],
+  "agentRules": {
+    "defaultMode": "repo-map-first",
+    "allowCavemanMode": true,
+    "preferPatchOnly": false,
+    "askBeforeLargeFileRead": true
+  },
+  "models": {
+    "preferredProviders": ["openai", "anthropic", "google", "local"],
+    "allowLocalModels": true,
+    "allowCloudModels": true
+  }
+}

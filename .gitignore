@@ -1,0 +1,14 @@
+node_modules
+dist
+*.tsbuildinfo
+.vscode-test
+*.vsix
+.DS_Store
+Thumbs.db
+
+coverage/
+.env
+.env.*
+*.log
+agentLogs.md
+output.txt

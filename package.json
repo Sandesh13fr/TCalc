@@ -1,0 +1,27 @@
+{
+  "name": "workspace-model-advisor",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Local-first workspace token calculator, model recommender, and coding-agent optimizer.",
+  "type": "module",
+  "license": "MIT",
+  "packageManager": "pnpm@latest",
+  "scripts": {
+    "dev": "pnpm -r dev",
+    "build": "pnpm -r build",
+    "scan:fixtures": "pnpm --filter @wma/scanner test",
+    "test": "vitest run",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "format": "prettier --write .",
+    "package:vscode": "pnpm --filter @wma/vscode-extension package"
+  },
+  "devDependencies": {
+    "@changesets/cli": "latest",
+    "@types/node": "latest",
+    "eslint": "latest",
+    "prettier": "latest",
+    "typescript": "latest",
+    "vitest": "latest"
+  }
+}
