@@ -9,7 +9,9 @@
   "scripts": {
     "dev": "pnpm -r dev",
     "build": "pnpm -r build",
-    "scan:fixtures": "pnpm --filter @wma/scanner test",
+    "cli": "node apps/cli/dist/index.js",
+    "wma": "node apps/cli/dist/index.js",
+    "scan:fixtures": "node apps/cli/dist/index.js scan fixtures/small-node-app",
     "test": "vitest run",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",

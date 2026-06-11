@@ -22,7 +22,8 @@
     "onCommand:workspaceModelAdvisor.compareModels",
     "onCommand:workspaceModelAdvisor.generateAgentRules",
     "onCommand:workspaceModelAdvisor.updateModelCatalog",
-    "onCommand:workspaceModelAdvisor.openSettings"
+    "onCommand:workspaceModelAdvisor.openSettings",
+    "onCommand:workspaceModelAdvisor.generateRepoMap"
   ],
   "main": "dist/extension.js",
   "contributes": {
@@ -58,6 +59,10 @@
       {
         "command": "workspaceModelAdvisor.openSettings",
         "title": "Workspace Model Advisor: Open Settings"
+      },
+      {
+        "command": "workspaceModelAdvisor.generateRepoMap",
+        "title": "Workspace Model Advisor: Generate Repo Map"
       }
     ],
     "configuration": {
@@ -102,7 +107,8 @@
     "@wma/model-catalog": "workspace:*",
     "@wma/recommender": "workspace:*",
     "@wma/reports": "workspace:*",
-    "@wma/agent-rules": "workspace:*"
+    "@wma/agent-rules": "workspace:*",
+    "@wma/repo-map": "workspace:*"
   },
   "devDependencies": {
     "@types/vscode": "^1.85.0",

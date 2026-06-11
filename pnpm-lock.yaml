@@ -27,6 +27,43 @@ importers:
         specifier: latest
         version: 4.1.8(@types/node@25.9.2)(vite@8.0.16(@types/node@25.9.2))
 
+  apps/cli:
+    dependencies:
+      '@wma/agent-rules':
+        specifier: workspace:*
+        version: link:../../packages/agent-rules
+      '@wma/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@wma/model-catalog':
+        specifier: workspace:*
+        version: link:../../packages/model-catalog
+      '@wma/recommender':
+        specifier: workspace:*
+        version: link:../../packages/recommender
+      '@wma/repo-map':
+        specifier: workspace:*
+        version: link:../../packages/repo-map
+      '@wma/reports':
+        specifier: workspace:*
+        version: link:../../packages/reports
+      '@wma/scanner':
+        specifier: workspace:*
+        version: link:../../packages/scanner
+      '@wma/tokenizers':
+        specifier: workspace:*
+        version: link:../../packages/tokenizers
+      commander:
+        specifier: ^13.0.0
+        version: 13.1.0
+    devDependencies:
+      '@types/node':
+        specifier: latest
+        version: 25.9.2
+      typescript:
+        specifier: latest
+        version: 6.0.3
+
   apps/vscode-extension:
     dependencies:
       '@wma/agent-rules':
@@ -41,6 +78,9 @@ importers:
       '@wma/recommender':
         specifier: workspace:*
         version: link:../../packages/recommender
+      '@wma/repo-map':
+        specifier: workspace:*
+        version: link:../../packages/repo-map
       '@wma/reports':
         specifier: workspace:*
         version: link:../../packages/reports
@@ -92,6 +132,16 @@ importers:
       '@wma/model-catalog':
         specifier: workspace:*
         version: link:../model-catalog
+    devDependencies:
+      typescript:
+        specifier: latest
+        version: 6.0.3
+
+  packages/repo-map:
+    dependencies:
+      '@wma/core':
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       typescript:
         specifier: latest
@@ -503,6 +553,10 @@ packages:
 
   chardet@2.1.1:
     resolution: {integrity: sha512-PsezH1rqdV9VvyNhxxOW32/d75r01NY7TQCmOqomRo15ZSOKbpTFVsfjghxo6JloQUCGnH4k1LGu0R4yCLlWQQ==}
+
+  commander@13.1.0:
+    resolution: {integrity: sha512-/rFeCpNJQbhSZjGVwO9RFV3xPqbnERS8MmIQzCtD/zl6gpJuV/bMLuN92oG3F7d8oDEHHRrujSXNUr8fpjntKw==}
+    engines: {node: '>=18'}
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
@@ -1601,6 +1655,8 @@ snapshots:
   chai@6.2.2: {}
 
   chardet@2.1.1: {}
+
+  commander@13.1.0: {}
 
   convert-source-map@2.0.0: {}
 

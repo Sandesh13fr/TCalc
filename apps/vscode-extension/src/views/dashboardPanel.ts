@@ -47,6 +47,9 @@ export function createDashboardPanel(
       case "generateAgentRules":
         vscode.commands.executeCommand("workspaceModelAdvisor.generateAgentRules");
         break;
+      case "generateRepoMap":
+        vscode.commands.executeCommand("workspaceModelAdvisor.generateRepoMap");
+        break;
     }
   });
 
@@ -249,6 +252,7 @@ function getHtml(
     <button class="btn" onclick="postCmd('changeGoal')">Change Goal</button>
     <button class="btn" onclick="postCmd('compareModels')">Compare Models</button>
     <button class="btn" onclick="postCmd('generateAgentRules')">Generate Agent Rules</button>
+    <button class="btn" onclick="postCmd('generateRepoMap')">Generate Repo Map</button>
     <button class="btn" onclick="postCmd('exportReport')">Export Markdown Report</button>
   </div>
 
