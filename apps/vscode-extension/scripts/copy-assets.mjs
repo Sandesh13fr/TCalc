@@ -26,3 +26,10 @@ if (existsSync(ci)) {
 } else {
   console.warn("No catalogs found at root, skipping copy");
 }
+
+const readmeSrc = resolve(repoRoot, "README.md");
+const readmeDst = resolve(extRoot, "README.md");
+if (existsSync(readmeSrc)) {
+  cpSync(readmeSrc, readmeDst, { force: true });
+  console.log(`README copied: ${readmeSrc} -> ${readmeDst}`);
+}
