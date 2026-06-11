@@ -33,3 +33,12 @@ if (existsSync(readmeSrc)) {
   cpSync(readmeSrc, readmeDst, { force: true });
   console.log(`README copied: ${readmeSrc} -> ${readmeDst}`);
 }
+
+const changelogSrc = resolve(repoRoot, "CHANGELOG.md");
+const changelogDst = resolve(extRoot, "CHANGELOG.md");
+if (existsSync(changelogSrc)) {
+  cpSync(changelogSrc, changelogDst, { force: true });
+  console.log(`CHANGELOG copied: ${changelogSrc} -> ${changelogDst}`);
+} else {
+  console.warn("No CHANGELOG.md at repo root, skipping copy");
+}

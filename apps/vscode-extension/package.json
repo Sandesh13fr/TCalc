@@ -32,12 +32,12 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/workspace-model-advisor/wma"
+    "url": "https://github.com/Sandesh13fr/TCalc"
   },
   "bugs": {
-    "url": "https://github.com/workspace-model-advisor/wma/issues"
+    "url": "https://github.com/Sandesh13fr/TCalc/issues"
   },
-  "homepage": "https://github.com/workspace-model-advisor/wma#readme",
+  "homepage": "https://github.com/Sandesh13fr/TCalc#readme",
   "galleryBanner": {
     "color": "#1e1e1e",
     "theme": "dark"
