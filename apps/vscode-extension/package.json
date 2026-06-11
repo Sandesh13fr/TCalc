@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Local-first workspace token calculator, model recommender, and coding-agent optimizer.",
-  "publisher": "Sandesh13fr",
+  "publisher": "TCalc",
   "author": {
     "name": "Workspace Model Advisor"
   },
