@@ -1,31 +1,36 @@
 name: Publish to Open VSX
 
+run-name: >-
+  Open VSX ${{ fromJSON(inputs.dry_run) && 'dry run' || 'publish' }}
+  ${{ inputs.version != '' && format('({0})', inputs.version) || '' }}
+
 # Manual trigger only. Never auto-publishes.
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Extension version to publish (informational; uses the version in apps/vscode-extension/package.json)"
+        description: "Extension version/tag to publish (informational; package.json version is authoritative)"
         required: false
         default: ""
+        type: string
       dry_run:
-        description: "Dry run: package and validate, do not publish to Open VSX"
-        type: boolean
-        required: false
+        description: "Package and validate only; do not publish to Open VSX"
+        required: true
         default: true
+        type: boolean
+
+permissions:
+  contents: read
 
 concurrency:
   group: publish-open-vsx-${{ github.workflow }}
   cancel-in-progress: false
 
-permissions:
-  contents: read
-
 jobs:
   build-test-package:
     name: Build, test, package
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -35,13 +40,15 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Setup pnpm (corepack)
+      - name: Setup pnpm with Corepack
         run: |
           corepack enable
           corepack prepare pnpm@11.5.2 --activate
+          pnpm --version
 
       - name: Get pnpm store directory
         id: pnpm-cache
+        shell: bash
         run: echo "dir=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
 
       - name: Cache pnpm store
@@ -52,7 +59,7 @@ jobs:
           restore-keys: |
             pnpm-store-${{ runner.os }}-
 
-      - name: Install
+      - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Check extension metadata
@@ -70,7 +77,8 @@ jobs:
       - name: Inspect VSIX
         run: pnpm package:vscode:inspect
 
-      - name: Log publish inputs
+      - name: Log workflow inputs
+        shell: bash
         run: |
           echo "inputs.version: ${{ inputs.version }}"
           echo "inputs.dry_run: ${{ inputs.dry_run }}"
@@ -88,8 +96,8 @@ jobs:
     needs: build-test-package
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # FIX: inputs.dry_run is a string even with type:boolean — compare to string "false"
-    if: ${{ inputs.dry_run == 'false' }}
+    # fromJSON converts the string "true"/"false" to a boolean
+    if: ${{ !fromJSON(inputs.dry_run) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -99,19 +107,24 @@ jobs:
         with:
           node-version: "22"
 
-      - name: Verify OPEN_VSX_TOKEN is set
+      - name: Verify OPEN_VSX_TOKEN is configured
         env:
           OPEN_VSX_TOKEN: ${{ secrets.OPEN_VSX_TOKEN }}
+        shell: bash
         run: |
-          if [ -z "$OPEN_VSX_TOKEN" ]; then
+          set -euo pipefail
+          if [ -z "${OPEN_VSX_TOKEN:-}" ]; then
             echo "::error::OPEN_VSX_TOKEN secret is not configured for this repository."
             echo "::error::Add it at: Settings -> Secrets and variables -> Actions -> New repository secret"
             echo "::error::Name: OPEN_VSX_TOKEN"
-            echo "::error::Value: your access token from https://open-vsx.org/ (User Settings -> Access Tokens)"
+            echo "::error::Value: your Open VSX access token"
             exit 1
           fi
-          # Do not echo the token. Just confirm length.
-          echo "OPEN_VSX_TOKEN present (length=${#OPEN_VSX_TOKEN})"
+          if [ "${#OPEN_VSX_TOKEN}" -lt 16 ]; then
+            echo "::error::OPEN_VSX_TOKEN looks too short. Refusing to publish."
+            exit 1
+          fi
+          echo "OPEN_VSX_TOKEN is present."
 
       - name: Download VSIX artifact
         uses: actions/download-artifact@v4
@@ -120,24 +133,32 @@ jobs:
           path: dist-vsix
 
       - name: List downloaded VSIX
-        run: ls -la dist-vsix
-
-      - name: Preflight: verify PAT can publish to namespace
-        env:
-          OPEN_VSX_TOKEN: ${{ secrets.OPEN_VSX_TOKEN }}
+        shell: bash
         run: |
           set -euo pipefail
-          # Read the publisher from the manifest. The namespace on open-vsx.org
-          # must match this value exactly.
+          ls -la dist-vsix
+          VSIX_COUNT=$(find dist-vsix -maxdepth 1 -name "*.vsix" | wc -l | tr -d " ")
+          if [ "$VSIX_COUNT" != "1" ]; then
+            echo "::error::Expected exactly one VSIX file, found $VSIX_COUNT."
+            exit 1
+          fi
+
+      - name: Verify Open VSX PAT can publish to namespace
+        env:
+          OPEN_VSX_TOKEN: ${{ secrets.OPEN_VSX_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
           PUBLISHER=$(node -e 'console.log(require("./apps/vscode-extension/package.json").publisher)')
-          echo "Publisher: $PUBLISHER"
+          echo "Publisher namespace: $PUBLISHER"
           if ! npx -y ovsx verify-pat "$PUBLISHER" --pat "$OPEN_VSX_TOKEN"; then
-            echo "::error::Token cannot publish to namespace '$PUBLISHER'."
+            echo "::error::Token cannot publish to Open VSX namespace '$PUBLISHER'."
             echo "::error::Make sure:"
-            echo "::error::  1. The namespace '$PUBLISHER' exists at https://open-vsx.org/"
-            echo "::error::     (or run: npx ovsx create-namespace $PUBLISHER --pat <token>)"
-            echo "::error::  2. Your OPEN_VSX_TOKEN is associated with that namespace's owner."
-            echo "::error::  3. The token has the 'publish:extension' scope."
+            echo "::error::  1. The namespace '$PUBLISHER' exists on Open VSX."
+            echo "::error::  2. The token owner has access to that namespace."
+            echo "::error::  3. The token has permission to publish extensions."
+            echo "::error::If needed, create the namespace locally with:"
+            echo "::error::  npx ovsx create-namespace $PUBLISHER --pat <token>"
             exit 1
           fi
           echo "PAT verified for namespace '$PUBLISHER'."
@@ -145,22 +166,25 @@ jobs:
       - name: Publish to Open VSX
         env:
           OPEN_VSX_TOKEN: ${{ secrets.OPEN_VSX_TOKEN }}
+        shell: bash
         run: |
           set -euo pipefail
-          # Use npx to fetch ovsx on demand. We pipe the PAT via --pat; we never echo it.
-          npx -y ovsx publish dist-vsix/*.vsix --pat "$OPEN_VSX_TOKEN"
+          VSIX_FILE=$(find dist-vsix -maxdepth 1 -name "*.vsix" | head -n 1)
+          echo "Publishing VSIX: $VSIX_FILE"
+          npx -y ovsx publish "$VSIX_FILE" --pat "$OPEN_VSX_TOKEN"
 
   publish-dry-run-summary:
     name: Dry-run summary
     needs: build-test-package
     runs-on: ubuntu-latest
     timeout-minutes: 2
-    # FIX: inputs.dry_run is a string — compare to string "true"
-    # FIX: always() ensures this runs even if publish-open-vsx is skipped
-    if: ${{ always() && inputs.dry_run == 'true' }}
+    # fromJSON converts the string "true"/"false" to a boolean
+    if: ${{ always() && fromJSON(inputs.dry_run) }}
     steps:
       - name: Dry run notice
+        shell: bash
         run: |
           echo "dry_run=true; no publish performed."
+          echo "The extension was built, tested, packaged, inspected, and uploaded as an artifact."
           echo "To publish for real, re-run this workflow with dry_run=false."
-          echo "Required secret: OPEN_VSX_TOKEN"
+          echo "Required repository secret: OPEN_VSX_TOKEN"
