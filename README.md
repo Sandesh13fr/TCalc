@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/Sandesh13fr/TCalc/actions/workflows/ci.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/ci.yml)
 [![Release](https://github.com/Sandesh13fr/TCalc/actions/workflows/release.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/release.yml)
-[![Workspace Advisor Report](https://github.com/Sandesh13fr/TCalc/actions/workflows/tcalc-report.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/tcalc-report.yml)
+[![TCalc Report](https://github.com/Sandesh13fr/TCalc/actions/workflows/tcalc-report.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/tcalc-report.yml)
 
 Local-first workspace token calculator, model recommender, and coding-agent optimizer.
 
@@ -34,7 +34,25 @@ pnpm test
 pnpm scan:fixtures
 ```
 
-## VS Code Extension (VSIX)
+## Install
+
+### Open VSX
+
+TCalc is published on Open VSX for VS Code-compatible editors.
+
+Install it from the Open VSX Registry, or search for **TCalc** inside an Open VSX-compatible editor such as VSCodium.
+
+To publish a new version:
+
+1. Add an `OPEN_VSX_TOKEN` secret in the repository
+   *Settings → Secrets and variables → Actions*.
+2. Open **Actions → Publish to Open VSX → Run workflow**.
+3. Uncheck **dry_run** to publish for real.
+
+See [docs/open-vsx-publishing.md](./docs/open-vsx-publishing.md) for the
+full guide.
+
+### VSIX
 
 Build and install locally:
 
@@ -44,39 +62,21 @@ pnpm package:vscode              # produces dist-vsix/*.vsix
 pnpm package:vscode:inspect      # verify VSIX contents
 ```
 
-See [docs/install-vsix.md](./docs/install-vsix.md) for installation instructions.
+You can also install the extension manually from the GitHub release asset:
 
-## Open VSX
-
-> **Status: prepared, not yet published.** Publishing is gated behind a
-> manual `workflow_dispatch` workflow (`publish-open-vsx.yml`) that defaults
-> to `dry_run=true`. There is no automatic publish on tag push.
-
-When a release is published, the extension will be installable from Open
-VSX in any editor that uses it (VSCodium, Eclipse Theia, Gitpod, etc.):
-
-```
-tcalc
+```bash
+code --install-extension tcalc-0.1.0.vsix
 ```
 
-To publish:
-
-1. Add an `OPEN_VSX_TOKEN` secret in the repository
-   *Settings → Secrets and variables → Actions*.
-2. Open **Actions → Publish to Open VSX → Run workflow**.
-3. Uncheck **dry_run** to publish for real.
-
-See [docs/open-vsx-publishing.md](./docs/open-vsx-publishing.md) for the
-full guide and [docs/release-checklist.md](./docs/release-checklist.md) for
-the Open VSX section of the release flow.
+See [docs/install-vsix.md](./docs/install-vsix.md) for more details.
 
 ## CLI
 
 ```bash
 pnpm cli --help
-pnpm wma scan ./my-project
-pnpm wma recommend ./my-project --goal build-mvp
-pnpm wma repo-map ./my-project --budget 8000
+pnpm tcalc scan ./my-project
+pnpm tcalc recommend ./my-project --goal build-mvp
+pnpm tcalc repo-map ./my-project --budget 8000
 ```
 
 ## Architecture
@@ -85,16 +85,16 @@ This is a pnpm monorepo with the following packages:
 
 | Package | Description |
 |---------|-------------|
-| `@wma/core` | Shared types, config, and constants |
-| `@wma/scanner` | Workspace file discovery and classification |
-| `@wma/tokenizers` | Token estimation (heuristic and provider-specific) |
-| `@wma/model-catalog` | Model metadata catalog loader |
-| `@wma/recommender` | Model scoring and recommendation engine |
-| `@wma/agent-rules` | Agent behavior rules generation |
-| `@wma/repo-map` | Context-aware repo map generation |
-| `@wma/reports` | HTML/markdown report generation |
+| `@tcalc/core` | Shared types, config, and constants |
+| `@tcalc/scanner` | Workspace file discovery and classification |
+| `@tcalc/tokenizers` | Token estimation (heuristic and provider-specific) |
+| `@tcalc/model-catalog` | Model metadata catalog loader |
+| `@tcalc/recommender` | Model scoring and recommendation engine |
+| `@tcalc/agent-rules` | Agent behavior rules generation |
+| `@tcalc/repo-map` | Context-aware repo map generation |
+| `@tcalc/reports` | HTML/markdown report generation |
 | `apps/cli` | CLI tool (Commander-based) |
-| `@wma/vscode-extension` | VS Code extension UI |
+| `@tcalc/vscode-extension` | VS Code extension UI |
 | `@tcalc/mcp-server` | MCP (Model Context Protocol) server for coding agents |
 
 ## CI & Automation
@@ -127,10 +127,10 @@ AI coding agents (Claude Code, Cursor, etc.) through the
 
 ```bash
 # Run via the TCalc CLI
-wma mcp
+tcalc mcp
 
 # Or run the standalone binary
-wma-mcp
+tcalc-mcp
 ```
 
 It exposes tools (`scan_workspace`, `recommend_models`, `create_repo_map`,
