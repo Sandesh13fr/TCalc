@@ -2,7 +2,7 @@
   "name": "@wma/mcp-server",
   "version": "0.1.0",
   "private": true,
-  "description": "MCP server for Workspace Model Advisor",
+  "description": "MCP server for TCalc",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

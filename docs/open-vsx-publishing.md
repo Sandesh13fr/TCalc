@@ -1,6 +1,6 @@
 # Open VSX Publishing Guide
 
-This document explains how to publish the Workspace Model Advisor VS Code
+This document explains how to publish the TCalc VS Code
 extension to **Eclipse Open VSX** (open-vsx.org), the open-source registry used
 by editors like VSCodium, Gitpod, Eclipse Theia, Code-OSS, and others.
 
@@ -24,15 +24,15 @@ To publish to Open VSX you need:
 
 1. **An Open VSX account.** Sign in at <https://open-vsx.org/> with a GitHub
    account.
-2. **A publisher namespace.** Pick a namespace (e.g. `workspace-model-advisor`).
+2. **A publisher namespace.** Pick a namespace (e.g. `Sandesh13fr`).
    This **must match exactly** the `publisher` field in
-   `apps/vscode-extension/package.json` (currently `workspace-model-advisor`).
+   `apps/vscode-extension/package.json` (currently `Sandesh13fr`).
    Create the namespace once per account, either:
    - Via the web UI: <https://open-vsx.org/user-settings/namespaces> → *New
      namespace*, or
    - Via the CLI:
      ```bash
-     npx -y ovsx create-namespace workspace-model-advisor --pat <token>
+     npx -y ovsx create-namespace Sandesh13fr --pat <token>
      ```
    > The namespace is permanent: there is no rename. Pick carefully.
 3. **A personal access token (PAT).** Generate one at
@@ -57,7 +57,7 @@ generic `Unknown publisher` error from `ovsx publish`.
 
 | Field | Source | Notes |
 |-------|--------|-------|
-| `name` | `apps/vscode-extension/package.json` | The extension ID, e.g. `workspace-model-advisor` |
+| `name` | `apps/vscode-extension/package.json` | The extension ID, e.g. `tcalc` |
 | `publisher` | `apps/vscode-extension/package.json` | The namespace you own on open-vsx.org |
 | `version` | `apps/vscode-extension/package.json` | Must be a semver string |
 | `description` / `displayName` | `apps/vscode-extension/package.json` | Shown on the registry page |
@@ -165,14 +165,14 @@ The job will:
 
 After the workflow completes successfully:
 
-1. Open <https://open-vsx.org/namespace/workspace-model-advisor>.
+1. Open <https://open-vsx.org/namespace/Sandesh13fr>.
 2. Confirm the version is listed and the metadata renders.
 3. Open the extension page
-   (<https://open-vsx.org/extension/workspace-model-advisor/workspace-model-advisor>).
+   (<https://open-vsx.org/extension/Sandesh13fr/tcalc>).
 4. In a compatible editor (VSCodium, Eclipse Theia, etc.), search for
-   `workspace-model-advisor` in the extension marketplace. It should appear
+   `tcalc` in the extension marketplace. It should appear
    in the search results.
-5. Install it and run the `Workspace Model Advisor: Scan Workspace` command
+5. Install it and run the `TCalc: Scan Workspace` command
    on a small folder to confirm activation.
 
 ## Smoke install
@@ -184,11 +184,11 @@ After publishing:
 2. In VSCodium (or any VS Code-compatible editor that uses Open VSX):
    ```bash
    # CLI install
-   vscodium --install-extension workspace-model-advisor-<version>.vsix
+   vscodium --install-extension tcalc-<version>.vsix
    # Or in the GUI: Extensions -> ... -> Install from VSIX
    ```
 3. Reload the window when prompted.
-4. Run `Workspace Model Advisor: Scan Workspace` on a test folder.
+4. Run `TCalc: Scan Workspace` on a test folder.
 5. Confirm the dashboard opens, the scan completes, and the model
    recommendation renders.
 
@@ -271,7 +271,7 @@ Open VSX has a few constraints to be aware of:
 - [ ] `apps/vscode-extension/package.json` `version` matches the release tag
 - [ ] `OPEN_VSX_TOKEN` secret is set in GitHub
 - [ ] Publisher namespace exists on open-vsx.org (run
-      `npx -y ovsx verify-pat workspace-model-advisor --pat $OPEN_VSX_TOKEN`
+      `npx -y ovsx verify-pat Sandesh13fr --pat $OPEN_VSX_TOKEN`
       to confirm)
 - [ ] Token's owning user account owns the namespace
 - [ ] Token has the `publish:extension` scope

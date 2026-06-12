@@ -1,6 +1,6 @@
 You are a senior TypeScript monorepo engineer, MCP server developer, and AI coding-tool integration engineer.
 
-Project: Workspace Model Advisor
+Project: TCalc
 Repo root: TCalc
 
 Current verified state:
@@ -27,7 +27,7 @@ Your task:
 Implement **Phase 7: MCP Server MVP**.
 
 Main goal:
-Create a local-first MCP server that exposes Workspace Model Advisor capabilities to AI coding agents through stdio transport.
+Create a local-first MCP server that exposes TCalc capabilities to AI coding agents through stdio transport.
 
 Do not implement:
 
@@ -47,7 +47,7 @@ Create package:
 
 Package name:
 
-* @wma/mcp-server
+* @tcalc/mcp-server
 
 Executable:
 
@@ -343,7 +343,7 @@ Acceptance criteria:
 * pnpm test passes.
 * existing 183 tests still pass.
 * new MCP tests pass.
-* pnpm --filter @wma/mcp-server build works.
+* pnpm --filter @tcalc/mcp-server build works.
 * node packages/mcp-server/dist/index.js starts stdio server.
 * node apps/cli/dist/index.js mcp starts stdio server.
 * no cloud calls are introduced.

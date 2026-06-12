@@ -2,7 +2,7 @@
   "name": "@wma/core",
   "version": "0.1.0",
   "private": true,
-  "description": "Shared types, config, and constants for Workspace Model Advisor.",
+  "description": "Shared types, config, and constants for TCalc.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

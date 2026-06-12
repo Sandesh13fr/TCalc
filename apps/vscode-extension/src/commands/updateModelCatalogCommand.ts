@@ -25,7 +25,7 @@ export function registerUpdateModelCatalogCommand(context: vscode.ExtensionConte
 
     if (rootPath) {
       const workspaceCatalogPath1 = path.join(rootPath, "catalogs", "models.json");
-      const workspaceCatalogPath2 = path.join(rootPath, ".workspace-model-advisor", "models.json");
+      const workspaceCatalogPath2 = path.join(rootPath, ".tcalc", "models.json");
 
       try {
         const wsCatalog1 = loadModelCatalog(workspaceCatalogPath1);
@@ -43,7 +43,7 @@ export function registerUpdateModelCatalogCommand(context: vscode.ExtensionConte
       try {
         const wsCatalog2 = loadModelCatalog(workspaceCatalogPath2);
         if (wsCatalog2.models.length > 0) {
-          messages.push(`Workspace override (.workspace-model-advisor/models.json): ${wsCatalog2.models.length} model(s).`);
+          messages.push(`Workspace override (.tcalc/models.json): ${wsCatalog2.models.length} model(s).`);
         }
       } catch {
         // not found

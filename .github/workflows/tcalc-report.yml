@@ -1,4 +1,4 @@
-name: Workspace Advisor Report
+name: TCalc Report
 
 on:
   pull_request:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: wma-report-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: tcalc-report-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   report:
-    name: Generate workspace advisor report
+    name: Generate TCalc report
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -96,7 +96,7 @@ jobs:
             const goal = process.env.REPORT_GOAL || '${{ steps.summary.outputs.goal }}';
             const tiers = process.env.REPORT_TIERS || '${{ steps.summary.outputs.tiers }}';
             const body = [
-              '### Workspace Model Advisor report',
+              '### TCalc report',
               '',
               `- **Goal**: \`${goal}\``,
               `- **Total tokens**: ${total}`,

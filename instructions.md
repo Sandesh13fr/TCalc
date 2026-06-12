@@ -1,12 +1,12 @@
-# Workspace Model Advisor — Repository Instructions
+# TCalc — Repository Instructions
 
 ## Project Name
 
-**Workspace Model Advisor**
+**TCalc**
 
 ## Product Summary
 
-Workspace Model Advisor is a local-first IDE extension and developer tool that scans a code workspace, estimates token usage, compares AI coding models by context limit and pricing, and recommends the cheapest sufficient model for the current development goal.
+TCalc is a local-first IDE extension and developer tool that scans a code workspace, estimates token usage, compares AI coding models by context limit and pricing, and recommends the cheapest sufficient model for the current development goal.
 
 The project should help developers answer:
 
@@ -193,7 +193,7 @@ Must support:
 * `.cursorignore`
 * `.aiderignore`
 * `.continueignore`
-* `.workspace-model-advisorignore`
+* `.tcalcignore`
 * user-defined exclude patterns
 * max file-size limits
 * binary file detection
@@ -428,7 +428,7 @@ The extension should export:
 * `workspace-model-report.json`
 * `repo-map.md`
 * `agent-rules.md`
-* `.workspace-model-advisor.json`
+* `.tcalc.json`
 
 The Markdown report should include:
 
@@ -448,22 +448,22 @@ The Markdown report should include:
 The extension should expose these commands:
 
 ```txt
-Workspace Model Advisor: Scan Workspace
-Workspace Model Advisor: Open Dashboard
-Workspace Model Advisor: Set Workspace Goal
-Workspace Model Advisor: Compare Models
-Workspace Model Advisor: Generate Repo Map
-Workspace Model Advisor: Generate Agent Rules
-Workspace Model Advisor: Export Report
-Workspace Model Advisor: Update Model Catalog
-Workspace Model Advisor: Open Settings
+TCalc: Scan Workspace
+TCalc: Open Dashboard
+TCalc: Set Workspace Goal
+TCalc: Compare Models
+TCalc: Generate Repo Map
+TCalc: Generate Agent Rules
+TCalc: Export Report
+TCalc: Update Model Catalog
+TCalc: Open Settings
 ```
 
 ---
 
 ## Suggested Configuration File
 
-Create `.workspace-model-advisor.json` at the repo root.
+Create `.tcalc.json` at the repo root.
 
 Example:
 

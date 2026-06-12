@@ -19,7 +19,7 @@ const IGNORE_FILE_NAMES = [
   ".cursorignore",
   ".aiderignore",
   ".continueignore",
-  ".workspace-model-advisorignore",
+  ".tcalcignore",
 ];
 
 export class IgnoreResolver {

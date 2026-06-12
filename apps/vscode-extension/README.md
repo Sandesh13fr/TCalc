@@ -1,14 +1,14 @@
-# Workspace Model Advisor
+# TCalc
 
 [![CI](https://github.com/Sandesh13fr/TCalc/actions/workflows/ci.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/ci.yml)
 [![Release](https://github.com/Sandesh13fr/TCalc/actions/workflows/release.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/release.yml)
-[![Workspace Advisor Report](https://github.com/Sandesh13fr/TCalc/actions/workflows/workspace-advisor-report.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/workspace-advisor-report.yml)
+[![Workspace Advisor Report](https://github.com/Sandesh13fr/TCalc/actions/workflows/tcalc-report.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/tcalc-report.yml)
 
 Local-first workspace token calculator, model recommender, and coding-agent optimizer.
 
 ## What It Does
 
-Workspace Model Advisor scans your code workspace, estimates token usage, compares AI coding models by context limit and pricing, and recommends the cheapest sufficient model for your current development goal.
+TCalc scans your code workspace, estimates token usage, compares AI coding models by context limit and pricing, and recommends the cheapest sufficient model for your current development goal.
 
 ### Questions It Answers
 
@@ -56,7 +56,7 @@ When a release is published, the extension will be installable from Open
 VSX in any editor that uses it (VSCodium, Eclipse Theia, Gitpod, etc.):
 
 ```
-workspace-model-advisor
+tcalc
 ```
 
 To publish:
@@ -95,7 +95,7 @@ This is a pnpm monorepo with the following packages:
 | `@wma/reports` | HTML/markdown report generation |
 | `apps/cli` | CLI tool (Commander-based) |
 | `@wma/vscode-extension` | VS Code extension UI |
-| `@wma/mcp-server` | MCP (Model Context Protocol) server for coding agents |
+| `@tcalc/mcp-server` | MCP (Model Context Protocol) server for coding agents |
 
 ## CI & Automation
 
@@ -103,7 +103,7 @@ GitHub Actions workflows live in `.github/workflows/`:
 
 - **`ci.yml`** — runs on every push to `main` and every PR. Builds, tests, packages the VSIX, inspects it, runs the no-telemetry guard, and validates extension metadata.
 - **`release.yml`** — runs on `v*.*.*` tag pushes. Builds, tests, packages the VSIX, and attaches it to a **draft** GitHub Release. Never publishes to the Marketplace or Open VSX.
-- **`workspace-advisor-report.yml`** — runs on every PR. Uses the WMA CLI to generate a workspace model report, repo map, and model recommendations, then uploads them as artifacts. Posts a short comment on trusted (non-fork) PRs only.
+- **`tcalc-report.yml`** — runs on every PR. Uses the TCalc CLI to generate a workspace model report, repo map, and model recommendations, then uploads them as artifacts. Posts a short comment on trusted (non-fork) PRs only.
 - **`publish-open-vsx.yml`** — manual `workflow_dispatch` only. Defaults to `dry_run=true`; only publishes when a human explicitly clears the dry-run flag and the `OPEN_VSX_TOKEN` secret is set.
 
 Local equivalents:
@@ -111,7 +111,7 @@ Local equivalents:
 ```bash
 pnpm ci                 # full local CI pass
 pnpm ci:smoke           # CLI smoke tests
-pnpm ci:workspace-report  # generate WMA report on the current repo
+pnpm ci:workspace-report  # generate TCalc report on the current repo
 ```
 
 See [docs/ci-reporter.md](./docs/ci-reporter.md) and
@@ -121,12 +121,12 @@ See [docs/ci-reporter.md](./docs/ci-reporter.md) and
 
 > **Status: Experimental / MVP** — stdio transport only, no hosted mode.
 
-The `@wma/mcp-server` package exposes Workspace Model Advisor capabilities to
+The `@tcalc/mcp-server` package exposes TCalc capabilities to
 AI coding agents (Claude Code, Cursor, etc.) through the
 [Model Context Protocol](https://modelcontextprotocol.io/) over **stdio**.
 
 ```bash
-# Run via the WMA CLI
+# Run via the TCalc CLI
 wma mcp
 
 # Or run the standalone binary
@@ -156,7 +156,7 @@ example client configs, security limitations, and MVP limitations.
 
 ## Configuration
 
-Create `.workspace-model-advisor.json` at your repo root. See `instructions.md` for the full schema.
+Create `.tcalc.json` at your repo root. See `instructions.md` for the full schema.
 
 ## License
 

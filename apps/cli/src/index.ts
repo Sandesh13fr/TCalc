@@ -18,7 +18,7 @@ const program = new Command();
 
 program
   .name("wma")
-  .description("Workspace Model Advisor — local-first workspace analysis and AI agent optimization")
+  .description("TCalc — local-first workspace analysis and AI agent optimization")
   .version("0.1.0")
   .option("--debug", "Show stack traces on error");
 

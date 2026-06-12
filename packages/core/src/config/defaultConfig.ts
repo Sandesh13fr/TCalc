@@ -33,7 +33,7 @@ export interface ModelPreferencesConfig {
   allowCloudModels: boolean;
 }
 
-/** Full workspace-model-advisor config. */
+/** Full TCalc config. */
 export interface WmaConfig {
   defaultGoal: WorkspaceGoal;
   privacyMode: "local-first" | "cloud-ok";

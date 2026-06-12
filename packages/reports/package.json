@@ -2,7 +2,7 @@
   "name": "@wma/reports",
   "version": "0.1.0",
   "private": true,
-  "description": "Markdown and JSON report generation for Workspace Model Advisor.",
+  "description": "Markdown and JSON report generation for TCalc.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

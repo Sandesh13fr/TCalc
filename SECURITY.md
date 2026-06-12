@@ -12,11 +12,11 @@ We take security seriously. If you discover a vulnerability, please report it pr
 
 **Do not** open a public GitHub issue. Instead, email the project maintainer or open a security advisory at:
 
-https://github.com/workspace-model-advisor/wma/security/advisories/new
+https://github.com/Sandesh13fr/TCalc/security/advisories/new
 
 ## Local-First Guarantee
 
-Workspace Model Advisor is designed to be **local-first**. By default:
+TCalc is designed to be **local-first**. By default:
 
 - No code leaves your machine
 - No telemetry or analytics are collected

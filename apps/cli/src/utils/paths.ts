@@ -7,11 +7,11 @@ export function resolveTargetPath(target?: string): string {
 export function findCatalogInWorkspace(rootPath: string): string[] {
   const candidates = [
     path.join(rootPath, "catalogs", "models.json"),
-    path.join(rootPath, ".workspace-model-advisor", "models.json"),
+    path.join(rootPath, ".tcalc", "models.json"),
   ];
   return candidates;
 }
 
 export function findWorkspaceConfigPath(rootPath: string): string {
-  return path.join(rootPath, ".workspace-model-advisor.json");
+  return path.join(rootPath, ".tcalc.json");
 }

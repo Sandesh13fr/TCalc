@@ -22,7 +22,7 @@ code --install-extension path/to/wma.vsix
 ## Verify
 
 1. Open any workspace
-2. Run the command **Workspace Model Advisor: Scan Workspace** from the Command Palette (`Ctrl+Shift+P`)
+2. Run the command **TCalc: Scan Workspace** from the Command Palette (`Ctrl+Shift+P`)
 3. The dashboard should open with scan results
 
 ## Uninstall

@@ -1,3 +1,3 @@
 # Instructions
 
-This is a test fixture README file for the Workspace Model Advisor project.
+This is a test fixture README file for the TCalc project.

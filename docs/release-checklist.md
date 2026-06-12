@@ -64,7 +64,7 @@ without write access, or GitHub Actions outages).
    ```
 2. Confirm `dist-vsix/*.vsix` exists.
 3. Create a GitHub Release for the tag manually:
-   - Open `https://github.com/workspace-model-advisor/wma/releases/new`
+   - Open `https://github.com/Sandesh13fr/TCalc/releases/new`
    - Choose the tag (e.g. `v0.x.x`)
    - Leave it as a **draft** until reviewed
    - Attach the VSIX file
@@ -108,10 +108,10 @@ a manual `workflow_dispatch` trigger and defaults to `dry_run=true`.
 
 - An Open VSX account at <https://open-vsx.org/>.
 - A publisher namespace **already created** on open-vsx.org and matching
-  the `publisher` field in `apps/vscode-extension/package.json`
-  (`workspace-model-advisor`). Create it once per account via the web UI
-  (<https://open-vsx.org/user-settings/namespaces>) or via
-  `npx -y ovsx create-namespace workspace-model-advisor --pat <token>`.
+   the `publisher` field in `apps/vscode-extension/package.json`
+   (`Sandesh13fr`). Create it once per account via the web UI
+   (<https://open-vsx.org/user-settings/namespaces>) or via
+   `npx -y ovsx create-namespace Sandesh13fr --pat <token>`.
   The namespace is permanent; pick carefully.
 - A personal access token from
   <https://open-vsx.org/user-settings/tokens> with the
@@ -166,7 +166,7 @@ echoed; only its length is reported.
 
 After the workflow finishes:
 
-1. Open <https://open-vsx.org/namespace/workspace-model-advisor>.
+1. Open <https://open-vsx.org/namespace/Sandesh13fr>.
 2. Confirm the new version is listed.
 3. Open the extension page and verify the README, categories, and metadata
    render correctly.
@@ -176,10 +176,10 @@ After the workflow finishes:
 1. Download the matching VSIX from the workflow artifact.
 2. In VSCodium (or any editor that uses Open VSX):
    ```bash
-   vscodium --install-extension workspace-model-advisor-<version>.vsix
+   vscodium --install-extension tcalc-<version>.vsix
    ```
 3. Reload the window when prompted.
-4. Run `Workspace Model Advisor: Scan Workspace` on a test folder.
+4. Run `TCalc: Scan Workspace` on a test folder.
 5. Confirm the dashboard, recommendations, and repo map all render.
 
 ### Rollback

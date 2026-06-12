@@ -2,13 +2,13 @@
 
 > **Status: Experimental / MVP**
 >
-> The MCP server is a local-first bridge that exposes Workspace Model Advisor
+> The MCP server is a local-first bridge that exposes TCalc
 > capabilities to AI coding agents through the [Model Context Protocol](https://modelcontextprotocol.io/).
 > It uses **stdio transport only** in the MVP and does not make any network calls.
 
 ## What it does
 
-The MCP server turns Workspace Model Advisor into a set of tools, resources,
+The MCP server turns TCalc into a set of tools, resources,
 and prompts that any MCP-compatible coding agent (Claude Code, Cursor, etc.)
 can call directly. All processing happens locally — no code leaves your machine.
 
@@ -23,7 +23,7 @@ Key capabilities exposed via MCP:
 
 ## How to run
 
-### Option 1: via the WMA CLI
+### Option 1: via the TCalc CLI
 
 ```bash
 # After building the monorepo
@@ -35,7 +35,7 @@ wma mcp
 
 ```bash
 # After building the mcp-server package
-pnpm --filter @wma/mcp-server build
+pnpm --filter @tcalc/mcp-server build
 wma-mcp
 ```
 
@@ -58,7 +58,7 @@ Add this to your MCP-compatible client configuration (e.g. Claude Desktop
 }
 ```
 
-Or, if you prefer to run it through the WMA CLI:
+Or, if you prefer to run it through the TCalc CLI:
 
 ```json
 {
@@ -131,7 +131,7 @@ Or, if you prefer to run it through the WMA CLI:
 Tests are located in `packages/mcp-server/tests/` and can be run with:
 
 ```bash
-pnpm --filter @wma/mcp-server test
+pnpm --filter @tcalc/mcp-server test
 ```
 
 Tests cover tool handlers, security (no shell execution, no network calls,
