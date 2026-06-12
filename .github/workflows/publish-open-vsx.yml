@@ -88,8 +88,8 @@ jobs:
     needs: build-test-package
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    # Only runs when the human explicitly set dry_run to false.
-    if: ${{ inputs.dry_run == false }}
+    # FIX: inputs.dry_run is a string even with type:boolean — compare to string "false"
+    if: ${{ inputs.dry_run == 'false' }}
     steps:
       - name: Verify OPEN_VSX_TOKEN is set
         env:
@@ -147,8 +147,9 @@ jobs:
     needs: build-test-package
     runs-on: ubuntu-latest
     timeout-minutes: 2
-    # Only runs when the human kept dry_run enabled (the default).
-    if: ${{ inputs.dry_run == true }}
+    # FIX: inputs.dry_run is a string — compare to string "true"
+    # FIX: always() ensures this runs even if publish-open-vsx is skipped
+    if: ${{ always() && inputs.dry_run == 'true' }}
     steps:
       - name: Dry run notice
         run: |
