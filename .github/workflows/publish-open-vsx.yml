@@ -91,6 +91,14 @@ jobs:
     # FIX: inputs.dry_run is a string even with type:boolean — compare to string "false"
     if: ${{ inputs.dry_run == 'false' }}
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
       - name: Verify OPEN_VSX_TOKEN is set
         env:
           OPEN_VSX_TOKEN: ${{ secrets.OPEN_VSX_TOKEN }}
