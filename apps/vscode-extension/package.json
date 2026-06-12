@@ -1,12 +1,12 @@
 {
   "name": "workspace-model-advisor",
-  "displayName": "Workspace Model Advisor",
+  "displayName": "TCalc",
   "version": "0.1.0",
   "private": true,
   "description": "Local-first workspace token calculator, model recommender, and coding-agent optimizer.",
-  "publisher": "workspace-model-advisor",
+  "publisher": "Sandesh13fr",
   "author": {
-    "name": "Workspace Model Advisor"
+    "name": "TCalc"
   },
   "license": "MIT",
   "type": "module",
@@ -64,43 +64,43 @@
     "commands": [
       {
         "command": "workspaceModelAdvisor.scanWorkspace",
-        "title": "Workspace Model Advisor: Scan Workspace"
+        "title": "TCalc: Scan Workspace"
       },
       {
         "command": "workspaceModelAdvisor.openDashboard",
-        "title": "Workspace Model Advisor: Open Dashboard"
+        "title": "TCalc: Open Dashboard"
       },
       {
         "command": "workspaceModelAdvisor.exportReport",
-        "title": "Workspace Model Advisor: Export Report"
+        "title": "TCalc: Export Report"
       },
       {
         "command": "workspaceModelAdvisor.setWorkspaceGoal",
-        "title": "Workspace Model Advisor: Set Workspace Goal"
+        "title": "TCalc: Set Workspace Goal"
       },
       {
         "command": "workspaceModelAdvisor.compareModels",
-        "title": "Workspace Model Advisor: Compare Models"
+        "title": "TCalc: Compare Models"
       },
       {
         "command": "workspaceModelAdvisor.generateAgentRules",
-        "title": "Workspace Model Advisor: Generate Agent Rules"
+        "title": "TCalc: Generate Agent Rules"
       },
       {
         "command": "workspaceModelAdvisor.updateModelCatalog",
-        "title": "Workspace Model Advisor: Update Model Catalog"
+        "title": "TCalc: Update Model Catalog"
       },
       {
         "command": "workspaceModelAdvisor.openSettings",
-        "title": "Workspace Model Advisor: Open Settings"
+        "title": "TCalc: Open Settings"
       },
       {
         "command": "workspaceModelAdvisor.generateRepoMap",
-        "title": "Workspace Model Advisor: Generate Repo Map"
+        "title": "TCalc: Generate Repo Map"
       }
     ],
     "configuration": {
-      "title": "Workspace Model Advisor",
+      "title": "TCalc",
       "properties": {
         "wma.defaultGoal": {
           "type": "string",

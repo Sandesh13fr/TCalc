@@ -20,7 +20,7 @@ export function createDashboardPanel(
 ): vscode.WebviewPanel {
   const panel = vscode.window.createWebviewPanel(
     "wmaDashboard",
-    "Workspace Model Advisor",
+    "TCalc",
     vscode.ViewColumn.One,
     { enableScripts: true, localResourceRoots: [] },
   );
@@ -89,7 +89,7 @@ function getHtml(
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Workspace Model Advisor</title>
+  <title>TCalc</title>
   <style>
     :root {
       --bg: var(--vscode-editor-background, #1e1e1e);
@@ -162,7 +162,7 @@ function getHtml(
   </style>
 </head>
 <body>
-  <h1>Workspace Model Advisor</h1>
+  <h1>TCalc</h1>
 
   <h2>Summary</h2>
   <div class="cards">

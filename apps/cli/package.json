@@ -2,7 +2,7 @@
   "name": "@wma/cli",
   "version": "0.1.0",
   "private": true,
-  "description": "Command-line interface for Workspace Model Advisor.",
+  "description": "Command-line interface for TCalc.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
