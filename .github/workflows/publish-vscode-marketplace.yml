@@ -1,0 +1,170 @@
+name: Publish to VS Code Marketplace
+
+run-name: >-
+  VS Code Marketplace ${{ fromJSON(inputs.dry_run) && 'dry run' || 'publish' }}
+  ${{ inputs.version != '' && format('({0})', inputs.version) || '' }}
+
+# Manual trigger only. Never auto-publishes.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Extension version/tag to publish (informational; package.json version is authoritative)"
+        required: false
+        default: ""
+        type: string
+      dry_run:
+        description: "Package and validate only; do not publish to the Marketplace"
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-vscode-marketplace-${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  build-test-package:
+    name: Build, test, package
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup pnpm with Corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.5.2 --activate
+          pnpm --version
+
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: echo "dir=$(pnpm store path --silent)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.dir }}
+          key: pnpm-store-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-store-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check extension metadata
+        run: pnpm check:extension-metadata
+
+      - name: Build all packages
+        run: pnpm build
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Package VSIX
+        run: pnpm package:vscode
+
+      - name: Inspect VSIX
+        run: pnpm package:vscode:inspect
+
+      - name: Log workflow inputs
+        shell: bash
+        run: |
+          echo "inputs.version: ${{ inputs.version }}"
+          echo "inputs.dry_run: ${{ inputs.dry_run }}"
+
+      - name: Upload VSIX artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: marketplace-vsix
+          path: dist-vsix/*.vsix
+          if-no-files-found: error
+          retention-days: 30
+
+  publish-vscode-marketplace:
+    name: Publish to VS Code Marketplace
+    needs: build-test-package
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # fromJSON converts the string "true"/"false" to a boolean
+    if: ${{ !fromJSON(inputs.dry_run) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Verify VSCE_TOKEN is configured
+        env:
+          VSCE_TOKEN: ${{ secrets.VSCE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${VSCE_TOKEN:-}" ]; then
+            echo "::error::VSCE_TOKEN secret is not configured for this repository."
+            echo "::error::Add it at: Settings -> Secrets and variables -> Actions -> New repository secret"
+            echo "::error::Name: VSCE_TOKEN"
+            echo "::error::Value: your Azure DevOps PAT with Marketplace (Publish) scope"
+            exit 1
+          fi
+          if [ "${#VSCE_TOKEN}" -lt 16 ]; then
+            echo "::error::VSCE_TOKEN looks too short. Refusing to publish."
+            exit 1
+          fi
+          echo "VSCE_TOKEN is present."
+
+      - name: Download VSIX artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: marketplace-vsix
+          path: dist-vsix
+
+      - name: List downloaded VSIX
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -la dist-vsix
+          VSIX_COUNT=$(find dist-vsix -maxdepth 1 -name "*.vsix" | wc -l | tr -d " ")
+          if [ "$VSIX_COUNT" != "1" ]; then
+            echo "::error::Expected exactly one VSIX file, found $VSIX_COUNT."
+            exit 1
+          fi
+
+      - name: Publish to VS Code Marketplace
+        env:
+          VSCE_TOKEN: ${{ secrets.VSCE_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VSIX_FILE=$(find dist-vsix -maxdepth 1 -name "*.vsix" | head -n 1)
+          echo "Publishing VSIX: $VSIX_FILE"
+          npx -y @vscode/vsce publish --packagePath "$VSIX_FILE" --pat "$VSCE_TOKEN"
+
+  publish-dry-run-summary:
+    name: Dry-run summary
+    needs: build-test-package
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    # fromJSON converts the string "true"/"false" to a boolean
+    if: ${{ always() && fromJSON(inputs.dry_run) }}
+    steps:
+      - name: Dry run notice
+        shell: bash
+        run: |
+          echo "dry_run=true; no publish performed."
+          echo "The extension was built, tested, packaged, inspected, and uploaded as an artifact."
+          echo "To publish for real, re-run this workflow with dry_run=false."
+          echo "Required repository secret: VSCE_TOKEN"

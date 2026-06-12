@@ -1,9 +1,9 @@
 # Release Checklist
 
 This checklist combines a manual release path with the automated GitHub
-Actions workflow. The release is intentionally conservative: we only attach
-the VSIX to a GitHub Release. We do **not** publish to the VS Code
-Marketplace or Open VSX.
+Actions workflow. The release attaches the VSIX to a GitHub Release and can
+optionally be published to Open VSX or the VS Code Marketplace via separate
+manual workflows.
 
 ## Pre-release
 
@@ -73,16 +73,8 @@ without write access, or GitHub Actions outages).
 ## Post-release
 
 - [ ] Install the VSIX locally and run a manual smoke test
-- [ ] (Future) Publish to VS Code Marketplace:
-  ```bash
-  cd apps/vscode-extension
-  vsce publish
-  ```
-- [ ] (Future) Publish to Open VSX Registry:
-  ```bash
-  cd apps/vscode-extension
-  ovsx publish
-  ```
+- [ ] Publish to Open VSX (see Open VSX section below)
+- [ ] Publish to VS Code Marketplace (see Marketplace section below)
 
 ## Notes on what is automated vs manual
 
@@ -91,18 +83,18 @@ without write access, or GitHub Actions outages).
 | Build, test, package | Yes (`release.yml`) | Reproducible, cached, runs on clean runner |
 | VSIX inspection | Yes (`release.yml`) | Required to catch packaging regressions |
 | Draft GitHub Release | Yes (`release.yml`) | Drafts are safe; humans still publish |
-| VS Code Marketplace | **No** | Out of scope for v0.x |
+| VS Code Marketplace | **Manual workflow_dispatch** | See Marketplace section below |
 | Open VSX | **Manual workflow_dispatch** | See Open VSX section below |
 | Tag push | Manual | Versioning is a human decision |
 | Draft → Published | Manual | Final review happens on GitHub |
 
-The automation never publishes to a public registry. If a release needs to be
+The automation never publishes to a public registry automatically. If a release needs to be
 undone, delete the GitHub Release and re-tag.
 
 ## Open VSX
 
-Publishing to Open VSX is **prepared but not automatic**. It is gated behind
-a manual `workflow_dispatch` trigger and defaults to `dry_run=true`.
+Publishing to Open VSX is **available** via a manual `workflow_dispatch` trigger
+and defaults to `dry_run=true`.
 
 ### Prerequisites
 
@@ -196,3 +188,82 @@ and update the GitHub secret.
 
 See [docs/open-vsx-publishing.md](./open-vsx-publishing.md) for the full
 guide.
+
+## VS Code Marketplace
+
+Publishing to the VS Code Marketplace is **prepared but not automatic**. It is
+gated behind a manual `workflow_dispatch` trigger and defaults to `dry_run=true`.
+
+### Prerequisites
+
+- A Visual Studio Marketplace publisher account at
+  <https://marketplace.visualstudio.com/manage>.
+- A publisher name matching the `publisher` field in
+  `apps/vscode-extension/package.json` (`Sandesh13fr`).
+- An Azure DevOps PAT with the **Marketplace (Publish)** scope from
+  <https://dev.azure.com/{your-org}/_usersettings/tokens>.
+- A GitHub repository secret named `VSCE_TOKEN` containing that PAT.
+  *Settings → Secrets and variables → Actions → New repository secret.*
+
+### Preflight
+
+```bash
+pnpm check:extension-metadata
+node scripts/check-no-telemetry.mjs
+```
+
+Both must pass before publishing.
+
+### Dry run (recommended first step)
+
+1. Open the **Actions** tab on GitHub.
+2. Select **Publish to VS Code Marketplace** in the left sidebar.
+3. Click **Run workflow**.
+4. Leave **dry_run** checked.
+5. Click **Run workflow**.
+
+This builds, tests, packages, and uploads the VSIX as a workflow artifact
+(`marketplace-vsix`). Nothing is pushed to the Marketplace.
+
+### Manual approval
+
+Before publishing for real, confirm:
+
+- The token in `VSCE_TOKEN` is still valid (regenerate if you have any doubt).
+- The `version` field in `apps/vscode-extension/package.json` matches the
+  release tag.
+- The CHANGELOG entry exists for the version being published.
+- The publisher name on the Marketplace is owned by the token issuer.
+
+### Publish
+
+1. Open the **Actions** tab.
+2. Select **Publish to VS Code Marketplace**.
+3. Click **Run workflow**.
+4. Uncheck **dry_run**.
+5. Click **Run workflow**.
+
+### Verify the page
+
+After the workflow finishes:
+
+1. Open <https://marketplace.visualstudio.com/items?itemName=Sandesh13fr.tcalc>.
+2. Confirm the version and metadata render correctly.
+
+### Smoke install
+
+1. Open VS Code.
+2. Search for `TCalc` in the Extensions view.
+3. Install it and run `TCalc: Scan Workspace` on a test folder.
+
+### Rollback
+
+1. Go to <https://marketplace.visualstudio.com/manage>.
+2. Sign in with the publisher account.
+3. Find the extension and unpublish the bad version.
+
+If the token is leaked, **revoke it immediately** in your Azure DevOps
+settings, then issue a new token and update the GitHub secret.
+
+See [docs/vscode-marketplace-publishing.md](./vscode-marketplace-publishing.md)
+for the full guide.

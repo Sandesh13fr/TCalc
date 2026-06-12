@@ -3,6 +3,7 @@
 [![CI](https://github.com/Sandesh13fr/TCalc/actions/workflows/ci.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/ci.yml)
 [![Release](https://github.com/Sandesh13fr/TCalc/actions/workflows/release.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/release.yml)
 [![TCalc Report](https://github.com/Sandesh13fr/TCalc/actions/workflows/tcalc-report.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/tcalc-report.yml)
+[![Open VSX](https://img.shields.io/badge/Open%20VSX-Sandesh13fr.tcalc-9146ff)](https://open-vsx.org/extension/Sandesh13fr/tcalc)
 
 Local-first workspace token calculator, model recommender, and coding-agent optimizer.
 
@@ -38,7 +39,7 @@ pnpm scan:fixtures
 
 ### Open VSX
 
-TCalc is published on Open VSX for VS Code-compatible editors.
+TCalc is published on [Open VSX](https://open-vsx.org/extension/Sandesh13fr/tcalc) for VS Code-compatible editors.
 
 Install it from the Open VSX Registry, or search for **TCalc** inside an Open VSX-compatible editor such as VSCodium.
 
@@ -51,6 +52,11 @@ To publish a new version:
 
 See [docs/open-vsx-publishing.md](./docs/open-vsx-publishing.md) for the
 full guide.
+
+### VS Code Marketplace
+
+> **Status:** Prepared, not yet published. See
+> [docs/vscode-marketplace-publishing.md](./docs/vscode-marketplace-publishing.md).
 
 ### VSIX
 

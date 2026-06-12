@@ -4,9 +4,10 @@ This document explains how to publish the TCalc VS Code
 extension to **Eclipse Open VSX** (open-vsx.org), the open-source registry used
 by editors like VSCodium, Gitpod, Eclipse Theia, Code-OSS, and others.
 
-> **Status (v0.1.0):** Publishing is **prepared but not yet performed**. The
-> workflow is conservative: it ships in `dry_run=true` mode by default, only
-> runs on `workflow_dispatch`, and never auto-publishes on tag push.
+> **Status (v0.1.0):** Published. The extension is available on
+> [open-vsx.org](https://open-vsx.org/extension/Sandesh13fr/tcalc).
+> Publishing is gated behind a manual `workflow_dispatch` workflow that
+> defaults to `dry_run=true` and never auto-publishes on tag push.
 
 ## Why Open VSX and not the VS Code Marketplace
 
