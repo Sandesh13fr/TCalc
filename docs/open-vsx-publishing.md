@@ -279,6 +279,20 @@ Open VSX has a few constraints to be aware of:
 - [ ] Dry run completed cleanly via
       `Actions → Publish to Open VSX → Run workflow (dry_run=true)`
 
+## GitHub Release VSIX
+
+The same VSIX that is published to Open VSX is also attached to every
+[GitHub Release](https://github.com/Sandesh13fr/TCalc/releases) as a
+downloadable asset. This means you can always install the extension from
+the GitHub release even if you do not use an Open VSX-compatible editor:
+
+```bash
+code --install-extension tcalc-0.1.0.vsix
+```
+
+The GitHub release VSIX is identical to the one published on Open VSX.
+Both are produced by the same `pnpm package:vscode` step.
+
 ## What this guide does **not** cover
 
 - Publishing to the **VS Code Marketplace** (out of scope for v0.1.x).

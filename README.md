@@ -4,6 +4,7 @@
 [![Release](https://github.com/Sandesh13fr/TCalc/actions/workflows/release.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/release.yml)
 [![TCalc Report](https://github.com/Sandesh13fr/TCalc/actions/workflows/tcalc-report.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/tcalc-report.yml)
 [![Open VSX](https://img.shields.io/badge/Open%20VSX-Sandesh13fr.tcalc-9146ff)](https://open-vsx.org/extension/Sandesh13fr/tcalc)
+[![VS Code Marketplace](https://img.shields.io/badge/Marketplace-Sandesh13fr.tcalc-0078d7)](https://marketplace.visualstudio.com/items?itemName=Sandesh13fr.tcalc)
 
 Local-first workspace token calculator, model recommender, and coding-agent optimizer.
 
@@ -55,8 +56,9 @@ full guide.
 
 ### VS Code Marketplace
 
-> **Status:** Prepared, not yet published. See
-> [docs/vscode-marketplace-publishing.md](./docs/vscode-marketplace-publishing.md).
+> **Status:** Published. Available at
+> [marketplace.visualstudio.com/items?itemName=Sandesh13fr.tcalc](https://marketplace.visualstudio.com/items?itemName=Sandesh13fr.tcalc).
+> See [docs/vscode-marketplace-publishing.md](./docs/vscode-marketplace-publishing.md).
 
 ### VSIX
 
@@ -111,6 +113,7 @@ GitHub Actions workflows live in `.github/workflows/`:
 - **`release.yml`** — runs on `v*.*.*` tag pushes. Builds, tests, packages the VSIX, and attaches it to a **draft** GitHub Release. Never publishes to the Marketplace or Open VSX.
 - **`tcalc-report.yml`** — runs on every PR. Uses the TCalc CLI to generate a workspace model report, repo map, and model recommendations, then uploads them as artifacts. Posts a short comment on trusted (non-fork) PRs only.
 - **`publish-open-vsx.yml`** — manual `workflow_dispatch` only. Defaults to `dry_run=true`; only publishes when a human explicitly clears the dry-run flag and the `OPEN_VSX_TOKEN` secret is set.
+- **`publish-vscode-marketplace.yml`** — manual `workflow_dispatch` only. Defaults to `dry_run=true`; only publishes when a human explicitly clears the dry-run flag and the `VSCE_TOKEN` secret is set.
 
 Local equivalents:
 

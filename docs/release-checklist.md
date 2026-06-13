@@ -191,8 +191,9 @@ guide.
 
 ## VS Code Marketplace
 
-Publishing to the VS Code Marketplace is **prepared but not automatic**. It is
-gated behind a manual `workflow_dispatch` trigger and defaults to `dry_run=true`.
+Publishing to the VS Code Marketplace is **published** (v0.1.0).
+Available at [marketplace.visualstudio.com/items?itemName=Sandesh13fr.tcalc](https://marketplace.visualstudio.com/items?itemName=Sandesh13fr.tcalc).
+Publishing new versions is gated behind a manual `workflow_dispatch` trigger and defaults to `dry_run=true`.
 
 ### Prerequisites
 

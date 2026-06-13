@@ -3,9 +3,10 @@
 This document explains how to publish the TCalc VS Code extension to the
 official **Visual Studio Marketplace**.
 
-> **Status (v0.1.0):** Prepared but not yet published. Publishing is gated
-> behind a manual `workflow_dispatch` workflow (`publish-vscode-marketplace.yml`)
-> that defaults to `dry_run=true`.
+> **Status (v0.1.0):** Published. Available at
+> [marketplace.visualstudio.com/items?itemName=Sandesh13fr.tcalc](https://marketplace.visualstudio.com/items?itemName=Sandesh13fr.tcalc).
+> Publishing is gated behind a manual `workflow_dispatch` workflow
+> (`publish-vscode-marketplace.yml`) that defaults to `dry_run=true`.
 
 ## Prerequisites
 
