@@ -1,12 +1,33 @@
 # TCalc
 
-[![CI](https://github.com/Sandesh13fr/TCalc/actions/workflows/ci.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/ci.yml)
-[![Release](https://github.com/Sandesh13fr/TCalc/actions/workflows/release.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/release.yml)
-[![TCalc Report](https://github.com/Sandesh13fr/TCalc/actions/workflows/tcalc-report.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/tcalc-report.yml)
-[![Open VSX](https://img.shields.io/badge/Open%20VSX-Sandesh13fr.tcalc-9146ff)](https://open-vsx.org/extension/Sandesh13fr/tcalc)
 [![VS Code Marketplace](https://img.shields.io/badge/Marketplace-Sandesh13fr.tcalc-0078d7)](https://marketplace.visualstudio.com/items?itemName=Sandesh13fr.tcalc)
+[![Open VSX](https://img.shields.io/badge/Open%20VSX-Sandesh13fr.tcalc-9146ff)](https://open-vsx.org/extension/Sandesh13fr/tcalc)
+[![GitHub Release](https://img.shields.io/github/v/release/Sandesh13fr/TCalc?logo=github)](https://github.com/Sandesh13fr/TCalc/releases)
+[![CI](https://github.com/Sandesh13fr/TCalc/actions/workflows/ci.yml/badge.svg)](https://github.com/Sandesh13fr/TCalc/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Local-first workspace token calculator, model recommender, and coding-agent optimizer.
+**Local-first workspace token calculator, model recommender, and coding-agent optimizer.**
+
+Estimate token usage, compare AI models, generate repo maps and agent rules — all on your machine, with no telemetry and no cloud calls.
+
+> **Local-first &bull; No telemetry &bull; No cloud calls &bull; No source upload**
+
+### Install
+
+| Source | Command / Link |
+|--------|----------------|
+| [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=Sandesh13fr.tcalc) | Search for **TCalc** in VS Code extensions view |
+| [Open VSX](https://open-vsx.org/extension/Sandesh13fr/tcalc) | For VSCodium and Open VSX-compatible editors |
+| [GitHub Release](https://github.com/Sandesh13fr/TCalc/releases) | `code --install-extension tcalc-*.vsix` |
+| Build from source | `pnpm build && pnpm package:vscode` |
+
+## Quick Preview
+
+_Add screenshots here. See [docs/assets/screenshots/README.md](./docs/assets/screenshots/README.md) for capture instructions._
+
+| Dashboard | Model Comparison | Repo Map |
+|-----------|-----------------|----------|
+| _Placeholder_ | _Placeholder_ | _Placeholder_ |
 
 ## What It Does
 
@@ -36,43 +57,17 @@ pnpm test
 pnpm scan:fixtures
 ```
 
-## Install
+## Install in VS Code
 
-### Open VSX
+Open the Extensions view (`Ctrl+Shift+X`) and search for **TCalc**.
 
-TCalc is published on [Open VSX](https://open-vsx.org/extension/Sandesh13fr/tcalc) for VS Code-compatible editors.
-
-Install it from the Open VSX Registry, or search for **TCalc** inside an Open VSX-compatible editor such as VSCodium.
-
-To publish a new version:
-
-1. Add an `OPEN_VSX_TOKEN` secret in the repository
-   *Settings → Secrets and variables → Actions*.
-2. Open **Actions → Publish to Open VSX → Run workflow**.
-3. Uncheck **dry_run** to publish for real.
-
-See [docs/open-vsx-publishing.md](./docs/open-vsx-publishing.md) for the
-full guide.
-
-### VS Code Marketplace
-
-> **Status:** Published. Available at
-> [marketplace.visualstudio.com/items?itemName=Sandesh13fr.tcalc](https://marketplace.visualstudio.com/items?itemName=Sandesh13fr.tcalc).
-> See [docs/vscode-marketplace-publishing.md](./docs/vscode-marketplace-publishing.md).
-
-### VSIX
-
-Build and install locally:
+Alternatively, install from the command line:
 
 ```bash
-pnpm build
-pnpm package:vscode              # produces dist-vsix/*.vsix
-pnpm package:vscode:inspect      # verify VSIX contents
-```
+# From VS Code Marketplace
+code --install-extension Sandesh13fr.tcalc
 
-You can also install the extension manually from the GitHub release asset:
-
-```bash
+# From a GitHub release VSIX
 code --install-extension tcalc-0.1.0.vsix
 ```
 

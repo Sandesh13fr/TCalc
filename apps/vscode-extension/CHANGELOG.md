@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.1.1] - 2026-06-13
+
+### Added
+- Extension icon for Marketplace and Open VSX listings
+- First-run onboarding welcome message (shown once, non-intrusive)
+- Quick Start command with step-by-step guide
+- Screenshot placeholders and documentation for capturing them
+- Marketplace-optimized README with trust banner and install links
+
+### Changed
+- Improved README top section with hero title, badges, and install table
+- Updated extension README for Marketplace presentation
+
+### Security
+- No telemetry, no cloud calls, no source upload (unchanged from 0.1.0)
+
 ## [0.1.0] - 2026-06-11
 
 ### Added

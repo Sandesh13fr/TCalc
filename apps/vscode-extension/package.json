@@ -13,6 +13,7 @@
   "engines": {
     "vscode": "^1.85.0"
   },
+  "icon": "media/icon.png",
   "categories": [
     "Programming Languages",
     "Other",
@@ -51,7 +52,9 @@
     "onCommand:workspaceModelAdvisor.generateAgentRules",
     "onCommand:workspaceModelAdvisor.updateModelCatalog",
     "onCommand:workspaceModelAdvisor.openSettings",
-    "onCommand:workspaceModelAdvisor.generateRepoMap"
+    "onCommand:workspaceModelAdvisor.generateRepoMap",
+    "onCommand:workspaceModelAdvisor.showWelcome",
+    "onCommand:workspaceModelAdvisor.quickStart"
   ],
   "main": "dist/extension.js",
   "capabilities": {
@@ -97,6 +100,14 @@
       {
         "command": "workspaceModelAdvisor.generateRepoMap",
         "title": "TCalc: Generate Repo Map"
+      },
+      {
+        "command": "workspaceModelAdvisor.showWelcome",
+        "title": "TCalc: Show Welcome"
+      },
+      {
+        "command": "workspaceModelAdvisor.quickStart",
+        "title": "TCalc: Quick Start"
       }
     ],
     "configuration": {

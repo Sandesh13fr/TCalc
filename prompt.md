@@ -1,211 +1,239 @@
+You are a senior TypeScript monorepo engineer, VS Code extension maintainer, marketplace listing designer, and open-source product polish engineer.
 
-## Next milestone: VS Code Marketplace
-
-The official VS Code docs support both packaging extensions as VSIX files and publishing them to the Visual Studio Marketplace using `vsce`, so the next logical distribution step is Marketplace publishing. :contentReference[oaicite:1]{index=1}
-
-Use this next:
-
-:::writing{variant="standard" id="61492"}
-You are a senior TypeScript monorepo engineer, VS Code Marketplace release engineer, and open-source distribution maintainer.
-
-Project: Workspace Model Advisor  
+Project: Workspace Model Advisor
 Repo root: TCalc
 
 Current state:
-- GitHub v0.1.0 release is done.
-- VSIX is attached to GitHub release.
-- Open VSX publishing is done.
-- VS Code extension works.
-- CLI works.
-- MCP server works.
-- GitHub Actions CI works.
-- Release automation works.
-- No telemetry.
-- No cloud calls.
+
+* Extension is published on VS Code Marketplace.
+* Extension is published on Open VSX.
+* GitHub release + VSIX exist.
+* CLI works.
+* MCP server works.
+* CI/release workflows work.
+* No telemetry.
+* No cloud calls.
+* Local-first product.
 
 Your task:
-Implement Phase 10: VS Code Marketplace publishing preparation.
+Implement Phase 11: v0.1.1 marketplace polish and first-run experience.
 
-Main goal:
-Prepare the project to publish Workspace Model Advisor to the official Visual Studio Marketplace safely, using manual workflow dispatch only.
+Main goals:
 
-Do not implement:
-- automatic publishing on every tag
-- telemetry
-- cloud calls from app code
-- hosted services
-- paid features
+1. Add a polished extension icon.
+2. Improve README and Marketplace/Open VSX presentation.
+3. Add screenshots/GIF placeholders or docs-ready image slots.
+4. Add first-run onboarding inside the extension.
+5. Prepare v0.1.1 release notes.
+
+Do not add:
+
+* telemetry
+* cloud calls
+* paid features
+* hosted services
+* account/login flows
+* marketplace auto-publish changes
 
 Tasks:
 
-1. Update docs after Open VSX publish
+1. Add extension icon
+
+Use the generated modern clean logo as the base.
+
+Create:
+
+* apps/vscode-extension/media/icon.png
+
+Requirements:
+
+* 128×128 PNG
+* readable at small size
+* no text inside the icon
+* clean contrast on light and dark marketplace UIs
 
 Update:
-- README.md
-- docs/open-vsx-publishing.md
-- docs/release-checklist.md
 
-Change status from:
-- “prepared, not yet published”
-
-To:
-- “published on Open VSX”
+* apps/vscode-extension/package.json
 
 Add:
-- Open VSX extension link placeholder if exact URL is not known
-- install instructions
-- verification checklist
-- note that GitHub release VSIX remains available
 
-Do not claim Visual Studio Marketplace availability yet.
+* "icon": "media/icon.png"
 
-2. Create Marketplace publishing docs
+Update metadata validator:
 
-Create:
-- docs/vscode-marketplace-publishing.md
+* scripts/check-extension-metadata.mjs should verify icon exists if declared.
 
-Include:
-- prerequisites
-- Visual Studio Marketplace publisher account
-- Azure DevOps Personal Access Token requirement
-- GitHub secret name: VSCE_TOKEN
-- local dry run
-- local publish
-- GitHub Actions manual publish
-- rollback/unpublish notes
-- verification checklist
-- limitations
-- security notes
-
-3. Add Marketplace workflow
+2. Add screenshots and demo assets
 
 Create:
-- .github/workflows/publish-vscode-marketplace.yml
 
-Trigger:
-- workflow_dispatch only
+* docs/assets/screenshots/
+* docs/assets/screenshots/dashboard.png
+* docs/assets/screenshots/model-comparison.png
+* docs/assets/screenshots/repo-map.png
+* docs/assets/screenshots/agent-rules.png
+* docs/assets/screenshots/mcp.png
 
-Inputs:
-- version:
-  - required: false
-  - type: string
-- dry_run:
-  - required: true
-  - default: true
-  - type: boolean
-
-Permissions:
-- contents: read
-
-Jobs:
-- build-test-package:
-  - checkout
-  - setup node
-  - setup pnpm 11.5.2
-  - pnpm install --frozen-lockfile
-  - pnpm check:extension-metadata
-  - pnpm build
-  - pnpm test
-  - pnpm package:vscode
-  - pnpm package:vscode:inspect
-  - upload VSIX artifact
-
-- publish-vscode-marketplace:
-  - needs build-test-package
-  - runs only when inputs.dry_run == false
-  - requires VSCE_TOKEN
-  - downloads VSIX artifact
-  - publishes using vsce
-  - never echoes token
-  - clear error if token is missing or suspiciously short
-
-- dry-run-summary:
-  - runs when inputs.dry_run == true
-  - confirms nothing was published
-
-4. Add scripts
-
-Add root scripts:
-- publish:vscode:dry-run
-- publish:vscode:local
-
-Local dry run should:
-- run metadata check
-- build
-- test
-- package VSIX
-- inspect VSIX
-
-Local publish should:
-- require VSCE_TOKEN env var
-- refuse if missing or suspiciously short
-- publish the VSIX with vsce
-
-5. Add local helper script
-
-Create:
-- scripts/publish-vscode-marketplace.mjs
-
-Behavior:
-- supports dry run and publish mode
-- does not hardcode token
-- reads VSCE_TOKEN from environment for publish mode
-- runs:
-  - pnpm check:extension-metadata
-  - pnpm build
-  - pnpm test
-  - pnpm package:vscode
-  - pnpm package:vscode:inspect
-- publishes only if not dry-run
-
-6. Update release checklist
+If actual screenshots are not available yet, add clear placeholders and document how to replace them.
 
 Update:
-- docs/release-checklist.md
 
-Add Marketplace section:
-- dry run
-- add VSCE_TOKEN
-- manual publish
-- verify Marketplace page
-- smoke install
-- rollback
+* README.md
+* apps/vscode-extension/README.md if present
 
-7. Security constraints
+Add sections:
 
-- Never echo VSCE_TOKEN.
-- Do not use pull_request triggers.
-- Do not use pull_request_target.
-- Do not grant contents: write.
-- Do not publish from forks.
-- Do not add telemetry.
-- Do not add app network calls.
-- Keep workflow_dispatch only.
+* Quick preview
+* Dashboard screenshot
+* Repo map screenshot
+* Model comparison screenshot
+* MCP usage screenshot
 
-8. Acceptance criteria
+3. Add first-run onboarding
 
-- pnpm build passes.
-- pnpm test passes.
-- pnpm package:vscode passes.
-- pnpm package:vscode:inspect passes.
-- pnpm check:extension-metadata passes.
-- publish-vscode-marketplace.yml is workflow_dispatch only.
-- dry_run defaults to true.
-- publish job is gated behind inputs.dry_run == false.
-- token is never hardcoded.
-- docs explain Marketplace publishing accurately.
-- README says Open VSX is published.
-- README does not claim Marketplace is published.
-- no telemetry or cloud calls are introduced.
+In the VS Code extension:
+
+* On first activation or first command run, show a non-intrusive welcome message.
+* Do not show repeatedly.
+* Store state in extension globalState or workspaceState.
+* Message options:
+
+  * Scan Workspace
+  * View Docs
+  * Dismiss
+
+Command:
+
+* workspaceModelAdvisor.showWelcome
+
+Add command title:
+
+* Workspace Model Advisor: Show Welcome
+
+Welcome content should explain:
+
+* local-first
+* no telemetry
+* scan workspace
+* compare models
+* generate repo map
+* generate agent rules
+
+4. Add quickstart command
+
+Add command:
+
+* workspaceModelAdvisor.quickStart
+
+Title:
+
+* Workspace Model Advisor: Quick Start
+
+Behavior:
+
+* Opens a Markdown document or Webview with:
+
+  * Step 1: Scan Workspace
+  * Step 2: Set Goal
+  * Step 3: Compare Models
+  * Step 4: Generate Repo Map
+  * Step 5: Generate Agent Rules
+  * Step 6: Export Report
+
+Keep this local and static.
+
+5. Update package manifest
+
+Add commands:
+
+* showWelcome
+* quickStart
+
+Ensure:
+
+* contributes.commands includes both.
+* activation events are correct.
+* package still passes metadata check.
+* icon is packaged into VSIX.
+
+6. Improve README top section
+
+Add:
+
+* hero title
+* short tagline
+* badges:
+
+  * Marketplace
+  * Open VSX
+  * GitHub release
+  * CI
+  * license
+* install links:
+
+  * VS Code Marketplace
+  * Open VSX
+  * GitHub VSIX
+* trust banner:
+
+  * Local-first
+  * No telemetry
+  * No cloud calls
+  * No source upload
+
+7. Add v0.1.1 changelog
+
+Update:
+
+* CHANGELOG.md
+
+Add:
+
+## 0.1.1
+
+* Added extension icon
+* Added first-run onboarding
+* Added quickstart command
+* Improved Marketplace/Open VSX README
+* Added screenshot placeholders/docs
+* No telemetry/no cloud calls retained
+
+8. Tests
+
+Add tests if applicable:
+
+* metadata validator catches missing icon if declared
+* welcome state logic helper, if extracted
+* package inspection confirms media/icon.png exists
+
+9. Verification
+
+Run:
+
+* pnpm build
+* pnpm test
+* pnpm check:extension-metadata
+* pnpm package:vscode
+* pnpm package:vscode:inspect
+
+Acceptance criteria:
+
+* build passes
+* tests pass
+* icon appears in extension package
+* metadata check passes
+* VSIX inspect passes
+* README has Marketplace and Open VSX install links
+* first-run welcome appears only once
+* quickstart command works
+* no telemetry/cloud calls introduced
 
 After implementation, print:
-1. Files changed.
-2. Workflow added.
-3. Scripts added.
-4. Required GitHub secret.
-5. Dry-run instructions.
-6. Publish instructions.
-7. Remaining TODOs.
-:::
 
-Once Marketplace is done, your next high-impact phase should be **v0.1.1 polish**: add an icon, screenshots/GIF, example reports, and a better landing section in the README.
+1. Files changed.
+2. New commands added.
+3. Icon path.
+4. README sections updated.
+5. Tests added.
+6. Release checklist for v0.1.1.

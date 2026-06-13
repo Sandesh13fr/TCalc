@@ -8,6 +8,8 @@ import { registerGenerateAgentRulesCommand } from "./commands/generateAgentRules
 import { registerGenerateRepoMapCommand } from "./commands/generateRepoMapCommand.js";
 import { registerUpdateModelCatalogCommand } from "./commands/updateModelCatalogCommand.js";
 import { registerOpenSettingsCommand } from "./commands/openSettingsCommand.js";
+import { registerShowWelcomeCommand, showWelcomeOnFirstActivation } from "./commands/showWelcomeCommand.js";
+import { registerQuickStartCommand } from "./commands/quickStartCommand.js";
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(registerScanWorkspaceCommand(context));
@@ -19,6 +21,10 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(registerGenerateRepoMapCommand(context));
   context.subscriptions.push(registerUpdateModelCatalogCommand(context));
   context.subscriptions.push(registerOpenSettingsCommand());
+  context.subscriptions.push(registerShowWelcomeCommand(context));
+  context.subscriptions.push(registerQuickStartCommand());
+
+  showWelcomeOnFirstActivation(context);
 }
 
 export function deactivate() {}
