@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { glob } from "glob";
@@ -13,7 +13,6 @@ const SUSPICIOUS_PATTERNS = [
   /\btelemetry\b/i,
   /\bappInsights\b/i,
   /\bXMLHttpRequest\b/i,
-  /\bhttps?:\/\/[^\/]/,
 ];
 
 const ALLOWED_URLS = [
@@ -25,16 +24,24 @@ const ALLOWED_URLS = [
   "pnpm.io",
   "ollama.ai",
   "opencode",
+  "modelcontextprotocol.io",
+  "dev.azure.com",
 ];
 
 function isUrlAllowed(url) {
   return ALLOWED_URLS.some((allowed) => url.includes(allowed));
 }
 
+function extractUrl(line, startIndex) {
+  const rest = line.slice(startIndex);
+  const urlMatch = rest.match(/^https?:\/\/[^\s"'\`)>]+/);
+  return urlMatch ? urlMatch[0] : null;
+}
+
 async function main() {
   const sourceFiles = glob.sync("apps/**/*.ts", {
     cwd: repoRoot,
-    ignore: ["**/node_modules/**", "**/dist/**", "**/*.d.ts"],
+    ignore: ["**/node_modules/**", "**/dist/**", "**/*.d.ts", "**/node_modules/.pnpm/**"],
   });
 
   let violations = [];
@@ -46,15 +53,26 @@ async function main() {
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
-      for (const pattern of SUSPICIOUS_PATTERNS) {
-        const match = line.match(pattern);
-        if (match) {
-          const matched = match[0];
-          if (matched.startsWith("http") && isUrlAllowed(matched)) {
-            continue;
-          }
-          violations.push({ file, line: i + 1, content: line.trim() });
+      const trimmed = line.trim();
+
+      // Check URLs: match full URLs and check against allowlist
+      const urlPattern = /\bhttps?:\/\/[^\s"'\`)>]+/g;
+      let match;
+      while ((match = urlPattern.exec(line)) !== null) {
+        const fullUrl = extractUrl(line, match.index);
+        if (fullUrl && !isUrlAllowed(fullUrl)) {
+          violations.push({ file, line: i + 1, content: trimmed, reason: `unexpected URL: ${fullUrl}` });
         }
+      }
+
+      // Check other suspicious patterns
+      for (const pattern of SUSPICIOUS_PATTERNS) {
+        const match = trimmed.match(pattern);
+        if (!match) continue;
+        const matched = match[0];
+        // Skip telemetry flag if line is documenting "no telemetry"
+        if (matched.toLowerCase() === "telemetry" && trimmed.toLowerCase().includes("no telemetry")) continue;
+        violations.push({ file, line: i + 1, content: trimmed, reason: `matched pattern: ${matched}` });
       }
     }
   }
@@ -69,6 +87,7 @@ async function main() {
   for (const v of violations) {
     console.log(`  ${v.file}:${v.line}`);
     console.log(`    ${v.content}`);
+    console.log(`    Reason: ${v.reason}`);
     console.log("");
   }
 
