@@ -23,11 +23,13 @@ Estimate token usage, compare AI models, generate repo maps and agent rules — 
 
 ## Quick Preview
 
-_Add screenshots here. See [docs/assets/screenshots/README.md](./docs/assets/screenshots/README.md) for capture instructions._
+| Dashboard | Model Comparison |
+|-----------|----------------|
+| ![Dashboard](apps/vscode-extension/media/dashboard.png) | ![Model Comparison](apps/vscode-extension/media/model-comparison.png) |
 
-| Dashboard | Model Comparison | Repo Map |
-|-----------|-----------------|----------|
-| _Placeholder_ | _Placeholder_ | _Placeholder_ |
+| Repo Map | Agent Rules |
+|----------|-------------|
+| ![Repo Map](apps/vscode-extension/media/repo-map.png) | ![Agent Rules](apps/vscode-extension/media/agent-rules.png) |
 
 ## What It Does
 
