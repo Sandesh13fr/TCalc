@@ -1,7 +1,7 @@
 {
   "name": "tcalc",
   "displayName": "TCalc",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Local-first workspace token calculator, model recommender, and coding-agent optimizer.",
   "publisher": "Sandesh13fr",

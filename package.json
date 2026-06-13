@@ -1,7 +1,7 @@
 {
   "name": "tcalc",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local-first workspace token calculator, model recommender, and coding-agent optimizer.",
   "type": "module",
   "license": "MIT",
