@@ -14,3 +14,11 @@ coverage/
 *.log
 agentLogs.md
 output.txt
+
+# JetBrains plugin
+.gradle
+build/
+!gradle-wrapper.jar
+apps/jetbrains-plugin/build/
+apps/jetbrains-plugin/.gradle/
+apps/jetbrains-plugin/out/

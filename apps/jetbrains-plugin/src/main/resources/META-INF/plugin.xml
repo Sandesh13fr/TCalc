@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE idea-plugin PUBLIC "Plugin/DTD" "https://plugins.jetbrains.com/plugin.dtd">
+<idea-plugin>
+    <name>TCalc</name>
+    <id>com.tcalc.plugin.tcalc-jetbrains</id>
+    <vendor email="" url="https://github.com/Sandesh13fr/TCalc">TCalc</vendor>
+
+    <description><![CDATA[
+      <h1>TCalc</h1>
+      <p>Local-first workspace token calculator, model recommender, and coding-agent optimizer.</p>
+      <p>Scan your workspace, estimate token usage, compare AI coding models, generate repo maps, and create agent rules — all on your machine with no telemetry and no cloud calls.</p>
+      <p><strong>Local-first · No telemetry · No cloud calls · No source upload</strong></p>
+      <h2>Requirements</h2>
+      <ul>
+        <li>Node.js 18+ installed</li>
+        <li>TCalc CLI built (<code>git clone</code> + <code>pnpm build</code> from the repo, or a pre-built <code>wma</code> binary)</li>
+      </ul>
+      <h2>Quick Start</h2>
+      <ol>
+        <li>Open Settings → Tools → TCalc</li>
+        <li>Set the path to your <code>wma</code> CLI binary (e.g., <code>/path/to/tcalc/apps/cli/dist/index.js</code>)</li>
+        <li>Set the Node.js executable path</li>
+        <li>Open the TCalc tool window (View → Tool Windows → TCalc)</li>
+        <li>Click <strong>Scan Workspace</strong></li>
+      </ol>
+    ]]></description>
+
+    <change-notes><![CDATA[
+      <h2>0.1.0</h2>
+      <ul>
+        <li>Initial MVP release</li>
+        <li>Tool window with scan summary and model recommendations</li>
+        <li>Actions: Scan Workspace, Compare Models, Generate Repo Map, Generate Agent Rules, Export Report</li>
+        <li>Settings: CLI path, Node path, default goal, privacy mode, token budget</li>
+        <li>Local CLI runner — no telemetry, no cloud calls</li>
+      </ul>
+    ]]></change-notes>
+
+    <depends>com.intellij.modules.platform</depends>
+
+    <extensions defaultExtensionNs="com.intellij">
+        <toolWindow
+            id="TCalc"
+            anchor="right"
+            factoryClass="com.tcalc.plugin.WmaToolWindowFactory"
+            icon="icons/icon.svg"
+        />
+        <applicationConfigurable
+            parentId="tools"
+            instance="com.tcalc.plugin.settings.WmaSettingsConfigurable"
+            displayName="TCalc"
+        />
+        <applicationService
+            serviceImplementation="com.tcalc.plugin.settings.WmaSettingsState"
+        />
+    </extensions>
+
+    <actions>
+        <action
+            id="com.tcalc.plugin.actions.ScanWorkspaceAction"
+            class="com.tcalc.plugin.actions.ScanWorkspaceAction"
+            text="TCalc: Scan Workspace"
+            description="Scan the current workspace and show a summary"
+        />
+        <action
+            id="com.tcalc.plugin.actions.CompareModelsAction"
+            class="com.tcalc.plugin.actions.CompareModelsAction"
+            text="TCalc: Compare Models"
+            description="Recommend AI models for your workspace"
+        />
+        <action
+            id="com.tcalc.plugin.actions.GenerateRepoMapAction"
+            class="com.tcalc.plugin.actions.GenerateRepoMapAction"
+            text="TCalc: Generate Repo Map"
+            description="Generate a structured repo map"
+        />
+        <action
+            id="com.tcalc.plugin.actions.GenerateAgentRulesAction"
+            class="com.tcalc.plugin.actions.GenerateAgentRulesAction"
+            text="TCalc: Generate Agent Rules"
+            description="Generate agent rules for this workspace"
+        />
+        <action
+            id="com.tcalc.plugin.actions.ExportReportAction"
+            class="com.tcalc.plugin.actions.ExportReportAction"
+            text="TCalc: Export Report"
+            description="Export a full Markdown or JSON report"
+        />
+        <action
+            id="com.tcalc.plugin.actions.OpenSettingsAction"
+            class="com.tcalc.plugin.actions.OpenSettingsAction"
+            text="TCalc: Open Settings"
+            description="Open TCalc settings"
+        />
+    </actions>
+</idea-plugin>

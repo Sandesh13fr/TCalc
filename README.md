@@ -151,6 +151,32 @@ source file bodies are never exposed.
 See [docs/mcp-server.md](./docs/mcp-server.md) for full documentation,
 example client configs, security limitations, and MVP limitations.
 
+## Use with AI Coding Agents
+
+TCalc integrates with AI coding tools via MCP (Model Context Protocol) and agent rule files.
+
+| Tool | Integration Method | Status | Documentation |
+|------|-------------------|--------|---------------|
+| [Cursor](https://cursor.com/) | MCP + `.cursorrules` | Stable | [docs/integrations/cursor.md](./docs/integrations/cursor.md) |
+| [Continue](https://continue.dev/) | MCP | Stable | [docs/integrations/continue.md](./docs/integrations/continue.md) |
+| [Claude Desktop](https://claude.ai/download) | MCP | Stable | [docs/integrations/claude-desktop.md](./docs/integrations/claude-desktop.md) |
+| [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | MCP + `CLAUDE.md` | Stable | [docs/integrations/claude-code.md](./docs/integrations/claude-code.md) |
+| [Cline](https://github.com/cline/cline) | MCP | Stable | [docs/integrations/cline.md](./docs/integrations/cline.md) |
+| [Roo](https://github.com/RooVeteran/Roo) | MCP | Stable | [docs/integrations/roo.md](./docs/integrations/roo.md) |
+| Any stdio MCP client | MCP | Stable | [docs/integrations/generic-mcp.md](./docs/integrations/generic-mcp.md) |
+
+Generate ready-to-use MCP configs with:
+
+```bash
+# CLI
+pnpm tcalc mcp-config --target cursor
+pnpm tcalc mcp-config --target continue --output continue-mcp.yaml
+
+# VS Code — Command Palette → "TCalc: Generate MCP Config"
+```
+
+See [docs/integrations/README.md](./docs/integrations/README.md) for setup guides, and [examples/mcp/](./examples/mcp/) for sample configs.
+
 ## Core Principles
 
 1. **Local-first** -- no code leaves your machine by default

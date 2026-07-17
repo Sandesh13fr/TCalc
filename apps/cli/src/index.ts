@@ -9,6 +9,7 @@ import { executeRepoMap } from "./commands/repoMap.js";
 import { executeRules } from "./commands/rules.js";
 import { executeReport } from "./commands/report.js";
 import { executeCatalogValidate } from "./commands/catalog.js";
+import { generateMcpConfig, type McpTarget } from "./commands/mcpConfig.js";
 import { resolveTargetPath } from "./utils/paths.js";
 import { handleError, CliError } from "./utils/errors.js";
 import type { AgentTarget, OptimizationMode } from "@wma/core";
@@ -192,6 +193,31 @@ catalogCmd
       });
       console.log(result.message);
       process.exit(result.exitCode);
+    } catch (err) {
+      handleError(err, program.opts().debug);
+    }
+  });
+
+program
+  .command("mcp-config")
+  .description("Generate MCP server config for AI coding tools")
+  .requiredOption("--target <target>", "Target tool (cursor|continue|claude-desktop|generic)")
+  .option("--command <command>", "MCP server command path")
+  .option("--output <file>", "Write output to file")
+  .option("--workspace <path>", "Workspace path for the config")
+  .action(async (opts) => {
+    try {
+      const output = generateMcpConfig({
+        target: opts.target as McpTarget,
+        command: opts.command,
+        workspace: opts.workspace,
+      });
+      if (opts.output) {
+        await writeFile(opts.output, output, "utf-8");
+        console.error(`Config written to ${opts.output}`);
+      } else {
+        console.log(output);
+      }
     } catch (err) {
       handleError(err, program.opts().debug);
     }

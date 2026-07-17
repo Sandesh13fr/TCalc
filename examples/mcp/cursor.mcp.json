@@ -1,0 +1,12 @@
+{
+  "$schema": "https://raw.githubusercontent.com/getcursor/cursor/main/mcp.schema.json",
+  "mcpServers": {
+    "tcalc": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/tcalc/packages/mcp-server/dist/index.js"
+      ],
+      "description": "Local-first workspace analysis and AI model recommendations"
+    }
+  }
+}

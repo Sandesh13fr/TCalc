@@ -10,6 +10,7 @@ import { registerUpdateModelCatalogCommand } from "./commands/updateModelCatalog
 import { registerOpenSettingsCommand } from "./commands/openSettingsCommand.js";
 import { registerShowWelcomeCommand, showWelcomeOnFirstActivation } from "./commands/showWelcomeCommand.js";
 import { registerQuickStartCommand } from "./commands/quickStartCommand.js";
+import { registerGenerateMcpConfigCommand } from "./commands/generateMcpConfigCommand.js";
 
 export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(registerScanWorkspaceCommand(context));
@@ -23,6 +24,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(registerOpenSettingsCommand());
   context.subscriptions.push(registerShowWelcomeCommand(context));
   context.subscriptions.push(registerQuickStartCommand());
+  context.subscriptions.push(registerGenerateMcpConfigCommand());
 
   showWelcomeOnFirstActivation(context);
 }

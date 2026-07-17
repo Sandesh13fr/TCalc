@@ -1,0 +1,9 @@
+# Continue MCP Configuration
+# Place in ~/.continue/config.yaml or ./.continue/config.yaml
+experimental:
+  modelContextProtocolServers:
+    - transport: stdio
+      command: node
+      args:
+        - /absolute/path/to/tcalc/packages/mcp-server/dist/index.js
+      description: TCalc workspace analysis tools

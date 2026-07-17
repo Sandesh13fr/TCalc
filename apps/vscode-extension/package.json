@@ -54,7 +54,8 @@
     "onCommand:workspaceModelAdvisor.openSettings",
     "onCommand:workspaceModelAdvisor.generateRepoMap",
     "onCommand:workspaceModelAdvisor.showWelcome",
-    "onCommand:workspaceModelAdvisor.quickStart"
+    "onCommand:workspaceModelAdvisor.quickStart",
+    "onCommand:workspaceModelAdvisor.generateMcpConfig"
   ],
   "main": "dist/extension.js",
   "capabilities": {
@@ -108,6 +109,10 @@
       {
         "command": "workspaceModelAdvisor.quickStart",
         "title": "TCalc: Quick Start"
+      },
+      {
+        "command": "workspaceModelAdvisor.generateMcpConfig",
+        "title": "TCalc: Generate MCP Config"
       }
     ],
     "configuration": {

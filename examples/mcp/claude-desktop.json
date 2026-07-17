@@ -1,0 +1,14 @@
+{
+  "$schema": "https://claude.ai/mcp.schema.json",
+  "mcpServers": {
+    "tcalc": {
+      "command": "node",
+      "args": [
+        "/absolute/path/to/tcalc/packages/mcp-server/dist/index.js"
+      ],
+      "description": "Local-first workspace analysis and AI model recommendations",
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}

@@ -1,239 +1,185 @@
-You are a senior TypeScript monorepo engineer, VS Code extension maintainer, marketplace listing designer, and open-source product polish engineer.
+You are a senior Kotlin/IntelliJ Platform plugin engineer, TypeScript monorepo engineer, and developer-tools product architect.
 
 Project: Workspace Model Advisor
 Repo root: TCalc
 
 Current state:
 
-* Extension is published on VS Code Marketplace.
-* Extension is published on Open VSX.
-* GitHub release + VSIX exist.
+* VS Code extension is published.
+* Open VSX extension is published.
 * CLI works.
 * MCP server works.
-* CI/release workflows work.
+* Agent integration docs exist or are planned.
 * No telemetry.
 * No cloud calls.
-* Local-first product.
+* TypeScript packages contain the core scanner/recommender/repo-map logic.
 
 Your task:
-Implement Phase 11: v0.1.1 marketplace polish and first-run experience.
+Implement Phase 13: JetBrains IDE Plugin MVP.
 
-Main goals:
+Main goal:
+Create a JetBrains IntelliJ Platform plugin that exposes Workspace Model Advisor inside IntelliJ-based IDEs by wrapping the existing CLI/MCP capabilities rather than reimplementing all logic in Kotlin.
 
-1. Add a polished extension icon.
-2. Improve README and Marketplace/Open VSX presentation.
-3. Add screenshots/GIF placeholders or docs-ready image slots.
-4. Add first-run onboarding inside the extension.
-5. Prepare v0.1.1 release notes.
+Target IDEs:
 
-Do not add:
+* IntelliJ IDEA
+* WebStorm
+* PyCharm
+* other IntelliJ Platform IDEs if compatible
+
+Do not implement:
 
 * telemetry
 * cloud calls
-* paid features
-* hosted services
 * account/login flows
-* marketplace auto-publish changes
+* hosted services
+* paid licensing
+* deep PSI parser integration yet
+* Marketplace publishing in this phase
 
-Tasks:
+Architecture decision:
 
-1. Add extension icon
-
-Use the generated modern clean logo as the base.
-
-Create:
-
-* apps/vscode-extension/media/icon.png
-
-Requirements:
-
-* 128×128 PNG
-* readable at small size
-* no text inside the icon
-* clean contrast on light and dark marketplace UIs
-
-Update:
-
-* apps/vscode-extension/package.json
-
-Add:
-
-* "icon": "media/icon.png"
-
-Update metadata validator:
-
-* scripts/check-extension-metadata.mjs should verify icon exists if declared.
-
-2. Add screenshots and demo assets
+* Use the existing Node CLI as the execution backend for MVP.
+* Kotlin plugin should call the local CLI with safe arguments only.
+* No arbitrary shell execution.
+* No uploading code.
+* All scans run locally.
 
 Create:
 
-* docs/assets/screenshots/
-* docs/assets/screenshots/dashboard.png
-* docs/assets/screenshots/model-comparison.png
-* docs/assets/screenshots/repo-map.png
-* docs/assets/screenshots/agent-rules.png
-* docs/assets/screenshots/mcp.png
+* apps/jetbrains-plugin/
 
-If actual screenshots are not available yet, add clear placeholders and document how to replace them.
+Use:
 
-Update:
+* Kotlin
+* Gradle
+* IntelliJ Platform Gradle Plugin 2.x
+* Java/Kotlin compatible with the current JetBrains plugin tooling
+* existing repo CLI built from apps/cli
 
+Plugin features MVP:
+
+1. Tool window:
+
+   * Workspace Model Advisor
+   * Shows scan summary
+   * total tokens
+   * included/excluded files
+   * top folders
+   * language breakdown
+   * recommendation cards
+
+2. Actions:
+
+   * Scan Workspace
+   * Compare Models
+   * Generate Repo Map
+   * Generate Agent Rules
+   * Export Report
+   * Open Settings
+
+3. Settings:
+
+   * Node executable path
+   * WMA CLI path
+   * default goal
+   * privacy mode
+   * token budget
+
+4. Local command runner:
+
+   * invoke CLI commands safely
+   * no arbitrary user command string
+   * pass arguments as arrays
+   * capture stdout/stderr
+   * timeout for long scans
+   * show friendly error if Node/CLI missing
+
+5. Output handling:
+
+   * parse JSON output where possible
+   * show Markdown repo map in editor tab
+   * save generated reports to workspace root after confirmation
+
+6. Security:
+
+   * no network calls
+   * no telemetry
+   * no source upload
+   * do not print file contents
+   * list risky files by path only
+
+Repo structure:
+apps/jetbrains-plugin/
+
+* build.gradle.kts
+* settings.gradle.kts or use root Gradle config if appropriate
+* gradle.properties
+* src/main/kotlin/...
+* src/main/resources/META-INF/plugin.xml
 * README.md
-* apps/vscode-extension/README.md if present
-
-Add sections:
-
-* Quick preview
-* Dashboard screenshot
-* Repo map screenshot
-* Model comparison screenshot
-* MCP usage screenshot
-
-3. Add first-run onboarding
-
-In the VS Code extension:
-
-* On first activation or first command run, show a non-intrusive welcome message.
-* Do not show repeatedly.
-* Store state in extension globalState or workspaceState.
-* Message options:
-
-  * Scan Workspace
-  * View Docs
-  * Dismiss
-
-Command:
-
-* workspaceModelAdvisor.showWelcome
-
-Add command title:
-
-* Workspace Model Advisor: Show Welcome
-
-Welcome content should explain:
-
-* local-first
-* no telemetry
-* scan workspace
-* compare models
-* generate repo map
-* generate agent rules
-
-4. Add quickstart command
-
-Add command:
-
-* workspaceModelAdvisor.quickStart
-
-Title:
-
-* Workspace Model Advisor: Quick Start
-
-Behavior:
-
-* Opens a Markdown document or Webview with:
-
-  * Step 1: Scan Workspace
-  * Step 2: Set Goal
-  * Step 3: Compare Models
-  * Step 4: Generate Repo Map
-  * Step 5: Generate Agent Rules
-  * Step 6: Export Report
-
-Keep this local and static.
-
-5. Update package manifest
-
-Add commands:
-
-* showWelcome
-* quickStart
-
-Ensure:
-
-* contributes.commands includes both.
-* activation events are correct.
-* package still passes metadata check.
-* icon is packaged into VSIX.
-
-6. Improve README top section
-
-Add:
-
-* hero title
-* short tagline
-* badges:
-
-  * Marketplace
-  * Open VSX
-  * GitHub release
-  * CI
-  * license
-* install links:
-
-  * VS Code Marketplace
-  * Open VSX
-  * GitHub VSIX
-* trust banner:
-
-  * Local-first
-  * No telemetry
-  * No cloud calls
-  * No source upload
-
-7. Add v0.1.1 changelog
-
-Update:
-
 * CHANGELOG.md
 
-Add:
+Implementation tasks:
 
-## 0.1.1
+1. Create plugin skeleton.
+2. Add plugin.xml metadata.
+3. Add tool window UI.
+4. Add actions.
+5. Add settings panel.
+6. Add CLI runner.
+7. Add JSON models for scan/recommend output.
+8. Add docs.
+9. Add tests where practical.
+10. Add GitHub Actions job for JetBrains plugin build only, not publish.
 
-* Added extension icon
-* Added first-run onboarding
-* Added quickstart command
-* Improved Marketplace/Open VSX README
-* Added screenshot placeholders/docs
-* No telemetry/no cloud calls retained
+Commands to support:
 
-8. Tests
+* wma scan <workspace> --format json
+* wma recommend <workspace> --format json
+* wma repo-map <workspace> --format markdown
+* wma rules <workspace> --target generic --mode repo-map-first
+* wma report <workspace> --format markdown --include-repo-map
 
-Add tests if applicable:
+Docs:
+Create:
 
-* metadata validator catches missing icon if declared
-* welcome state logic helper, if extracted
-* package inspection confirms media/icon.png exists
+* docs/jetbrains-plugin.md
 
-9. Verification
+Include:
 
-Run:
+* setup
+* development
+* run plugin sandbox
+* build plugin zip
+* limitations
+* privacy/security notes
+* future Marketplace publishing plan
 
-* pnpm build
-* pnpm test
-* pnpm check:extension-metadata
-* pnpm package:vscode
-* pnpm package:vscode:inspect
+CI:
+Add workflow or extend CI:
+
+* build JetBrains plugin
+* run tests
+* upload plugin zip artifact if built
 
 Acceptance criteria:
 
-* build passes
-* tests pass
-* icon appears in extension package
-* metadata check passes
-* VSIX inspect passes
-* README has Marketplace and Open VSX install links
-* first-run welcome appears only once
-* quickstart command works
-* no telemetry/cloud calls introduced
+* Gradle build passes.
+* Plugin can run in IntelliJ sandbox.
+* Tool window opens.
+* Scan Workspace calls CLI and displays summary.
+* Generate Repo Map opens Markdown output.
+* Generate Agent Rules works.
+* No telemetry/cloud calls.
+* No arbitrary shell command execution.
+* Docs explain limitations and local-first behavior.
 
 After implementation, print:
 
 1. Files changed.
-2. New commands added.
-3. Icon path.
-4. README sections updated.
-5. Tests added.
-6. Release checklist for v0.1.1.
+2. JetBrains plugin structure.
+3. Actions added.
+4. Settings added.
+5. How to run in IntelliJ sandbox.
+6. Remaining TODOs.
