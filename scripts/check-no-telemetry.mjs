@@ -26,6 +26,7 @@ const ALLOWED_URLS = [
   "opencode",
   "modelcontextprotocol.io",
   "dev.azure.com",
+  "tcalc-one.vercel.app",
 ];
 
 function isUrlAllowed(url) {
