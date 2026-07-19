@@ -2,12 +2,24 @@
   "name": "@wma/dashboard",
   "version": "0.1.4",
   "private": true,
-  "description": "Optional self-hosted dashboard for versioned TCalc reports.",
+  "description": "TCalc Next.js product site, documentation, and optional self-hosted report dashboard.",
   "type": "module",
   "scripts": {
-    "build": "node scripts/build.mjs",
+    "dev": "next dev",
+    "build": "next build",
     "start": "node src/server.mjs",
     "test": "node --test tests/server.test.mjs",
-    "lint": "node --check src/server.mjs && node --check public/app.js"
+    "lint": "next typegen && tsc --noEmit && node --check src/server.mjs",
+    "typecheck": "next typegen && tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "16.2.10",
+    "ogl": "1.0.11",
+    "react": "19.2.7",
+    "react-dom": "19.2.7"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3"
   }
 }

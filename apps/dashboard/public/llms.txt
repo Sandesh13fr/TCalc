@@ -1,0 +1,21 @@
+# TCalc
+
+TCalc is an open-source, local-first workspace token calculator, coding-model recommender, and agent-context optimizer.
+
+## Canonical pages
+
+- Home: https://tcalc-one.vercel.app/
+- Documentation: https://tcalc-one.vercel.app/docs/
+- Getting started: https://tcalc-one.vercel.app/docs/getting-started/
+- CLI workflows: https://tcalc-one.vercel.app/docs/cli-workflows/
+- Model catalog: https://tcalc-one.vercel.app/docs/model-catalog/
+- Coding-agent MCP: https://tcalc-one.vercel.app/docs/coding-agent-mcp/
+- Team reports: https://tcalc-one.vercel.app/docs/team-reports/
+- Source: https://github.com/Sandesh13fr/TCalc
+
+## Product facts
+
+- TCalc scans source locally and does not upload workspace code.
+- The bundled catalog contains 20 models across seven catalog providers and nine provider endpoints.
+- It produces token estimates, three recommendation tiers, repo maps, agent rules, and Markdown or JSON reports.
+- The core product is free under the MIT License.

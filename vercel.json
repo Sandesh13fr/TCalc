@@ -1,6 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": null,
-  "buildCommand": "node apps/dashboard/scripts/build.mjs",
-  "outputDirectory": "apps/dashboard/dist"
+  "framework": "nextjs",
+  "buildCommand": "pnpm --filter @wma/dashboard build",
+  "outputDirectory": "apps/dashboard/out"
 }

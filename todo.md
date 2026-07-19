@@ -103,6 +103,9 @@ P3 engineering is complete; publication and deployment remain opt-in rollout wor
 - [x] Expand the bundled catalogue to 20 models across cloud and local runtimes, plus nine provider connections.
 - [x] Upgrade the VS Code dashboard with provider coverage, ranked alternatives, privacy guidance, and accessible responsive controls.
 - [x] Document that VS Code remote-embedding CDN errors are upstream of TCalc.
-- [x] Replace the ChatGPT-hosted webpage with a deployable plain HTML/CSS/JS site.
+- [x] Replace the ChatGPT-hosted webpage with a deployable Next.js site.
+- [x] Add an official-logo documentation hub with grounded, statically generated guides.
+- [x] Add crawl metadata, sitemap, robots, structured data, and AI-readable product files without fabricated local-business data.
+- [x] Integrate the React Bits Lightfall hero with reduced-motion and background-tab safeguards.
 - [x] Add a native TCalc Activity Bar view with scan state, recommendations, and working workspace actions.
 - [x] Organize the full dashboard into accessible Overview, Models, Workspace, and Actions views.

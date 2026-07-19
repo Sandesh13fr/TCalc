@@ -5,7 +5,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const MAX_REPORT_BYTES = 1_000_000;
-const defaultPublicDir = fileURLToPath(new URL("../public", import.meta.url));
+const defaultPublicDir = fileURLToPath(new URL("../out", import.meta.url));
+const CONTENT_TYPES = new Map([
+  [".css", "text/css; charset=utf-8"], [".html", "text/html; charset=utf-8"], [".js", "text/javascript; charset=utf-8"],
+  [".json", "application/json; charset=utf-8"], [".map", "application/json; charset=utf-8"], [".png", "image/png"],
+  [".svg", "image/svg+xml"], [".txt", "text/plain; charset=utf-8"], [".woff2", "font/woff2"],
+]);
 
 export function createDashboardServer(options = {}) {
   const dataDir = path.resolve(options.dataDir ?? process.env.TCALC_DATA_DIR ?? ".tcalc-dashboard");
@@ -41,20 +46,46 @@ export function createDashboardServer(options = {}) {
           throw error;
         }
       }
-      if (request.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
-        response.writeHead(200, { "content-type": "text/html; charset=utf-8", "content-security-policy": "default-src 'self'; script-src 'self'; style-src 'self'" });
-        return response.end(await readFile(path.join(publicDir, "index.html")));
-      }
-      if (request.method === "GET" && ["/app.js", "/style.css"].includes(url.pathname)) {
-        const file = url.pathname.slice(1);
-        response.writeHead(200, { "content-type": file.endsWith(".js") ? "text/javascript; charset=utf-8" : "text/css; charset=utf-8" });
-        return response.end(await readFile(path.join(publicDir, file)));
-      }
+      if (request.method === "GET" && await serveStatic(response, publicDir, url.pathname)) return;
       json(response, 404, { error: "Not found" });
     } catch (error) {
       json(response, error?.message === "Report is too large" ? 413 : 500, { error: error instanceof Error ? error.message : String(error) });
     }
   });
+}
+
+async function serveStatic(response, publicDir, pathname) {
+  let relativePath;
+  try {
+    relativePath = decodeURIComponent(pathname).replace(/^\/+/, "");
+  } catch {
+    return false;
+  }
+  if (relativePath.split("/").includes("..")) return false;
+  const root = path.resolve(publicDir);
+  const requested = path.resolve(root, relativePath);
+  if (requested !== root && !requested.startsWith(`${root}${path.sep}`)) return false;
+  const candidates = pathname.endsWith("/")
+    ? [path.join(requested, "index.html")]
+    : [requested, `${requested}.html`, path.join(requested, "index.html")];
+  for (const candidate of candidates) {
+    try {
+      const content = await readFile(candidate);
+      const extension = path.extname(candidate).toLowerCase();
+      const immutable = pathname.startsWith("/_next/static/");
+      response.writeHead(200, {
+        "content-type": CONTENT_TYPES.get(extension) ?? "application/octet-stream",
+        "cache-control": immutable ? "public, max-age=31536000, immutable" : "no-cache",
+        "x-content-type-options": "nosniff",
+        ...(extension === ".html" ? { "content-security-policy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self';" } : {}),
+      });
+      response.end(content);
+      return true;
+    } catch (error) {
+      if (!["ENOENT", "EISDIR"].includes(error.code)) throw error;
+    }
+  }
+  return false;
 }
 
 async function listReports(dataDir) {

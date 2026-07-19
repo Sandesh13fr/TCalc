@@ -123,7 +123,7 @@ pnpm cli mcp
 | `apps/cli` | Commander-based CLI |
 | `apps/vscode-extension` | VS Code dashboard and commands |
 | `apps/jetbrains-plugin` | IntelliJ Platform plugin MVP |
-| `apps/dashboard` | Plain HTML/CSS/JS website and optional report service |
+| `apps/dashboard` | Next.js website, documentation, local report viewer, and optional report service |
 
 </details>
 
