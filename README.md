@@ -6,7 +6,7 @@
   <a href="https://marketplace.visualstudio.com/items?itemName=Sandesh13fr.tcalc"><img alt="VS Code Marketplace" src="https://img.shields.io/badge/VS_Code-Marketplace-007ACC?logo=visualstudiocode&logoColor=white"></a>
   <a href="https://open-vsx.org/extension/Sandesh13fr/tcalc"><img alt="Open VSX" src="https://img.shields.io/badge/Open_VSX-TCalc-C160EF"></a>
   <a href="https://github.com/Sandesh13fr/TCalc/releases"><img alt="GitHub release" src="https://img.shields.io/github/v/release/Sandesh13fr/TCalc?logo=github"></a>
-  <a href="https://sandesh13fr.github.io/TCalc/"><img alt="TCalc website" src="https://img.shields.io/badge/website-TCalc-1968FF"></a>
+  <a href="https://tcalc-one.vercel.app/"><img alt="TCalc website" src="https://img.shields.io/badge/website-TCalc-1968FF"></a>
   <a href="https://github.com/Sandesh13fr/TCalc/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/Sandesh13fr/TCalc/actions/workflows/ci.yml/badge.svg"></a>
   <a href="./LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-3BA4FF"></a>
 </p>
@@ -21,7 +21,7 @@
   <a href="#see-the-workspace-before-your-agent-does">See it work</a> ·
   <a href="#use-the-cli">CLI</a> ·
   <a href="#connect-your-coding-agent">Coding agents</a>
-  &middot; <a href="https://sandesh13fr.github.io/TCalc/">Website</a>
+  &middot; <a href="https://tcalc-one.vercel.app/">Website</a>
 </p>
 
 ## See the workspace before your agent does
