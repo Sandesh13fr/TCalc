@@ -74,6 +74,7 @@ Source: project status and roadmap dated 17 July 2026.
 - [x] Make local Marketplace publishers select the current-version VSIX instead of an arbitrary stale artifact.
 - [x] Remove the unused MCP path sanitizer and scanner ignore-pattern accessor.
 - [x] Build CLI workspace dependencies in the isolated GitHub Actions smoke job.
+- [x] Preserve the Gradle wrapper executable bit for Linux JetBrains CI runners.
 
 ## `0.1.2` release gate
 
