@@ -2,6 +2,7 @@ import type { WorkspaceScanResult, RepoMapSymbol, RepoMapImport, RepoMapRoute, R
 import { parseFileSymbols } from "./parseFileSymbols.js";
 import { detectFrameworkRoutes } from "./detectFrameworkRoutes.js";
 import { rankSymbols } from "./rankSymbols.js";
+import { resolveImports } from "./resolveImports.js";
 
 export interface SymbolExtractionResult {
   symbols: RepoMapSymbol[];
@@ -10,7 +11,7 @@ export interface SymbolExtractionResult {
   warnings: string[];
 }
 
-const SYMBOL_EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".py"]);
+const SYMBOL_EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".py", ".java", ".kt", ".go", ".rs"]);
 
 export function extractSymbols(
   scanResult: WorkspaceScanResult,
@@ -62,6 +63,7 @@ export function extractSymbols(
   }
 
   result.symbols = rankSymbols(result.symbols, options.goal).slice(0, maxSymbols);
+  result.imports = resolveImports(result.imports, scanResult);
 
   return result;
 }

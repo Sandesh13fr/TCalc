@@ -1,8 +1,9 @@
 import type { WorkspaceFileInfo, RepoMapSymbol, RepoMapImport } from "@wma/core";
 import { readFileSync } from "node:fs";
-import { extractTypeScriptSymbols } from "./parsers/typescriptSymbols.js";
+import { extractTypeScriptImports, extractTypeScriptSymbols } from "./parsers/typescriptSymbols.js";
 import { extractJavaScriptSymbols } from "./parsers/javascriptSymbols.js";
 import { extractPythonSymbols } from "./parsers/pythonSymbols.js";
+import { extractCLikeSymbols } from "./parsers/cLikeSymbols.js";
 
 export interface ParsedFileSymbols {
   symbols: RepoMapSymbol[];
@@ -23,18 +24,20 @@ export function parseFileSymbols(file: WorkspaceFileInfo, includeImports: boolea
       if (ext === ".ts" || ext === ".tsx") {
         symbols = extractTypeScriptSymbols(content, file.relativePath, ext);
         if (includeImports) {
-          imports = extractTypeScriptImports(content, file.relativePath);
+          imports = extractTypeScriptImports(content, file.relativePath, ext);
         }
       } else if (ext === ".js" || ext === ".jsx") {
         symbols = extractJavaScriptSymbols(content, file.relativePath, ext);
         if (includeImports) {
-          imports = extractJavaScriptImports(content, file.relativePath);
+          imports = extractJavaScriptImports(content, file.relativePath, ext);
         }
       } else if (ext === ".py") {
         symbols = extractPythonSymbols(content, file.relativePath);
         if (includeImports) {
           imports = extractPythonImports(content, file.relativePath);
         }
+      } else if ([".java", ".kt", ".go", ".rs"].includes(ext)) {
+        symbols = extractCLikeSymbols(content, file.relativePath, ext);
       }
     } catch (parseErr) {
       error = parseErr instanceof Error ? parseErr.message : String(parseErr);
@@ -47,29 +50,8 @@ export function parseFileSymbols(file: WorkspaceFileInfo, includeImports: boolea
   }
 }
 
-function extractTypeScriptImports(content: string, relativePath: string): RepoMapImport[] {
-  const imports: RepoMapImport[] = [];
-  const importRegex = /import\s+(?:\{[^}]*\}\s+from\s+)?['"]([^'"]+)['"]/g;
-  let m: RegExpExecArray | null;
-  while ((m = importRegex.exec(content)) !== null) {
-    imports.push({ source: m[1], relativePath, kind: "import" });
-  }
-
-  const dynamicImportRegex = /import\(['"]([^'"]+)['"]\)/g;
-  while ((m = dynamicImportRegex.exec(content)) !== null) {
-    imports.push({ source: m[1], relativePath, kind: "dynamic-import" });
-  }
-
-  const requireRegex = /(?:const|let|var)\s+\w+\s*=\s*require\(['"]([^'"]+)['"]\)/g;
-  while ((m = requireRegex.exec(content)) !== null) {
-    imports.push({ source: m[1], relativePath, kind: "require" });
-  }
-
-  return imports;
-}
-
-function extractJavaScriptImports(content: string, relativePath: string): RepoMapImport[] {
-  return extractTypeScriptImports(content, relativePath);
+function extractJavaScriptImports(content: string, relativePath: string, ext: string): RepoMapImport[] {
+  return extractTypeScriptImports(content, relativePath, ext);
 }
 
 function extractPythonImports(content: string, relativePath: string): RepoMapImport[] {

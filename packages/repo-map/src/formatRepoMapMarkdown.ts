@@ -1,4 +1,4 @@
-import type { RepoMapResult, RepoMapFile, RepoMapFolder, RepoMapLanguage } from "@wma/core";
+import { escapeMarkdownText, markdownCode, type RepoMapResult, type RepoMapFile, type RepoMapFolder, type RepoMapLanguage } from "@wma/core";
 
 export function formatRepoMapMarkdown(repoMap: RepoMapResult): string {
   const lines: string[] = [];
@@ -28,7 +28,7 @@ export function formatRepoMapMarkdown(repoMap: RepoMapResult): string {
 function appendSummary(lines: string[], repoMap: RepoMapResult): void {
   lines.push("## Summary");
   lines.push("");
-  lines.push(`- **Workspace Root:** \`${repoMap.rootPath}\``);
+  lines.push(`- **Workspace Root:** ${markdownCode(repoMap.rootPath)}`);
   lines.push(`- **Generated:** ${repoMap.generatedAt}`);
   lines.push(`- **Token Budget:** ${repoMap.tokenBudget.toLocaleString()}`);
   lines.push(`- **Estimated Repo Map Tokens:** ${repoMap.estimatedTokens.toLocaleString()}`);
@@ -36,7 +36,7 @@ function appendSummary(lines: string[], repoMap: RepoMapResult): void {
   lines.push(`- **Included Files:** ${repoMap.importantFiles.length}`);
   lines.push(`- **Excluded Files:** ${repoMap.excludedFiles.length}`);
   lines.push("");
-  lines.push(repoMap.summary);
+  lines.push(escapeMarkdownText(repoMap.summary));
   lines.push("");
 }
 
@@ -50,7 +50,7 @@ function appendProjectShape(lines: string[], repoMap: RepoMapResult): void {
     lines.push("| Folder | Files | Estimated Tokens |");
     lines.push("| --- | ---:| ---:|");
     for (const folder of repoMap.topLevelFolders) {
-      lines.push(`| \`${folder.relativePath}\` | ${folder.fileCount} | ${folder.estimatedTokens.toLocaleString()} |`);
+      lines.push(`| ${markdownCode(folder.relativePath)} | ${folder.fileCount} | ${folder.estimatedTokens.toLocaleString()} |`);
     }
     lines.push("");
   }
@@ -61,7 +61,7 @@ function appendProjectShape(lines: string[], repoMap: RepoMapResult): void {
     lines.push("| Language | Files | Estimated Tokens |");
     lines.push("| --- | ---:| ---:|");
     for (const lang of repoMap.languageBreakdown) {
-      lines.push(`| ${lang.language} | ${lang.fileCount} | ${lang.estimatedTokens.toLocaleString()} |`);
+      lines.push(`| ${escapeMarkdownText(lang.language)} | ${lang.fileCount} | ${lang.estimatedTokens.toLocaleString()} |`);
     }
     lines.push("");
   }
@@ -98,7 +98,7 @@ function appendEntryPoints(lines: string[], repoMap: RepoMapResult): void {
 
   for (const file of repoMap.entryPoints) {
     const lang = file.language ? ` (${file.language})` : "";
-    lines.push(`- \`${file.relativePath}\`${lang} — ~${file.estimatedTokens.toLocaleString()} tokens`);
+    lines.push(`- ${markdownCode(file.relativePath)}${escapeMarkdownText(lang)} — ~${file.estimatedTokens.toLocaleString()} tokens`);
   }
   lines.push("");
 }
@@ -114,7 +114,7 @@ function appendTests(lines: string[], repoMap: RepoMapResult): void {
   }
 
   for (const file of repoMap.testFiles) {
-    lines.push(`- \`${file.relativePath}\` — ~${file.estimatedTokens.toLocaleString()} tokens`);
+    lines.push(`- ${markdownCode(file.relativePath)} — ~${file.estimatedTokens.toLocaleString()} tokens`);
   }
   lines.push("");
 }
@@ -130,7 +130,7 @@ function appendConfigAndTooling(lines: string[], repoMap: RepoMapResult): void {
   }
 
   for (const file of repoMap.configFiles) {
-    lines.push(`- \`${file.relativePath}\` — ~${file.estimatedTokens.toLocaleString()} tokens`);
+    lines.push(`- ${markdownCode(file.relativePath)} — ~${file.estimatedTokens.toLocaleString()} tokens`);
   }
   lines.push("");
 }
@@ -146,7 +146,7 @@ function appendDocumentation(lines: string[], repoMap: RepoMapResult): void {
   }
 
   for (const file of repoMap.documentationFiles) {
-    lines.push(`- \`${file.relativePath}\` — ~${file.estimatedTokens.toLocaleString()} tokens`);
+    lines.push(`- ${markdownCode(file.relativePath)} — ~${file.estimatedTokens.toLocaleString()} tokens`);
   }
   lines.push("");
 }
@@ -164,7 +164,7 @@ function appendLargeNoisyFiles(lines: string[], repoMap: RepoMapResult): void {
   lines.push("The following files exceed ~50K estimated tokens and should usually not be sent to an AI agent:");
   lines.push("");
   for (const file of repoMap.largeFiles) {
-    lines.push(`- \`${file.relativePath}\` — ~${file.estimatedTokens.toLocaleString()} tokens`);
+    lines.push(`- ${markdownCode(file.relativePath)} — ~${file.estimatedTokens.toLocaleString()} tokens`);
   }
   lines.push("");
 }
@@ -182,7 +182,7 @@ function appendRiskSensitiveFiles(lines: string[], repoMap: RepoMapResult): void
   lines.push("The following files may contain sensitive information. Contents are not exposed here:");
   lines.push("");
   for (const file of repoMap.riskyFiles) {
-    lines.push(`- \`${file.relativePath}\` — ~${file.estimatedTokens.toLocaleString()} tokens`);
+    lines.push(`- ${markdownCode(file.relativePath)} — ~${file.estimatedTokens.toLocaleString()} tokens`);
   }
   lines.push("");
 }
@@ -195,7 +195,7 @@ function appendRecommendedAgentContext(lines: string[], repoMap: RepoMapResult):
     lines.push("### Files to Read First");
     lines.push("");
     for (const file of repoMap.recommendedInclude.slice(0, 15)) {
-      lines.push(`- \`${file.relativePath}\` — ${file.reason}`);
+      lines.push(`- ${markdownCode(file.relativePath)} — ${escapeMarkdownText(file.reason)}`);
     }
     lines.push("");
   }
@@ -204,7 +204,7 @@ function appendRecommendedAgentContext(lines: string[], repoMap: RepoMapResult):
     lines.push("### Files to Avoid");
     lines.push("");
     for (const file of repoMap.recommendedExclude.slice(0, 10)) {
-      lines.push(`- \`${file.relativePath}\` — ~${file.estimatedTokens.toLocaleString()} tokens`);
+      lines.push(`- ${markdownCode(file.relativePath)} — ~${file.estimatedTokens.toLocaleString()} tokens`);
     }
     lines.push("");
   }
@@ -244,7 +244,7 @@ function appendOverflowNotes(lines: string[], repoMap: RepoMapResult): void {
   }
 
   for (const note of repoMap.overflowNotes) {
-    lines.push(`- ${note}`);
+    lines.push(`- ${escapeMarkdownText(note)}`);
   }
   lines.push("");
 }
@@ -260,7 +260,7 @@ function appendKeySymbols(lines: string[], repoMap: RepoMapResult): void {
   const top = repoMap.symbols.slice(0, 30);
   for (const sym of top) {
     const exported = sym.exported ? "yes" : "";
-    lines.push(`| \`${sym.name}\` | ${sym.kind} | \`${sym.relativePath}\` | ${exported} | ${sym.priority} |`);
+    lines.push(`| ${markdownCode(sym.name)} | ${escapeMarkdownText(sym.kind)} | ${markdownCode(sym.relativePath)} | ${exported} | ${sym.priority} |`);
   }
   if (repoMap.symbols.length > 30) {
     lines.push(`| *... and ${repoMap.symbols.length - 30} more* | | | |`);
@@ -276,7 +276,7 @@ function appendRoutes(lines: string[], repoMap: RepoMapResult): void {
   lines.push("| File | Route / Framework | Reason |");
   lines.push("| --- | --- | --- |");
   for (const route of repoMap.routes) {
-    lines.push(`| \`${route.relativePath}\` | ${route.routePattern ?? route.framework ?? "unknown"} | ${route.reason} |`);
+    lines.push(`| ${markdownCode(route.relativePath)} | ${escapeMarkdownText(route.routePattern ?? route.framework ?? "unknown")} | ${escapeMarkdownText(route.reason)} |`);
   }
   lines.push("");
 }
@@ -301,11 +301,23 @@ function appendImportHints(lines: string[], repoMap: RepoMapResult): void {
   lines.push("| Module | Files Importing |");
   lines.push("| --- | ---:|");
   for (const [mod, count] of topImports) {
-    lines.push(`| \`${mod}\` | ${count} |`);
+    lines.push(`| ${markdownCode(mod)} | ${count} |`);
   }
   lines.push("");
+
+  const resolved = repoMap.imports.filter((entry) => entry.resolvedPath).slice(0, 30);
+  if (resolved.length > 0) {
+    lines.push("### Resolved Dependency Edges");
+    lines.push("");
+    lines.push("| From | To |");
+    lines.push("| --- | --- |");
+    for (const entry of resolved) {
+      lines.push(`| ${markdownCode(entry.relativePath)} | ${markdownCode(entry.resolvedPath!)} |`);
+    }
+    lines.push("");
+  }
 }
 
 function formatFileRow(file: RepoMapFile): string {
-  return `| \`${file.relativePath}\` | ${file.reason} | ${file.estimatedTokens.toLocaleString()} | ${file.priority} |`;
+  return `| ${markdownCode(file.relativePath)} | ${escapeMarkdownText(file.reason)} | ${file.estimatedTokens.toLocaleString()} | ${file.priority} |`;
 }

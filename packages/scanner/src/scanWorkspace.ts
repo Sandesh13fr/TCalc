@@ -1,35 +1,87 @@
-import { readdir, stat, readFile } from "node:fs/promises";
+import { readdir, stat, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
-import type { WorkspaceFileInfo, WorkspaceScanResult, FolderStats, LanguageBreakdown } from "@wma/core";
-import { DEFAULT_FILE_SIZE_CONFIG } from "@wma/core";
+import { DEFAULT_FILE_SIZE_CONFIG, type WorkspaceFileInfo, type WorkspaceScanResult, type FolderStats, type LanguageBreakdown } from "@wma/core";
+import { estimateFileTokens, estimateProviderTokens, estimateTokensFromBytes, type ProviderTokenizer } from "@wma/tokenizers";
 import { IgnoreResolver, type IgnoreResolverOptions } from "./ignoreResolver.js";
 import { classifyFile, detectSecretRisk } from "./classifyFile.js";
+import { loadScanCache, saveScanCache, type ScanCacheEntry } from "./scanCache.js";
 
 const CONCURRENCY_LIMIT = 10;
 
 export interface ScanOptions extends IgnoreResolverOptions {
   rootPath: string;
+  signal?: AbortSignal;
+  cacheFile?: string;
+  tokenizer?: ProviderTokenizer;
+  tokenizerModel?: string;
+}
+
+interface ScannedFile {
+  info: WorkspaceFileInfo;
+  cacheEntry: ScanCacheEntry;
+  cacheHit: boolean;
+}
+
+interface WalkContext {
+  rootRealPath: string;
+  visited: Set<string>;
+  skipRelativePaths: Set<string>;
+  warnings: string[];
+  signal?: AbortSignal;
 }
 
 export async function scanWorkspace(options: ScanOptions): Promise<WorkspaceScanResult> {
   const { rootPath } = options;
-  const resolver = await resolveIgnoreRules(rootPath, options);
+  const warnings: string[] = [];
+  const cacheRelativePath = options.cacheFile ? path.relative(rootPath, options.cacheFile).replace(/\\/g, "/") : undefined;
+  const cacheExclude = cacheRelativePath && !cacheRelativePath.startsWith("../") && !path.isAbsolute(cacheRelativePath) ? [cacheRelativePath] : [];
+  const resolver = await resolveIgnoreRules(rootPath, {
+    ...options,
+    userExcludePatterns: [...(options.userExcludePatterns ?? []), ...cacheExclude],
+    onWarning: (warning) => {
+      warnings.push(warning);
+      options.onWarning?.(warning);
+    },
+  });
 
   const allFiles: WorkspaceFileInfo[] = [];
-  const filePaths = await walkFiles(rootPath, rootPath, resolver);
+  const tokenizerKey = options.tokenizer ? `${options.tokenizer.provider}:${options.tokenizer.id}:${options.tokenizerModel ?? ""}` : "heuristic-v1";
+  const cache = await loadScanCache(options.cacheFile, tokenizerKey);
+  const nextCache = new Map<string, ScanCacheEntry>();
+  let cacheHits = 0;
+  let cacheMisses = 0;
+  const filePaths = await walkFiles(rootPath, rootPath, resolver, {
+    rootRealPath: await realpath(rootPath),
+    visited: new Set(),
+    skipRelativePaths: new Set(cacheExclude),
+    warnings,
+    signal: options.signal,
+  });
 
   for (let i = 0; i < filePaths.length; i += CONCURRENCY_LIMIT) {
+    options.signal?.throwIfAborted();
     const chunk = filePaths.slice(i, i + CONCURRENCY_LIMIT);
-    const results = await Promise.all(chunk.map(filePath => scanSingleFile(rootPath, filePath, resolver)));
-    allFiles.push(...results);
+    const results = await Promise.all(chunk.map(filePath => scanSingleFile(rootPath, filePath, resolver, warnings, cache, options)));
+    for (const result of results) {
+      allFiles.push(result.info);
+      nextCache.set(result.info.relativePath, result.cacheEntry);
+      if (result.cacheHit) cacheHits++;
+      else cacheMisses++;
+    }
+  }
+
+  try {
+    await saveScanCache(options.cacheFile, tokenizerKey, nextCache);
+  } catch (error) {
+    warnings.push(`Failed to write scan cache: ${errorMessage(error)}`);
   }
 
   allFiles.sort((a, b) => a.relativePath.localeCompare(b.relativePath));
 
-  const warnings: string[] = [];
   if (allFiles.length === 0) {
     warnings.push("No files found in workspace");
   }
+  warnings.sort();
 
   const stats = aggregateWorkspaceStats(allFiles);
   const folders = computeFolderStats(allFiles);
@@ -46,33 +98,74 @@ export async function scanWorkspace(options: ScanOptions): Promise<WorkspaceScan
     languages,
     warnings,
     riskFiles,
+    ...(options.cacheFile ? { cacheHits, cacheMisses } : {}),
   };
 }
 
-export async function walkFiles(rootPath: string, currentPath: string, resolver: IgnoreResolver): Promise<string[]> {
+export async function walkFiles(rootPath: string, currentPath: string, resolver: IgnoreResolver, context?: WalkContext): Promise<string[]> {
+  const state = context ?? {
+    rootRealPath: await realpath(rootPath),
+    visited: new Set<string>(),
+    skipRelativePaths: new Set<string>(),
+    warnings: [],
+  };
+  state.signal?.throwIfAborted();
   const results: string[] = [];
-  let entries: string[];
+  let currentRealPath: string;
   try {
-    entries = await readdir(currentPath);
-  } catch {
+    currentRealPath = await realpath(currentPath);
+  } catch (error) {
+    state.warnings.push(`Failed to resolve ${relativeDisplay(rootPath, currentPath)}: ${errorMessage(error)}`);
+    return results;
+  }
+  if (!isWithinRoot(state.rootRealPath, currentRealPath)) {
+    state.warnings.push(`Skipped path outside workspace: ${relativeDisplay(rootPath, currentPath)}`);
+    return results;
+  }
+  if (state.visited.has(currentRealPath)) {
+    state.warnings.push(`Skipped already visited directory: ${relativeDisplay(rootPath, currentPath)}`);
+    return results;
+  }
+  state.visited.add(currentRealPath);
+
+  let entries;
+  try {
+    entries = await readdir(currentPath, { withFileTypes: true });
+  } catch (error) {
+    state.warnings.push(`Failed to read directory ${relativeDisplay(rootPath, currentPath)}: ${errorMessage(error)}`);
     return results;
   }
   for (const entry of entries) {
-    const fullPath = path.join(currentPath, entry);
-    const entryName = path.basename(entry);
+    state.signal?.throwIfAborted();
+    const fullPath = path.join(currentPath, entry.name);
+    const entryName = entry.name;
     if (entryName === ".git" || entryName === ".svn" || entryName === ".hg") continue;
-    let entryStat;
-    try {
-      entryStat = await stat(fullPath);
-    } catch {
-      continue;
-    }
     const relativePath = path.relative(rootPath, fullPath).replace(/\\/g, "/");
-    if (entryStat.isDirectory()) {
+    if (state.skipRelativePaths.has(relativePath)) continue;
+
+    if (entry.isSymbolicLink()) {
+      try {
+        const targetRealPath = await realpath(fullPath);
+        if (!isWithinRoot(state.rootRealPath, targetRealPath)) {
+          state.warnings.push(`Skipped symlink outside workspace: ${relativePath}`);
+          continue;
+        }
+        const targetStat = await stat(fullPath);
+        if (targetStat.isDirectory()) {
+          if (!resolver.shouldIgnore(relativePath + "/", 0).ignored) {
+            results.push(...await walkFiles(rootPath, fullPath, resolver, state));
+          }
+        } else if (targetStat.isFile()) {
+          results.push(fullPath);
+        }
+      } catch (error) {
+        state.warnings.push(`Failed to resolve symlink ${relativePath}: ${errorMessage(error)}`);
+      }
+    } else if (entry.isDirectory()) {
       if (resolver.shouldIgnore(relativePath + "/", 0).ignored) continue;
-      const subResults = await walkFiles(rootPath, fullPath, resolver);
+      const subResults = await walkFiles(rootPath, fullPath, resolver, state);
       results.push(...subResults);
-    } else if (entryStat.isFile()) {
+    } else if (entry.isFile()) {
       results.push(fullPath);
     }
   }
@@ -102,11 +195,17 @@ async function scanSingleFile(
   rootPath: string,
   filePath: string,
   resolver: IgnoreResolver,
-): Promise<WorkspaceFileInfo> {
+  warnings: string[],
+  cache: Map<string, ScanCacheEntry>,
+  options: ScanOptions,
+): Promise<ScannedFile> {
+  const signal = options.signal;
+  signal?.throwIfAborted();
   let entryStat;
   try {
     entryStat = await stat(filePath);
-  } catch {
+  } catch (error) {
+    warnings.push(`Failed to stat ${path.relative(rootPath, filePath)}: ${errorMessage(error)}`);
     entryStat = undefined;
   }
   const relativePath = path.relative(rootPath, filePath).replace(/\\/g, "/");
@@ -123,19 +222,30 @@ async function scanSingleFile(
   let contentPreview = "";
 
   const fileSizeConfig = DEFAULT_FILE_SIZE_CONFIG;
+  const cached = cache.get(relativePath);
+  let cacheHit = false;
 
   if (!excludedByIgnoreOrBinary && entryStat && fileSize > 0) {
-    if (fileSize <= fileSizeConfig.maxTextFileBytes) {
+    if (cached && cached.bytes === fileSize && cached.mtimeMs === entryStat.mtimeMs) {
+      estimatedTokens = cached.estimatedTokens;
+      for (const flag of cached.riskFlags) if (!riskFlags.includes(flag)) riskFlags.push(flag);
+      excludedBySecret = riskFlags.includes("secret");
+      cacheHit = true;
+    } else if (fileSize <= fileSizeConfig.maxTextFileBytes) {
       try {
-        const buf = await readFile(filePath);
+        const buf = await readFile(filePath, { signal });
         const text = buf.toString("utf-8");
-        estimatedTokens = estimateTokensHeuristic(text, extension);
+        estimatedTokens = options.tokenizer
+          ? estimateProviderTokens(text, options.tokenizer, options.tokenizerModel, (value) => estimateFileTokens(value, relativePath)).tokens
+          : estimateFileTokens(text, relativePath);
         contentPreview = text.slice(0, fileSizeConfig.maxContentPreviewBytes);
-      } catch {
-        estimatedTokens = Math.round(fileSize / 4);
+      } catch (error) {
+        if (signal?.aborted) signal.throwIfAborted();
+        warnings.push(`Failed to read ${relativePath}: ${errorMessage(error)}`);
+        estimatedTokens = estimateTokensFromBytes(fileSize);
       }
     } else {
-      estimatedTokens = Math.round(fileSize / 4);
+      estimatedTokens = estimateTokensFromBytes(fileSize);
     }
 
     if (contentPreview) {
@@ -156,16 +266,38 @@ async function scanSingleFile(
   const included = !excludedByIgnoreOrBinary && !excludedBySecret && !excludedByRisk;
 
   return {
-    path: filePath,
-    relativePath,
-    extension,
-    language: classification.language,
-    bytes: fileSize,
-    estimatedTokens,
-    included,
-    excludedReason: getExclusionReason(ignoreResult, classification.isBinary, riskFlags),
-    riskFlags,
+    info: {
+      path: filePath,
+      relativePath,
+      extension,
+      language: classification.language,
+      bytes: fileSize,
+      estimatedTokens,
+      included,
+      excludedReason: getExclusionReason(ignoreResult, classification.isBinary, riskFlags),
+      riskFlags,
+    },
+    cacheEntry: {
+      bytes: fileSize,
+      mtimeMs: entryStat?.mtimeMs ?? 0,
+      estimatedTokens,
+      riskFlags,
+    },
+    cacheHit,
   };
+}
+
+function isWithinRoot(rootPath: string, targetPath: string): boolean {
+  const relative = path.relative(rootPath, targetPath);
+  return relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative));
+}
+
+function relativeDisplay(rootPath: string, targetPath: string): string {
+  return path.relative(rootPath, targetPath).replace(/\\/g, "/") || ".";
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 function getExclusionReason(
@@ -181,27 +313,6 @@ function getExclusionReason(
   );
   if (risk) return risk.replace("-", " ");
   return undefined;
-}
-
-const EXTENSION_TOKEN_MULTIPLIERS: Record<string, number> = {
-  ".json": 0.9,
-  ".yaml": 0.85,
-  ".yml": 0.85,
-  ".md": 1.1,
-  ".mdx": 1.1,
-  ".svg": 1.3,
-};
-
-export function estimateTokensHeuristic(text: string, ext?: string): number {
-  const charCount = text.length;
-  const wordCount = text.split(/\s+/).filter(w => w.length > 0).length;
-  const charEstimate = Math.ceil(charCount / 4);
-  const wordEstimate = Math.ceil(wordCount * 1.3);
-  let estimate = Math.max(charEstimate, wordEstimate);
-  if (ext) {
-    estimate = Math.round(estimate * (EXTENSION_TOKEN_MULTIPLIERS[ext] ?? 1));
-  }
-  return estimate;
 }
 
 function computeFolderStats(files: WorkspaceFileInfo[]): FolderStats[] {

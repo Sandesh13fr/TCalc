@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -7,13 +7,13 @@ import { fileURLToPath } from "node:url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "..");
 const distDir = resolve(repoRoot, "dist-vsix");
+const extPkg = JSON.parse(
+  readFileSync(resolve(repoRoot, "apps/vscode-extension/package.json"), "utf-8"),
+);
 
 function findVsix() {
-  if (!existsSync(distDir)) return null;
-  const entries = readdirSync(distDir);
-  const vsix = entries.filter((e) => e.endsWith(".vsix"));
-  if (vsix.length === 0) return null;
-  return resolve(distDir, vsix[0]);
+  const expectedPath = resolve(distDir, `${extPkg.name}-${extPkg.version}.vsix`);
+  return existsSync(expectedPath) ? expectedPath : null;
 }
 
 const isDryRun = process.argv.includes("--dry-run");
@@ -65,7 +65,9 @@ execSync("pnpm package:vscode:inspect", { cwd: repoRoot, stdio: "inherit" });
 
 const vsixPath = findVsix();
 if (!vsixPath) {
-  console.error("ERROR: No .vsix found in dist-vsix/ after packaging.");
+  console.error(
+    `ERROR: Expected ${extPkg.name}-${extPkg.version}.vsix in dist-vsix/ after packaging.`,
+  );
   process.exit(1);
 }
 const stat = statSync(vsixPath);

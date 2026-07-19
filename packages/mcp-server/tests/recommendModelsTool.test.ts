@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { handleRecommendModels } from "../src/tools/recommendModelsTool.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fixturePath = path.resolve(__dirname, "../../../fixtures/small-node-app");
@@ -66,5 +67,18 @@ describe("recommendModelsTool", () => {
 
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed).toBeDefined();
+  });
+
+  it("rejects invalid custom catalog records", async () => {
+    const root = mkdtempSync(path.join(process.cwd(), ".tcalc-invalid-catalog-"));
+    try {
+      writeFileSync(path.join(root, "index.ts"), "export const value = 1;");
+      const invalidCatalog = path.join(root, "models.json");
+      writeFileSync(invalidCatalog, JSON.stringify({ version: "1.0", updatedAt: "2026-07-01", models: [{ id: "broken" }] }));
+      const result = await handleRecommendModels({ rootPath: root, catalogPath: invalidCatalog });
+      expect(JSON.parse(result.content[0].text).error).toMatch(/displayName/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });

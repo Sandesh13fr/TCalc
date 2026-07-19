@@ -12,6 +12,11 @@ describe("catalog validate command", () => {
     expect(result.message).toContain("VALID");
   });
 
+  it("emits JSON when requested", async () => {
+    const result = await executeCatalogValidate({ path: "catalogs/models.json", format: "json" });
+    expect(JSON.parse(result.message)).toMatchObject({ valid: true, modelCount: 9, errors: [] });
+  });
+
   it("fails on missing catalog", async () => {
     const result = await executeCatalogValidate({
       path: "catalogs/nonexistent.json",

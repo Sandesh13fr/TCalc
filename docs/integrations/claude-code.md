@@ -12,7 +12,7 @@ Use TCalc from [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (CL
 Claude Code can connect to any stdio MCP server. Run TCalc's MCP server:
 
 ```bash
-pnpm tcalc mcp
+pnpm cli mcp
 ```
 
 Or configure it in your Claude Code project settings to start automatically.
@@ -22,7 +22,7 @@ Or configure it in your Claude Code project settings to start automatically.
 Generate `CLAUDE.md` to optimize Claude Code's behavior for your workspace:
 
 ```bash
-pnpm tcalc rules . --target claude-code --mode normal --yes
+pnpm cli rules . --target claude-code --mode normal --yes
 ```
 
 Or from the VS Code extension: **TCalc: Generate Agent Rules** → select `claude-code`.
@@ -47,11 +47,11 @@ Or from the VS Code extension: **TCalc: Generate Agent Rules** → select `claud
 ## Troubleshooting
 
 **Claude Code can't find MCP server**  
-Ensure you run `pnpm build` first, then start the server with `pnpm tcalc mcp` from the repo root.
+Ensure you run `pnpm build` first, then start the server with `pnpm cli mcp` from the repo root.
 
 **CLAUDE.md not being picked up**  
 The file must be at the workspace root. Regenerate with `--yes` to overwrite.
 
 ## Verify It Works
 
-Run `pnpm tcalc mcp` — the server starts and waits for JSON-RPC messages on stdin.
+Run `pnpm cli mcp` — the server starts and waits for JSON-RPC messages on stdin.

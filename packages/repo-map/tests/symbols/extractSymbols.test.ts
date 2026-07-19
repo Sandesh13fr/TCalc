@@ -64,6 +64,7 @@ const myConst = 42;
     expect(names).toContain("MyType");
     expect(names).toContain("MyEnum");
     expect(names).toContain("myConst");
+    expect(names).toContain("MyClass.doStuff");
 
     const hello = result.symbols.find((s) => s.name === "hello")!;
     expect(hello.exported).toBe(true);
@@ -95,6 +96,30 @@ export function PrimaryButton() { return <button />; }
     expect(names).toContain("PrimaryButton");
     const primaryButton = result.symbols.find((s) => s.name === "PrimaryButton")!;
     expect(primaryButton.kind).toBe("component");
+  });
+});
+
+describe("parseFileSymbols - additional languages", () => {
+  it("extracts Java classes and methods", () => {
+    const content = "public class AccountService {\n  public void refresh() {\n    return helper();\n  }\n}";
+    const filePath = join(tempDir, "AccountService.java");
+    writeFileSync(filePath, content, "utf-8");
+    const result = parseFileSymbols(makeFileInfo("src/AccountService.java", ".java", "AccountService.java"), true);
+    expect(result.symbols.map((symbol) => symbol.name)).toEqual(expect.arrayContaining(["AccountService", "refresh"]));
+    expect(result.symbols.map((symbol) => symbol.name)).not.toContain("helper");
+  });
+
+  it("recognizes Go and Kotlin export rules", () => {
+    writeFileSync(join(tempDir, "service.go"), "type Service struct {}\nfunc Run() {}\nfunc hidden() {}", "utf-8");
+    const go = parseFileSymbols(makeFileInfo("service.go", ".go", "service.go"), true);
+    expect(go.symbols.find((symbol) => symbol.name === "Service")).toMatchObject({ kind: "type", exported: true });
+    expect(go.symbols.find((symbol) => symbol.name === "Run")?.exported).toBe(true);
+    expect(go.symbols.find((symbol) => symbol.name === "hidden")?.exported).toBe(false);
+
+    writeFileSync(join(tempDir, "Service.kt"), "class Service\nprivate fun hidden() {}", "utf-8");
+    const kotlin = parseFileSymbols(makeFileInfo("Service.kt", ".kt", "Service.kt"), true);
+    expect(kotlin.symbols.find((symbol) => symbol.name === "Service")?.exported).toBe(true);
+    expect(kotlin.symbols.find((symbol) => symbol.name === "hidden")?.exported).toBe(false);
   });
 });
 

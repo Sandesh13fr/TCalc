@@ -73,6 +73,8 @@ describe("generateJsonReport", () => {
     const parsed = JSON.parse(json);
     expect(parsed).toHaveProperty("title");
     expect(parsed).toHaveProperty("summary");
+    expect(parsed.schemaVersion).toBe("1.0.0");
+    expect(parsed.goal).toBe("debug");
   });
 
   it("should include scan data", () => {
@@ -94,6 +96,17 @@ describe("generateJsonReport", () => {
     const json = generateJsonReport(createMockScanResult(), null);
     const parsed = JSON.parse(json);
     expect(parsed.summary.totalFiles).toBe(10);
-    expect(parsed.recommendations).toBeDefined();
+    expect(parsed.recommendations).toBeNull();
+    expect(parsed.goal).toBeNull();
+  });
+
+  it("uses zero percentages when included tokens are zero", () => {
+    const scan = createMockScanResult();
+    scan.includedTokens = 0;
+    scan.files = [{ path: "/empty", relativePath: "empty", extension: "", language: "Unknown", bytes: 0, estimatedTokens: 0, included: true, riskFlags: [] }];
+    scan.folders = [{ folderPath: ".", totalFiles: 1, totalBytes: 0, totalTokens: 0, includedFiles: 1, excludedFiles: 0 }];
+    const parsed = JSON.parse(generateJsonReport(scan, createMockRecommendation()));
+    expect(parsed.topTokenConsumers[0].percentage).toBe(0);
+    expect(parsed.topFolders[0].percentage).toBe(0);
   });
 });

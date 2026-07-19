@@ -78,21 +78,19 @@ export function registerGenerateRepoMapCommand(context: vscode.ExtensionContext)
       });
       await vscode.window.showTextDocument(doc);
 
-      const save = await vscode.window.showInformationMessage(
-        "Save repo map to workspace root?",
-        "Save",
-        "Don't Save",
-      );
+      const saveUri = await vscode.window.showSaveDialog({
+        defaultUri: vscode.Uri.file(path.join(rootPath, "repo-map.md")),
+        filters: { Markdown: ["md"] },
+      });
 
-      if (save === "Save") {
-        const filePath = path.join(rootPath, "repo-map.md");
+      if (saveUri) {
         try {
           await vscode.workspace.fs.writeFile(
-            vscode.Uri.file(filePath),
+            saveUri,
             new TextEncoder().encode(markdown),
           );
-          await context.workspaceState.update("wma.repoMapPath", filePath);
-          vscode.window.showInformationMessage(`Repo map saved to repo-map.md`);
+          await context.workspaceState.update("wma.repoMapPath", saveUri.fsPath);
+          vscode.window.showInformationMessage(`Repo map saved to ${saveUri.fsPath}`);
         } catch (err) {
           vscode.window.showErrorMessage(
             `Failed to save repo map: ${err instanceof Error ? err.message : String(err)}`,

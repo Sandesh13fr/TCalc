@@ -234,4 +234,17 @@ describe("formatRepoMapMarkdown", () => {
     expect(md).not.toContain("## Routes / Entry Handlers");
     expect(md).not.toContain("## Import / Dependency Hints");
   });
+
+  it("escapes hostile Markdown fields", () => {
+    const repoMap = makeFixtureRepoMap();
+    repoMap.importantFiles[0].relativePath = "src/a`b|c.ts";
+    repoMap.importantFiles[0].reason = "reason\n## injected";
+    repoMap.routes![0].routePattern = "/a|b";
+    const md = formatRepoMapMarkdown(repoMap);
+
+    expect(md).toContain("a`b&#124;c.ts");
+    expect(md).toContain("reason \\#\\# injected");
+    expect(md).toContain("/a\\|b");
+    expect(md).not.toContain("\n## injected");
+  });
 });

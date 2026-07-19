@@ -1,5 +1,6 @@
 src/**
 tests/**
+dist/test/**
 **/*.map
 tsconfig.json
 tsconfig.tsbuildinfo

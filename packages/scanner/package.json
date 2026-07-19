@@ -1,6 +1,6 @@
 {
   "name": "@wma/scanner",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "description": "Workspace file discovery, classification, and ignore-resolution.",
   "type": "module",
@@ -15,9 +15,10 @@
   },
   "dependencies": {
     "@wma/core": "workspace:*",
+    "@wma/tokenizers": "workspace:*",
     "ignore": "^7.0.0"
   },
   "devDependencies": {
-    "typescript": "latest"
+    "typescript": "5.9.3"
   }
 }

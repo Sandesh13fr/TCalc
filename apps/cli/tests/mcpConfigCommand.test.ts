@@ -12,6 +12,7 @@ describe("mcp-config command", () => {
     expect(parsed.mcpServers.tcalc).toBeDefined();
     expect(parsed.mcpServers.tcalc.command).toBe("node");
     expect(parsed.mcpServers.tcalc.args).toContain("/path/to/mcp-server/dist/index.js");
+    expect(parsed.mcpServers.tcalc.env.WMA_ALLOWED_ROOT).toBe(process.cwd());
   });
 
   it("generates valid JSON for generic target", () => {

@@ -14,6 +14,7 @@ repositories {
 }
 
 dependencies {
+    testImplementation(kotlin("test"))
     intellijPlatform {
         create(providers.gradleProperty("platformType").get(), providers.gradleProperty("platformVersion").get())
         pluginVerifier()
@@ -24,7 +25,7 @@ dependencies {
 intellijPlatform {
     pluginConfiguration {
         name = providers.gradleProperty("pluginName").get()
-        id = "${providers.gradleProperty("pluginGroup").get()}.${providers.gradleProperty("pluginName").get()}"
+        id = "com.tcalc.plugin.tcalc-jetbrains"
         version = providers.gradleProperty("pluginVersion").get()
         description = "Local-first workspace token calculator, model recommender, and coding-agent optimizer for JetBrains IDEs."
         vendor {
@@ -43,18 +44,19 @@ intellijPlatform {
 
     pluginVerification {
         ides {
-            recommended()
+            ide("IC", "2024.2")
+            ide("IC", "2024.3")
         }
     }
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 tasks {
@@ -62,6 +64,9 @@ tasks {
         enabled = false
     }
     named("instrumentCode") {
+        enabled = false
+    }
+    named("instrumentTestCode") {
         enabled = false
     }
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, mkdirSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,6 +15,7 @@ if (!existsSync(distDir)) {
 }
 
 const outFile = resolve(distDir, `${pkg.name}-${pkg.version}.vsix`);
+rmSync(outFile, { force: true });
 
 console.log(`Packaging ${pkg.name}@${pkg.version}`);
 console.log(`  out: ${outFile}`);

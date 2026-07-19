@@ -1,9 +1,9 @@
 import * as vscode from "vscode";
 import path from "node:path";
 import { scanWorkspace } from "@wma/scanner";
-import { loadModelCatalog } from "@wma/model-catalog";
+import { applyModelProfile, loadModelCatalog, validateModelCatalog } from "@wma/model-catalog";
 import { recommendModels } from "@wma/recommender";
-import type { RecommendationResult, WorkspaceScanResult } from "@wma/core";
+import { getActiveModelProfile, loadTeamPolicy, type RecommendationResult, type WorkspaceScanResult } from "@wma/core";
 
 export function registerScanWorkspaceCommand(context: vscode.ExtensionContext): vscode.Disposable {
   return vscode.commands.registerCommand("workspaceModelAdvisor.scanWorkspace", async () => {
@@ -16,9 +16,13 @@ export function registerScanWorkspaceCommand(context: vscode.ExtensionContext): 
     await vscode.window.withProgress(
       { location: vscode.ProgressLocation.Notification, title: "Scanning workspace...", cancellable: true },
       async (progress, token) => {
+        const controller = new AbortController();
+        const cancellation = token.onCancellationRequested(() => controller.abort());
+        try {
         progress.report({ message: "Walking files..." });
 
-        const scanResult: WorkspaceScanResult = await scanWorkspace({ rootPath });
+        const policy = await loadTeamPolicy(rootPath);
+        const scanResult: WorkspaceScanResult = await scanWorkspace({ rootPath, signal: controller.signal, userExcludePatterns: policy?.exclude });
 
         if (token.isCancellationRequested) return;
 
@@ -45,19 +49,25 @@ export function registerScanWorkspaceCommand(context: vscode.ExtensionContext): 
 
         progress.report({ message: "Generating recommendations..." });
         const config = vscode.workspace.getConfiguration("wma");
-        const goal = config.get<string>("defaultGoal") ?? "build-mvp";
-        const privacyMode = config.get<string>("privacyMode") ?? "local-first";
+        const goal = policy?.defaultGoal ?? config.get<string>("defaultGoal") ?? "build-mvp";
+        const privacyMode = policy?.privacyMode ?? config.get<string>("privacyMode") ?? "local-first";
+        const models = applyModelProfile(catalog.models, getActiveModelProfile(policy));
+        const catalogErrors = validateModelCatalog(catalog.models);
 
         let recommendation: RecommendationResult | null = null;
-        if (catalog.models.length === 0) {
+        if (catalogErrors.length > 0) {
+          scanResult.warnings.push(`Invalid model catalog: ${catalogErrors[0]}`);
+          vscode.window.showWarningMessage(`Invalid model catalog: ${catalogErrors[0]}`);
+        } else if (models.length === 0) {
           vscode.window.showWarningMessage("Model catalog is empty. No recommendations generated.");
         } else {
           try {
             recommendation = recommendModels({
-              models: catalog.models,
+              models,
               workspaceTokens: scanResult.includedTokens,
               goal: goal as any,
               privacyMode: privacyMode as any,
+              budget: policy?.maxTokenBudget,
             });
           } catch (err) {
             scanResult.warnings.push(`Recommendations failed: ${err instanceof Error ? err.message : String(err)}`);
@@ -69,13 +79,18 @@ export function registerScanWorkspaceCommand(context: vscode.ExtensionContext): 
 
         await context.workspaceState.update("wma.lastScan", scanResult);
         await context.workspaceState.update("wma.lastRecommendation", recommendation);
-        await context.workspaceState.update("wma.lastModels", catalog.models);
+        await context.workspaceState.update("wma.lastModels", models);
 
         vscode.window.showInformationMessage(
           `Workspace scanned: ${scanResult.totalEstimatedTokens.toLocaleString()} estimated tokens`,
         );
 
-        vscode.commands.executeCommand("workspaceModelAdvisor.openDashboard");
+        await vscode.commands.executeCommand("workspaceModelAdvisor.openDashboard");
+        } catch (error) {
+          if (!controller.signal.aborted) throw error;
+        } finally {
+          cancellation.dispose();
+        }
       },
     );
   });

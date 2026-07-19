@@ -34,7 +34,7 @@ See [examples/mcp/cursor.mcp.json](../../examples/mcp/cursor.mcp.json) for a com
 Generate `.cursorrules` to optimize Cursor's behavior for your workspace:
 
 ```bash
-pnpm tcalc rules . --target cursor --mode normal --yes
+pnpm cli rules . --target cursor --mode normal --yes
 ```
 
 Or from the VS Code extension: **TCalc: Generate Agent Rules** → select `cursor`.

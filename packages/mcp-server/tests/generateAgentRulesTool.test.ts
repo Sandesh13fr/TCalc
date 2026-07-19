@@ -53,4 +53,8 @@ describe("generateAgentRulesTool", () => {
     const parsed = JSON.parse(result.content[0].text);
     expect(parsed.mode).toBe("concise");
   });
+
+  it("should reject unknown options", async () => {
+    await expect(handleGenerateAgentRules({ rootPath: fixturePath, ignored: true })).rejects.toThrow();
+  });
 });

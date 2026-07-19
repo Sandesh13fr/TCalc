@@ -20,7 +20,7 @@ export async function executeRepoMap(options: RepoMapOptions): Promise<string> {
   const rootPath = resolveTargetPath(options.target);
   const config = await loadWorkspaceConfig(rootPath);
 
-  const scanResult = await scanWorkspace({ rootPath });
+  const scanResult = await scanWorkspace({ rootPath, userExcludePatterns: config.exclude });
 
   const repoMap = createRepoMap(scanResult, {
     tokenBudget: options.budget ?? config.tokenBudget.defaultContextBudget,

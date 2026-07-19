@@ -1,27 +1,19 @@
 #!/usr/bin/env node
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { glob } from "glob";
+import { existsSync, readFileSync } from "node:fs";
 import yauzl from "yauzl";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "..");
 
 async function main() {
-  const vsixPattern = `${repoRoot.replace(/\\/g, "/")}/apps/vscode-extension/*.vsix`;
-  let files = glob.sync(vsixPattern);
-
-  if (files.length === 0) {
-    const altPattern = `${repoRoot.replace(/\\/g, "/")}/dist-vsix/*.vsix`;
-    const altFiles = glob.sync(altPattern);
-    if (altFiles.length === 0) {
-      console.error("No .vsix file found. Run pnpm package:vscode first.");
-      process.exit(1);
-    }
-    files.push(...altFiles);
+  const expected = JSON.parse(readFileSync(resolve(repoRoot, "apps/vscode-extension/package.json"), "utf-8"));
+  const vsixPath = resolve(repoRoot, "dist-vsix", `${expected.name}-${expected.version}.vsix`);
+  if (!existsSync(vsixPath)) {
+    console.error(`Expected VSIX not found: ${vsixPath}. Run pnpm package:vscode first.`);
+    process.exit(1);
   }
-
-  const vsixPath = files[0];
   console.log(`Inspecting: ${vsixPath}`);
   console.log("");
 
@@ -34,6 +26,7 @@ async function main() {
   ];
 
   const foundFiles = [];
+  let packagedVersion;
 
   await new Promise((resolve, reject) => {
     yauzl.open(vsixPath, { lazyEntries: true }, (err, zipfile) => {
@@ -48,6 +41,19 @@ async function main() {
           const innerPath = parts.slice(1).join("/");
           if (innerPath) {
             foundFiles.push(innerPath);
+          }
+          if (innerPath === "package.json") {
+            zipfile.openReadStream(entry, (streamError, stream) => {
+              if (streamError || !stream) return reject(streamError ?? new Error("Failed to read package.json"));
+              let json = "";
+              stream.on("data", (chunk) => json += chunk);
+              stream.on("end", () => {
+                packagedVersion = JSON.parse(json).version;
+                zipfile.readEntry();
+              });
+              stream.on("error", reject);
+            });
+            return;
           }
         }
         zipfile.readEntry();
@@ -68,6 +74,10 @@ async function main() {
     console.log(`  ${ok ? "✓" : "✗"} ${rf}`);
     if (!ok) allFound = false;
   }
+
+  const versionMatches = packagedVersion === expected.version;
+  console.log(`  ${versionMatches ? "\u2713" : "\u2717"} version ${expected.version}`);
+  allFound &&= versionMatches;
 
   console.log("");
   if (allFound) {

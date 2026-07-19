@@ -1,7 +1,7 @@
 {
   "name": "tcalc",
   "displayName": "TCalc",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "Local-first workspace token calculator, model recommender, and coding-agent optimizer.",
   "publisher": "Sandesh13fr",
@@ -92,7 +92,7 @@
       },
       {
         "command": "workspaceModelAdvisor.updateModelCatalog",
-        "title": "TCalc: Update Model Catalog"
+        "title": "TCalc: Validate Model Catalog"
       },
       {
         "command": "workspaceModelAdvisor.openSettings",
@@ -138,7 +138,10 @@
         "wma.privacyMode": {
           "type": "string",
           "default": "local-first",
-          "enum": ["local-first", "cloud-ok"],
+          "enum": [
+            "local-first",
+            "cloud-ok"
+          ],
           "description": "Privacy mode: prefer local models or allow cloud."
         }
       }
@@ -148,23 +151,26 @@
     "build": "pnpm copy:assets && tsc -b",
     "copy:assets": "node scripts/copy-assets.mjs",
     "dev": "tsc -b --watch",
-    "typecheck": "tsc -b --noEmit",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint src/",
+    "test": "pnpm test:host",
+    "test:host": "pnpm build && node dist/test/runTest.js",
     "package": "pnpm copy:assets && node scripts/package-vsix.mjs"
   },
   "dependencies": {
+    "@wma/agent-rules": "workspace:*",
     "@wma/core": "workspace:*",
-    "@wma/scanner": "workspace:*",
-    "@wma/tokenizers": "workspace:*",
     "@wma/model-catalog": "workspace:*",
     "@wma/recommender": "workspace:*",
+    "@wma/repo-map": "workspace:*",
     "@wma/reports": "workspace:*",
-    "@wma/agent-rules": "workspace:*",
-    "@wma/repo-map": "workspace:*"
+    "@wma/scanner": "workspace:*",
+    "@wma/tokenizers": "workspace:*"
   },
   "devDependencies": {
     "@types/vscode": "^1.85.0",
+    "@vscode/test-electron": "^3.0.0",
     "@vscode/vsce": "latest",
-    "typescript": "latest"
+    "typescript": "5.9.3"
   }
 }

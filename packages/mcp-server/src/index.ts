@@ -1,11 +1,15 @@
 #!/usr/bin/env node
 
 import { startServer } from "./server.js";
+import { realpathSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-startServer().catch((error) => {
-  console.error("MCP server error:", error);
-  process.exit(1);
-});
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(fileURLToPath(import.meta.url))) {
+  startServer().catch((error) => {
+    console.error("MCP server error:", error);
+    process.exit(1);
+  });
+}
 
 export { startServer, createServer } from "./server.js";
 export {
@@ -44,6 +48,7 @@ export {
 export {
   validateRootPath,
   isWithinAllowedPath,
+  resolveCatalogPath,
   sanitizePath,
 } from "./utils/safeRootPath.js";
 export * from "./state.js";

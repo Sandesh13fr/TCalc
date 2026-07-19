@@ -1,121 +1,87 @@
-import type { RepoMapSymbol } from "@wma/core";
+import ts from "typescript";
+import type { RepoMapImport, RepoMapSymbol } from "@wma/core";
 
 export function extractTypeScriptSymbols(content: string, relativePath: string, ext: string): RepoMapSymbol[] {
+  const source = parseSource(content, relativePath, ext);
   const symbols: RepoMapSymbol[] = [];
-  const lines = content.split("\n");
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    const lineNum = i + 1;
-
-    const isExport = /^\s*export\s+/.test(line);
-    const isAsync = /^\s*(?:export\s+)?async\s+/.test(line);
-
-    const stripped = line.replace(/^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?/, "");
-
-    // class X
-    let m = stripped.match(/^(?:abstract\s+)?class\s+(\w+)/);
-    if (m) {
-      symbols.push({
-        name: m[1],
-        kind: "class",
-        relativePath,
-        lineStart: lineNum,
-        exported: isExport,
-        priority: isExport ? 8 : 5,
-      });
-      continue;
-    }
-
-    // interface X
-    m = stripped.match(/^interface\s+(\w+)/);
-    if (m) {
-      symbols.push({
-        name: m[1],
-        kind: "interface",
-        relativePath,
-        lineStart: lineNum,
-        exported: isExport,
-        priority: isExport ? 7 : 4,
-      });
-      continue;
-    }
-
-    // type X = ...
-    m = stripped.match(/^type\s+(\w+)\s*=/);
-    if (m) {
-      symbols.push({
-        name: m[1],
-        kind: "type",
-        relativePath,
-        lineStart: lineNum,
-        exported: isExport,
-        priority: isExport ? 6 : 3,
-      });
-      continue;
-    }
-
-    // enum X
-    m = stripped.match(/^enum\s+(\w+)/);
-    if (m) {
-      symbols.push({
-        name: m[1],
-        kind: "enum",
-        relativePath,
-        lineStart: lineNum,
-        exported: isExport,
-        priority: isExport ? 6 : 3,
-      });
-      continue;
-    }
-
-    // function name(...
-    m = stripped.match(/^function\s+(\w+)/);
-    if (m) {
-      const isComponent = ext === ".tsx" && /^[A-Z]/.test(m[1]);
-      symbols.push({
-        name: m[1],
-        kind: isComponent ? "component" : "function",
-        relativePath,
-        lineStart: lineNum,
-        exported: isExport,
-        async: isAsync,
-        priority: isExport ? 7 : 4,
-      });
-      continue;
-    }
-
-    // const|let|var Name = ... (with optional type annotation)
-    m = stripped.match(/^(?:const|let|var)\s+(\w+)\s*(?::[^=]*)?\s*=/);
-    if (m) {
-      const isComponent = ext === ".tsx" && /^[A-Z]/.test(m[1]);
-      symbols.push({
-        name: m[1],
-        kind: isComponent ? "component" : "variable",
-        relativePath,
-        lineStart: lineNum,
-        exported: isExport,
-        async: isAsync,
-        priority: isExport && isComponent ? 8 : isExport ? 5 : 2,
-      });
-      continue;
-    }
-
-    // export default class/function without name -> detect as default export
-    if (/^\s*export\s+default\s+(?:class|function|abstract\s+class)\s+(\w+)/.test(line)) {
-      m = line.match(/(?:class|function)\s+(\w+)/);
-      if (m) {
-        symbols.push({
-          name: m[1],
-          kind: "unknown",
-          relativePath,
-          lineStart: lineNum,
-          exported: true,
-          priority: 6,
-        });
+  for (const node of source.statements) {
+    const exported = hasModifier(node, ts.SyntaxKind.ExportKeyword);
+    if (ts.isFunctionDeclaration(node) && node.name) {
+      const kind = ext === ".tsx" && /^[A-Z]/.test(node.name.text) ? "component" : "function";
+      symbols.push(symbol(node.name.text, kind, node, source, relativePath, exported, hasModifier(node, ts.SyntaxKind.AsyncKeyword)));
+    } else if (ts.isClassDeclaration(node) && node.name) {
+      symbols.push(symbol(node.name.text, "class", node, source, relativePath, exported));
+      for (const member of node.members) {
+        if (ts.isMethodDeclaration(member) && member.name) {
+          symbols.push(symbol(`${node.name.text}.${member.name.getText(source)}`, "method", member, source, relativePath, exported, hasModifier(member, ts.SyntaxKind.AsyncKeyword)));
+        }
+      }
+    } else if (ts.isInterfaceDeclaration(node)) {
+      symbols.push(symbol(node.name.text, "interface", node, source, relativePath, exported));
+    } else if (ts.isTypeAliasDeclaration(node)) {
+      symbols.push(symbol(node.name.text, "type", node, source, relativePath, exported));
+    } else if (ts.isEnumDeclaration(node)) {
+      symbols.push(symbol(node.name.text, "enum", node, source, relativePath, exported));
+    } else if (ts.isVariableStatement(node)) {
+      for (const declaration of node.declarationList.declarations) {
+        if (ts.isIdentifier(declaration.name)) {
+          const kind = ext === ".tsx" && /^[A-Z]/.test(declaration.name.text) ? "component" : "variable";
+          symbols.push(symbol(declaration.name.text, kind, declaration, source, relativePath, exported));
+        }
       }
     }
   }
 
   return symbols;
+}
+
+export function extractTypeScriptImports(content: string, relativePath: string, ext: string): RepoMapImport[] {
+  const source = parseSource(content, relativePath, ext);
+  const imports: RepoMapImport[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isImportDeclaration(node) && ts.isStringLiteral(node.moduleSpecifier)) {
+      imports.push({ source: node.moduleSpecifier.text, relativePath, kind: "import" });
+    } else if (ts.isExportDeclaration(node) && node.moduleSpecifier && ts.isStringLiteral(node.moduleSpecifier)) {
+      imports.push({ source: node.moduleSpecifier.text, relativePath, kind: "export-from" });
+    } else if (ts.isCallExpression(node) && node.arguments.length > 0 && ts.isStringLiteral(node.arguments[0])) {
+      if (node.expression.kind === ts.SyntaxKind.ImportKeyword) {
+        imports.push({ source: node.arguments[0].text, relativePath, kind: "dynamic-import" });
+      } else if (ts.isIdentifier(node.expression) && node.expression.text === "require") {
+        imports.push({ source: node.arguments[0].text, relativePath, kind: "require" });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return imports;
+}
+
+function parseSource(content: string, relativePath: string, ext: string): ts.SourceFile {
+  const kind = ext === ".tsx" ? ts.ScriptKind.TSX : ext === ".jsx" ? ts.ScriptKind.JSX : ext === ".js" ? ts.ScriptKind.JS : ts.ScriptKind.TS;
+  return ts.createSourceFile(relativePath, content, ts.ScriptTarget.Latest, true, kind);
+}
+
+function symbol(
+  name: string,
+  kind: RepoMapSymbol["kind"],
+  node: ts.Node,
+  source: ts.SourceFile,
+  relativePath: string,
+  exported: boolean,
+  async = false,
+): RepoMapSymbol {
+  return {
+    name,
+    kind,
+    relativePath,
+    lineStart: source.getLineAndCharacterOfPosition(node.getStart(source)).line + 1,
+    exported,
+    async,
+    priority: exported ? 7 : kind === "class" || kind === "interface" ? 5 : 3,
+  };
+}
+
+function hasModifier(node: ts.Node, kind: ts.SyntaxKind): boolean {
+  return (ts.canHaveModifiers(node) ? ts.getModifiers(node) : undefined)?.some((modifier) => modifier.kind === kind) ?? false;
 }

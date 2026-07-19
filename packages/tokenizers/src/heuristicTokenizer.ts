@@ -14,8 +14,10 @@ export function estimateTokens(text: string): number {
   return Math.max(1, charEstimate, wordEstimate);
 }
 
-export function estimateFileTokens(content: string): number {
-  return estimateTokens(content);
+export function estimateFileTokens(content: string, filename?: string): number {
+  if (!filename) return estimateTokens(content);
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  return Math.round(estimateTokens(content) * (EXTENSION_ADJUSTMENTS[ext] ?? 1));
 }
 
 export function estimateTokensFromBytes(bytes: number): number {
@@ -24,17 +26,8 @@ export function estimateTokensFromBytes(bytes: number): number {
 
 export class HeuristicTokenizer {
   estimate(text: string): TokenEstimate {
-    if (!text || text.length === 0) {
-      return { tokens: 0, confidence: "heuristic" };
-    }
-
-    const charEstimate = Math.ceil(text.length / 4);
-    const words = text.split(/\s+/).filter(w => w.length > 0).length;
-    const wordEstimate = Math.ceil(words * 1.3);
-    const tokenEstimate = Math.max(charEstimate, wordEstimate);
-
     return {
-      tokens: tokenEstimate,
+      tokens: estimateTokens(text),
       confidence: "heuristic",
     };
   }
@@ -43,16 +36,7 @@ export class HeuristicTokenizer {
     const base = this.estimate(content);
 
     const ext = filename.split(".").pop()?.toLowerCase();
-    const adjustments: Record<string, number> = {
-      json: 0.9,
-      yaml: 0.85,
-      yml: 0.85,
-      md: 1.1,
-      svg: 1.3,
-      lock: 1.5,
-    };
-
-    const factor = adjustments[ext ?? ""] ?? 1.0;
+    const factor = EXTENSION_ADJUSTMENTS[ext ?? ""] ?? 1.0;
     const adjusted = Math.round(base.tokens * factor);
 
     return {
@@ -62,3 +46,13 @@ export class HeuristicTokenizer {
     };
   }
 }
+
+const EXTENSION_ADJUSTMENTS: Record<string, number> = {
+  json: 0.9,
+  yaml: 0.85,
+  yml: 0.85,
+  md: 1.1,
+  mdx: 1.1,
+  svg: 1.3,
+  lock: 1.5,
+};

@@ -1,129 +1,107 @@
-import type { RepoMapResult } from "@wma/core";
+import type { RepoMapFile, RepoMapResult } from "@wma/core";
+import { estimateTokens } from "@wma/tokenizers";
+import { formatRepoMapMarkdown } from "./formatRepoMapMarkdown.js";
 
-export function budgetRepoMap(
-  repoMap: RepoMapResult,
-  tokenBudget: number,
-): RepoMapResult {
-  const result = { ...repoMap, overflowNotes: [...repoMap.overflowNotes] };
+export function budgetRepoMap(repoMap: RepoMapResult, tokenBudget: number): RepoMapResult {
+  const result: RepoMapResult = {
+    ...repoMap,
+    importantFiles: [...repoMap.importantFiles],
+    testFiles: [...repoMap.testFiles],
+    largeFiles: [...repoMap.largeFiles],
+    riskyFiles: [...repoMap.riskyFiles],
+    generatedFiles: [...repoMap.generatedFiles],
+    excludedFiles: [...repoMap.excludedFiles],
+    recommendedInclude: [...repoMap.recommendedInclude],
+    recommendedExclude: [...repoMap.recommendedExclude],
+    overflowNotes: [...repoMap.overflowNotes],
+  };
 
-  const totalTokens = estimateMarkdownTokens(repoMap);
+  updateSerializedEstimate(result);
+  if (result.estimatedTokens <= tokenBudget) return result;
 
-  if (totalTokens <= tokenBudget) {
-    return result;
-  }
-
-  const highPriorityFiles = [
+  const highPriorityPaths = new Set([
     ...repoMap.entryPoints,
     ...repoMap.configFiles,
     ...repoMap.documentationFiles,
-  ];
+  ].map((file) => file.relativePath));
 
-  const highPriorityPaths = new Set(highPriorityFiles.map((f) => f.relativePath));
+  const candidates = uniqueTrimCandidates(repoMap, highPriorityPaths);
+  result.overflowNotes.push(`Budget of ${tokenBudget.toLocaleString()} tokens exceeded; lower-priority sections were trimmed.`);
 
-  const trimCandidates = [
-    ...repoMap.largeFiles.map((f) => ({ file: f, order: 0 })),
-    ...repoMap.generatedFiles.map((f) => ({ file: f, order: 1 })),
-    ...repoMap.riskyFiles.map((f) => ({ file: f, order: 2 })),
-    ...repoMap.excludedFiles.map((f) => ({ file: f, order: 3 })),
-    ...repoMap.testFiles
-      .filter((f) => !highPriorityPaths.has(f.relativePath))
-      .map((f) => ({ file: f, order: 4 })),
-    ...repoMap.importantFiles
-      .filter(
-        (f) =>
-          !highPriorityPaths.has(f.relativePath) &&
-          !repoMap.testFiles.some((t) => t.relativePath === f.relativePath),
-      )
-      .map((f) => ({ file: f, order: 5 })),
-  ];
-
-  trimCandidates.sort((a, b) => {
-    if (a.order !== b.order) return a.order - b.order;
-    return a.file.priority - b.file.priority;
-  });
-
-  const importantFiles = [...repoMap.importantFiles];
-  const testFiles = [...repoMap.testFiles];
-  const largeFiles = [...repoMap.largeFiles];
-  const riskyFiles = [...repoMap.riskyFiles];
-  const generatedFiles = [...repoMap.generatedFiles];
-  const excludedFiles = [...repoMap.excludedFiles];
-  const recommendedInclude = [...repoMap.recommendedInclude];
-  const recommendedExclude = [...repoMap.recommendedExclude];
-
-  const trimmedPaths = new Set<string>();
-  let currentEstimate = totalTokens;
-
-  for (const { file } of trimCandidates) {
-    if (currentEstimate <= tokenBudget) break;
-    if (highPriorityPaths.has(file.relativePath)) continue;
-
-    const fileTokens = file.estimatedTokens + 50;
-
-    removeFileFromList(importantFiles, file.relativePath);
-    removeFileFromList(testFiles, file.relativePath);
-    removeFileFromList(largeFiles, file.relativePath);
-    removeFileFromList(riskyFiles, file.relativePath);
-    removeFileFromList(generatedFiles, file.relativePath);
-    removeFileFromList(excludedFiles, file.relativePath);
-    removeFileFromList(recommendedInclude, file.relativePath);
-    removeFileFromList(recommendedExclude, file.relativePath);
-
-    trimmedPaths.add(file.relativePath);
-    currentEstimate -= fileTokens;
+  let trimmedCount = 0;
+  for (const file of candidates) {
+    if (result.estimatedTokens <= tokenBudget) break;
+    removeEverywhere(result, file.relativePath);
+    trimmedCount++;
+    updateSerializedEstimate(result);
   }
 
-  result.importantFiles = importantFiles;
-  result.testFiles = testFiles;
-  result.largeFiles = largeFiles;
-  result.riskyFiles = riskyFiles;
-  result.generatedFiles = generatedFiles;
-  result.excludedFiles = excludedFiles;
-  result.recommendedInclude = recommendedInclude;
-  result.recommendedExclude = recommendedExclude;
-  result.estimatedTokens = currentEstimate;
+  if (trimmedCount > 0) {
+    result.overflowNotes.push(`Trimmed ${trimmedCount} lower-priority file(s); entry points, config, and documentation were preserved.`);
+    refreshSymbolSummary(result);
+  }
 
-  if (trimmedPaths.size > 0) {
-    result.overflowNotes.push(
-      `Budget of ${tokenBudget.toLocaleString()} tokens exceeded. Trimmed ${trimmedPaths.size} lower-priority file(s) to fit.`,
-    );
-    if (trimmedPaths.size <= 5) {
-      const paths = [...trimmedPaths].map((p) => `\`${p}\``).join(", ");
-      result.overflowNotes.push(`Trimmed files: ${paths}`);
-    } else {
-      result.overflowNotes.push(
-        `Trimmed ${trimmedPaths.size} files. High-priority files (entry points, config, docs) were preserved.`,
-      );
-    }
+  updateSerializedEstimate(result);
+  if (result.estimatedTokens > tokenBudget) {
+    result.overflowNotes.push(`The required high-priority sections need ${result.estimatedTokens.toLocaleString()} tokens and cannot fit the requested budget.`);
+    updateSerializedEstimate(result);
   }
 
   return result;
 }
 
-function estimateMarkdownTokens(repoMap: RepoMapResult): number {
-  const listFiles = (files: Array<{ estimatedTokens: number }>) =>
-    files.reduce((sum, f) => sum + f.estimatedTokens, 0);
-
-  const overhead = 2000;
-  return (
-    overhead +
-    listFiles(repoMap.entryPoints) +
-    listFiles(repoMap.configFiles) +
-    listFiles(repoMap.documentationFiles) +
-    listFiles(repoMap.testFiles) +
-    listFiles(repoMap.largeFiles) +
-    listFiles(repoMap.riskyFiles) +
-    listFiles(repoMap.generatedFiles) +
-    listFiles(repoMap.excludedFiles)
-  );
+function uniqueTrimCandidates(repoMap: RepoMapResult, highPriorityPaths: Set<string>): RepoMapFile[] {
+  const ordered = [
+    ...repoMap.largeFiles,
+    ...repoMap.generatedFiles,
+    ...repoMap.riskyFiles,
+    ...repoMap.excludedFiles,
+    ...repoMap.testFiles,
+    ...repoMap.importantFiles,
+  ];
+  const seen = new Set<string>();
+  return ordered.filter((file) => {
+    if (highPriorityPaths.has(file.relativePath) || seen.has(file.relativePath)) return false;
+    seen.add(file.relativePath);
+    return true;
+  });
 }
 
-function removeFileFromList(
-  list: Array<{ relativePath: string }>,
-  relativePath: string,
-): void {
-  const idx = list.findIndex((f) => f.relativePath === relativePath);
-  if (idx !== -1) {
-    list.splice(idx, 1);
+function removeEverywhere(repoMap: RepoMapResult, relativePath: string): void {
+  repoMap.importantFiles = withoutPath(repoMap.importantFiles, relativePath);
+  repoMap.testFiles = withoutPath(repoMap.testFiles, relativePath);
+  repoMap.largeFiles = withoutPath(repoMap.largeFiles, relativePath);
+  repoMap.riskyFiles = withoutPath(repoMap.riskyFiles, relativePath);
+  repoMap.generatedFiles = withoutPath(repoMap.generatedFiles, relativePath);
+  repoMap.excludedFiles = withoutPath(repoMap.excludedFiles, relativePath);
+  repoMap.recommendedInclude = withoutPath(repoMap.recommendedInclude, relativePath);
+  repoMap.recommendedExclude = withoutPath(repoMap.recommendedExclude, relativePath);
+  repoMap.symbols = repoMap.symbols.filter((symbol) => symbol.relativePath !== relativePath);
+  repoMap.imports = repoMap.imports.filter((entry) => entry.relativePath !== relativePath);
+  repoMap.routes = repoMap.routes.filter((route) => route.relativePath !== relativePath);
+}
+
+function refreshSymbolSummary(repoMap: RepoMapResult): void {
+  repoMap.symbolSummary = repoMap.symbols.length === 0 ? [] : [
+    `${repoMap.symbols.length} symbols extracted from ${new Set(repoMap.symbols.map((symbol) => symbol.relativePath)).size} files`,
+    `Exports: ${repoMap.symbols.filter((symbol) => symbol.exported).length}`,
+    `Functions: ${repoMap.symbols.filter((symbol) => symbol.kind === "function" || symbol.kind === "component").length}`,
+    `Classes: ${repoMap.symbols.filter((symbol) => symbol.kind === "class").length}`,
+    `Interfaces/Types: ${repoMap.symbols.filter((symbol) => symbol.kind === "interface" || symbol.kind === "type").length}`,
+    `Routes: ${repoMap.routes.length}`,
+  ];
+}
+
+function withoutPath(files: RepoMapFile[], relativePath: string): RepoMapFile[] {
+  return files.filter((file) => file.relativePath !== relativePath);
+}
+
+function updateSerializedEstimate(repoMap: RepoMapResult): void {
+  let estimate = estimateTokens(formatRepoMapMarkdown(repoMap));
+  repoMap.estimatedTokens = estimate;
+  const stableEstimate = estimateTokens(formatRepoMapMarkdown(repoMap));
+  if (stableEstimate !== estimate) {
+    estimate = stableEstimate;
+    repoMap.estimatedTokens = estimate;
   }
 }

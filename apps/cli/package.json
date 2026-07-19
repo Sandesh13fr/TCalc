@@ -1,6 +1,6 @@
 {
   "name": "@wma/cli",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "description": "Command-line interface for TCalc.",
   "type": "module",
@@ -12,25 +12,25 @@
   "scripts": {
     "build": "tsc -b",
     "dev": "tsc -b --watch",
-    "typecheck": "tsc -b --noEmit",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "start": "node dist/index.js",
     "lint": "eslint src/"
   },
   "dependencies": {
+    "@wma/agent-rules": "workspace:*",
     "@wma/core": "workspace:*",
-    "@wma/scanner": "workspace:*",
-    "@wma/tokenizers": "workspace:*",
+    "@wma/mcp-server": "workspace:*",
     "@wma/model-catalog": "workspace:*",
     "@wma/recommender": "workspace:*",
-    "@wma/reports": "workspace:*",
     "@wma/repo-map": "workspace:*",
-    "@wma/agent-rules": "workspace:*",
-    "@wma/mcp-server": "workspace:*",
+    "@wma/reports": "workspace:*",
+    "@wma/scanner": "workspace:*",
+    "@wma/tokenizers": "workspace:*",
     "commander": "^13.0.0"
   },
   "devDependencies": {
     "@types/node": "latest",
-    "typescript": "latest"
+    "typescript": "5.9.3"
   }
 }

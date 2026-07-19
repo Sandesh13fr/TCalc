@@ -1,0 +1,64 @@
+name: TCalc Workspace Report
+description: Generate local-first workspace token, model-fit, and repo-map artifacts
+author: TCalc
+branding:
+  icon: activity
+  color: blue
+inputs:
+  path:
+    description: Workspace path to analyze
+    required: false
+    default: .
+  goal:
+    description: Workspace goal
+    required: false
+    default: build-mvp
+  privacy:
+    description: Privacy setting
+    required: false
+    default: local-first
+  token-budget:
+    description: Repo-map token budget
+    required: false
+    default: "64000"
+  output-dir:
+    description: Artifact output directory
+    required: false
+    default: tcalc-artifacts
+outputs:
+  report:
+    description: Generated JSON report path
+    value: ${{ steps.generate.outputs.report }}
+  repo-map:
+    description: Generated Markdown repo-map path
+    value: ${{ steps.generate.outputs.repo-map }}
+runs:
+  using: composite
+  steps:
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: "22"
+    - name: Build TCalc
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        corepack enable
+        corepack prepare pnpm@11.5.2 --activate
+        pnpm install --frozen-lockfile
+        pnpm build
+    - name: Generate artifacts
+      id: generate
+      shell: bash
+      env:
+        INPUT_PATH: ${{ inputs.path }}
+        INPUT_GOAL: ${{ inputs.goal }}
+        INPUT_PRIVACY: ${{ inputs.privacy }}
+        INPUT_BUDGET: ${{ inputs.token-budget }}
+        INPUT_OUTPUT_DIR: ${{ inputs.output-dir }}
+      run: |
+        mkdir -p "$INPUT_OUTPUT_DIR"
+        node "$GITHUB_ACTION_PATH/apps/cli/dist/index.js" report "$INPUT_PATH" --goal "$INPUT_GOAL" --privacy "$INPUT_PRIVACY" --catalog "$GITHUB_ACTION_PATH/catalogs/models.json" --format json --output "$INPUT_OUTPUT_DIR/report.json" --force
+        node "$GITHUB_ACTION_PATH/apps/cli/dist/index.js" repo-map "$INPUT_PATH" --goal "$INPUT_GOAL" --budget "$INPUT_BUDGET" --output "$INPUT_OUTPUT_DIR/repo-map.md" --force
+        echo "report=$INPUT_OUTPUT_DIR/report.json" >> "$GITHUB_OUTPUT"
+        echo "repo-map=$INPUT_OUTPUT_DIR/repo-map.md" >> "$GITHUB_OUTPUT"

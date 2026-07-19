@@ -2,7 +2,8 @@
  * Configuration types and loader.
  */
 
-import type { WorkspaceGoal } from "../types/recommendation.js";
+import type { OptimizationMode, PrivacySetting, WorkspaceGoal } from "../types/options.js";
+import type { TeamPolicy } from "../teamPolicy.js";
 
 /** Token budget configuration. */
 export interface TokenBudgetConfig {
@@ -20,7 +21,7 @@ export interface FileSizeConfig {
 
 /** Agent rules configuration. */
 export interface AgentRulesConfig {
-  defaultMode: string;
+  defaultMode: OptimizationMode;
   allowCavemanMode: boolean;
   preferPatchOnly: boolean;
   askBeforeLargeFileRead: boolean;
@@ -36,12 +37,13 @@ export interface ModelPreferencesConfig {
 /** Full TCalc config. */
 export interface WmaConfig {
   defaultGoal: WorkspaceGoal;
-  privacyMode: "local-first" | "cloud-ok";
+  privacyMode: PrivacySetting;
   currency: string;
   tokenBudget: TokenBudgetConfig;
   exclude: string[];
   agentRules: AgentRulesConfig;
   models: ModelPreferencesConfig;
+  teamPolicy?: TeamPolicy;
 }
 
 export const DEFAULT_FILE_SIZE_CONFIG: FileSizeConfig = {

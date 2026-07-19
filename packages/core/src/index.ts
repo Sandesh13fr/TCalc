@@ -1,8 +1,11 @@
 export type * from "./types/workspace.js";
 export type * from "./types/model.js";
 export type * from "./types/pricing.js";
+export * from "./types/options.js";
 export type * from "./types/recommendation.js";
 export type * from "./types/agentRules.js";
-export type * from "./types/report.js";
+export * from "./types/report.js";
 export type * from "./types/repoMap.js";
 export * from "./config/defaultConfig.js";
+export * from "./markdown.js";
+export * from "./teamPolicy.js";

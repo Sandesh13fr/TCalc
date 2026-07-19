@@ -28,15 +28,15 @@ Key capabilities exposed via MCP:
 ```bash
 # After building the monorepo
 pnpm build
-wma mcp
+pnpm cli mcp
 ```
 
 ### Option 2: via the standalone binary
 
 ```bash
 # After building the mcp-server package
-pnpm --filter @tcalc/mcp-server build
-wma-mcp
+pnpm --filter @wma/mcp-server build
+node packages/mcp-server/dist/index.js
 ```
 
 The server speaks the MCP protocol over **stdin/stdout**. All logs and errors
@@ -105,8 +105,10 @@ Or, if you prefer to run it through the TCalc CLI:
 
 ## Security limitations
 
-- **Root path validation:** All `rootPath` inputs are validated as local
-  filesystem paths. The server does not fetch remote URLs.
+- **Root path boundary:** All `rootPath` inputs are resolved through real paths
+  and must stay under `WMA_ALLOWED_ROOT` (the process working directory by
+  default). Generated `wma mcp-config` files set this variable to the selected
+  workspace. The server does not fetch remote URLs.
 - **No shell execution:** Tool inputs are never passed to a shell. There is
   no `child_process` or `exec` usage.
 - **Structural repo maps:** Repo maps are always structural — they list
@@ -131,7 +133,7 @@ Or, if you prefer to run it through the TCalc CLI:
 Tests are located in `packages/mcp-server/tests/` and can be run with:
 
 ```bash
-pnpm --filter @tcalc/mcp-server test
+pnpm exec vitest run packages/mcp-server/tests
 ```
 
 Tests cover tool handlers, security (no shell execution, no network calls,

@@ -5,11 +5,13 @@ import { createRepoMap, formatRepoMapMarkdown } from "@wma/repo-map";
 import { resolveCatalog } from "../utils/loadCatalog.js";
 import { resolveTargetPath } from "../utils/paths.js";
 import { loadWorkspaceConfig } from "../utils/loadWorkspaceConfig.js";
+import { getActiveModelProfile, type PrivacySetting, type WorkspaceGoal } from "@wma/core";
+import { applyModelProfile } from "@wma/model-catalog";
 
 export interface ReportOptions {
   target?: string;
-  goal?: string;
-  privacy?: string;
+  goal?: WorkspaceGoal;
+  privacy?: PrivacySetting;
   catalog?: string;
   format?: string;
   output?: string;
@@ -21,17 +23,18 @@ export async function executeReport(options: ReportOptions): Promise<string> {
   const rootPath = resolveTargetPath(options.target);
   const config = await loadWorkspaceConfig(rootPath);
 
-  const scanResult = await scanWorkspace({ rootPath });
+  const scanResult = await scanWorkspace({ rootPath, userExcludePatterns: config.exclude });
   const catalog = resolveCatalog(options.catalog, rootPath);
+  const models = applyModelProfile(catalog.models, getActiveModelProfile(config.teamPolicy));
 
-  const privacy = (options.privacy ?? config.privacyMode) as "local-first" | "cloud-ok";
-  const goal = (options.goal ?? config.defaultGoal) as any;
+  const privacy = options.privacy ?? config.privacyMode;
+  const goal = options.goal ?? config.defaultGoal;
 
   let recommendation = null;
-  if (catalog.models.length > 0) {
+  if (models.length > 0) {
     try {
       recommendation = recommendModels({
-        models: catalog.models,
+        models,
         workspaceTokens: scanResult.includedTokens,
         goal,
         privacyMode: privacy,

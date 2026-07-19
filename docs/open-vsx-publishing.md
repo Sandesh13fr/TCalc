@@ -287,7 +287,7 @@ downloadable asset. This means you can always install the extension from
 the GitHub release even if you do not use an Open VSX-compatible editor:
 
 ```bash
-code --install-extension tcalc-0.1.0.vsix
+code --install-extension tcalc-*.vsix
 ```
 
 The GitHub release VSIX is identical to the one published on Open VSX.

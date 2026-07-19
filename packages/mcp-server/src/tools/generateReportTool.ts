@@ -1,33 +1,21 @@
 import { z } from "zod";
-import path from "node:path";
-import type { WorkspaceGoal } from "@wma/core";
+import { PRIVACY_SETTINGS, WORKSPACE_GOALS, getActiveModelProfile, loadTeamPolicy } from "@wma/core";
 import { scanWorkspace } from "@wma/scanner";
-import { loadModelCatalog } from "@wma/model-catalog";
+import { applyModelProfile, loadModelCatalog, validateModelCatalog } from "@wma/model-catalog";
 import { recommendModels } from "@wma/recommender";
 import { generateMarkdownReport, generateJsonReport } from "@wma/reports";
-import { createRepoMap } from "@wma/repo-map";
-import { validateRootPath } from "../utils/safeRootPath.js";
+import { createRepoMap, formatRepoMapMarkdown } from "@wma/repo-map";
+import { resolveCatalogPath, validateRootPath } from "../utils/safeRootPath.js";
 import { setLatestScan, setLatestRecommendation, setLatestRepoMap, setLatestCatalog } from "../state.js";
 
 const GenerateReportInputSchema = z.object({
   rootPath: z.string().optional(),
-  goal: z.enum([
-    "build-mvp",
-    "add-feature",
-    "debug",
-    "refactor",
-    "migration",
-    "security-review",
-    "test-generation",
-    "documentation",
-    "architecture-planning",
-    "cleanup",
-  ]).optional(),
-  privacyMode: z.enum(["local-first", "cloud-ok"]).optional(),
+  goal: z.enum(WORKSPACE_GOALS).optional(),
+  privacyMode: z.enum(PRIVACY_SETTINGS).optional(),
   catalogPath: z.string().optional(),
   includeRepoMap: z.boolean().optional(),
   format: z.enum(["markdown", "json"]).optional(),
-});
+}).strict();
 
 export type GenerateReportInput = z.infer<typeof GenerateReportInputSchema>;
 
@@ -35,43 +23,55 @@ export async function handleGenerateReport(input: Record<string, unknown>) {
   const parsed = GenerateReportInputSchema.parse(input);
 
   const rootPath = validateRootPath(parsed.rootPath);
-  const goal = parsed.goal ?? "build-mvp";
-  const privacyMode = parsed.privacyMode ?? "local-first";
+  const policy = await loadTeamPolicy(rootPath);
+  const goal = policy?.defaultGoal ?? parsed.goal ?? "build-mvp";
+  const privacyMode = policy?.privacyMode ?? parsed.privacyMode ?? "local-first";
   const format = parsed.format ?? "markdown";
   const includeRepoMap = parsed.includeRepoMap ?? false;
-  const catalogPath = parsed.catalogPath ?? path.resolve(process.cwd(), "catalog.json");
+  const catalogPath = resolveCatalogPath(parsed.catalogPath);
 
-  const scanResult = await scanWorkspace({ rootPath });
+  const scanResult = await scanWorkspace({ rootPath, userExcludePatterns: policy?.exclude });
   setLatestScan(scanResult);
 
   const catalog = loadModelCatalog(catalogPath);
+  const validationErrors = validateModelCatalog(catalog.models);
+  if (validationErrors.length > 0) throw new Error(`Invalid model catalog: ${validationErrors[0]}`);
+  const models = applyModelProfile(catalog.models, getActiveModelProfile(policy));
   setLatestCatalog(catalog);
 
   let recommendation = null;
-  if (catalog.models.length > 0) {
+  if (models.length > 0) {
     recommendation = recommendModels({
-      models: catalog.models,
+      models,
       workspaceTokens: scanResult.includedTokens,
       goal,
       privacyMode,
+      budget: policy?.maxTokenBudget,
     });
     setLatestRecommendation(recommendation);
   }
 
-  let repoMapJson = "";
-  if (includeRepoMap && recommendation) {
-    repoMapJson = generateJsonReport(scanResult, recommendation);
-  }
-
-  const report = format === "markdown"
+  let report = format === "markdown"
     ? generateMarkdownReport(scanResult, recommendation)
     : generateJsonReport(scanResult, recommendation);
+
+  if (includeRepoMap) {
+    const repoMap = createRepoMap(scanResult, { tokenBudget: policy?.maxTokenBudget ?? 64000, goal });
+    setLatestRepoMap(repoMap);
+    if (format === "json") {
+      const parsedReport = JSON.parse(report) as Record<string, unknown>;
+      parsedReport.repoMap = repoMap;
+      report = JSON.stringify(parsedReport, null, 2);
+    } else {
+      report += `\n\n---\n\n${formatRepoMapMarkdown(repoMap)}`;
+    }
+  }
 
   return {
     content: [
       {
         type: "text" as const,
-        text: report + (includeRepoMap ? `\n\n---\n\n${repoMapJson}` : ""),
+        text: report,
       },
     ],
   };

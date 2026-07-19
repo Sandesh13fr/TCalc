@@ -2,6 +2,7 @@ import { scanWorkspace } from "@wma/scanner";
 import { formatScanTable, formatScanJson } from "../utils/output.js";
 import { resolveTargetPath } from "../utils/paths.js";
 import { loadWorkspaceConfig } from "../utils/loadWorkspaceConfig.js";
+import path from "node:path";
 
 export interface ScanOptions {
   target?: string;
@@ -10,12 +11,18 @@ export interface ScanOptions {
   format?: string;
   output?: string;
   debug?: boolean;
+  cache?: boolean;
 }
 
 export async function executeScan(options: ScanOptions): Promise<string> {
   const rootPath = resolveTargetPath(options.target);
+  const config = await loadWorkspaceConfig(rootPath);
 
-  const scanResult = await scanWorkspace({ rootPath });
+  const scanResult = await scanWorkspace({
+    rootPath,
+    userExcludePatterns: config.exclude,
+    cacheFile: options.cache ? path.join(rootPath, ".tcalc", "scan-cache.json") : undefined,
+  });
 
   const fmt = options.format ?? "table";
   let output: string;
@@ -64,7 +71,7 @@ function formatScanMarkdown(scan: import("@wma/core").WorkspaceScanResult): stri
     lines.push("| Path | Tokens | % |");
     lines.push("| --- | ---:| ---:|");
     for (const f of sortedFiles) {
-      const pc = ((f.estimatedTokens / scan.includedTokens) * 100).toFixed(1);
+      const pc = (scan.includedTokens > 0 ? (f.estimatedTokens / scan.includedTokens) * 100 : 0).toFixed(1);
       lines.push(`| \`${f.relativePath}\` | ${f.estimatedTokens.toLocaleString()} | ${pc}% |`);
     }
     lines.push("");

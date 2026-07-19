@@ -1,4 +1,4 @@
-import type { WorkspaceGoal } from "@wma/core";
+import type { PrivacySetting, WorkspaceGoal } from "@wma/core";
 
 const GOAL_LABELS: Record<WorkspaceGoal, string> = {
   "build-mvp": "building an MVP",
@@ -16,13 +16,16 @@ const GOAL_LABELS: Record<WorkspaceGoal, string> = {
 export interface OptimizeCodingAgentArgs {
   goal: WorkspaceGoal;
   tokenBudget?: number;
-  privacyMode?: "local-first" | "cloud-ok";
+  privacyMode?: PrivacySetting;
 }
 
 export function getOptimizeCodingAgentPrompt(args: OptimizeCodingAgentArgs): {
   messages: Array<{ role: "user"; text: string }>;
 } {
   const { goal, tokenBudget, privacyMode } = args;
+  if (tokenBudget !== undefined && (!Number.isSafeInteger(tokenBudget) || tokenBudget <= 0)) {
+    throw new TypeError("Token budget must be a positive integer");
+  }
   const goalLabel = GOAL_LABELS[goal] ?? "working on this workspace";
 
   const lines: string[] = [];

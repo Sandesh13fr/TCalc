@@ -20,7 +20,7 @@ Real screenshots for the VS Code Marketplace and Open VSX listing pages.
 4. Run `TCalc: Compare Models` and capture the comparison.
 5. Run `TCalc: Generate Repo Map` and capture the output.
 6. Run `TCalc: Generate Agent Rules` and capture the result.
-7. For MCP, run `pnpm tcalc mcp` and show it connected to an AI agent.
+7. For MCP, run `pnpm cli mcp` and show it connected to an AI agent.
 
 Requirements:
 - 1280×800 or similar 16:10 aspect ratio recommended.

@@ -16,7 +16,7 @@
 ## Install via CLI
 
 ```bash
-code --install-extension path/to/wma.vsix
+code --install-extension dist-vsix/tcalc-0.1.2.vsix
 ```
 
 ## Verify
@@ -28,7 +28,7 @@ code --install-extension path/to/wma.vsix
 ## Uninstall
 
 ```bash
-code --uninstall-extension @wma/vscode-extension
+code --uninstall-extension Sandesh13fr.tcalc
 ```
 
 Or right-click the extension in the Extensions view and select **Uninstall**.

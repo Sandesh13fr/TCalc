@@ -1,11 +1,12 @@
 import { z } from "zod";
 import { existsSync } from "node:fs";
-import { loadModelCatalog, validateModelCatalog } from "@wma/model-catalog";
+import { loadModelCatalog, validateCatalogFreshness, validateModelCatalog } from "@wma/model-catalog";
 import { setLatestCatalog, getLatestCatalog } from "../state.js";
+import { resolveCatalogPath } from "../utils/safeRootPath.js";
 
 const ValidateModelCatalogInputSchema = z.object({
   catalogPath: z.string().optional(),
-});
+}).strict();
 
 export type ValidateModelCatalogInput = z.infer<typeof ValidateModelCatalogInputSchema>;
 
@@ -18,10 +19,15 @@ export interface ValidateModelCatalogOutput {
 export async function handleValidateModelCatalog(input: Record<string, unknown>): Promise<{ content: { type: "text"; text: string }[] }> {
   const parsed = ValidateModelCatalogInputSchema.parse(input);
 
-  const catalogPath = parsed.catalogPath ?? process.cwd();
+  let catalogPath: string;
+  try {
+    catalogPath = resolveCatalogPath(parsed.catalogPath);
+  } catch (error) {
+    return invalidCatalog(error instanceof Error ? error.message : String(error));
+  }
   const fileExists = existsSync(catalogPath);
   const catalog = loadModelCatalog(catalogPath);
-  const errors = validateModelCatalog(catalog.models);
+  const errors = [...validateModelCatalog(catalog.models), ...validateCatalogFreshness(catalog)];
 
   if (!fileExists) {
     errors.push(`Catalog file not found at: ${catalogPath}`);
@@ -45,4 +51,9 @@ export async function handleValidateModelCatalog(input: Record<string, unknown>)
       },
     ],
   };
+}
+
+function invalidCatalog(error: string) {
+  const output: ValidateModelCatalogOutput = { valid: false, modelCount: 0, errors: [error] };
+  return { content: [{ type: "text" as const, text: JSON.stringify(output, null, 2) }] };
 }

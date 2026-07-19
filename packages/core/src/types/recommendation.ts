@@ -1,17 +1,8 @@
 import type { CostEstimate } from "./pricing.js";
 import type { WorkspaceFileInfo } from "./workspace.js";
+import type { WorkspaceGoal } from "./options.js";
 
-export type WorkspaceGoal =
-  | "build-mvp"
-  | "add-feature"
-  | "debug"
-  | "refactor"
-  | "migration"
-  | "security-review"
-  | "test-generation"
-  | "documentation"
-  | "architecture-planning"
-  | "cleanup";
+export type { WorkspaceGoal } from "./options.js";
 
 export type RecommendationTier = "cheapest-sufficient" | "balanced" | "high-confidence";
 

@@ -126,6 +126,15 @@ describe("recommendModels", () => {
     expect(bigInAll).toBeUndefined();
   });
 
+  it("reports when privacy filtering leaves no eligible models", () => {
+    expect(() => recommendModels({
+      models: [bigModel],
+      workspaceTokens: 5000,
+      goal: "debug",
+      privacyMode: "local-first",
+    })).toThrow('No models are eligible for privacy mode "local-first"');
+  });
+
   it("should include cloud models when privacy mode is cloud-ok", () => {
     const result = recommendModels({
       models: [cheapModel, bigModel],
@@ -185,6 +194,17 @@ describe("recommendModels", () => {
       budget: 3000,
     });
     expect(result.assumptions.some((a) => a.includes("3000"))).toBe(true);
+  });
+
+  it("does not inflate a workspace to fill a larger token budget", () => {
+    const result = recommendModels({
+      models: [cheapModel],
+      workspaceTokens: 5000,
+      goal: "debug",
+      budget: 10000,
+    });
+    expect(result.cheapestSufficient.costEstimate.inputTokens).toBe(6000);
+    expect(result.cheapestSufficient.costEstimate.cachedInputTokens).toBe(1500);
   });
 
   it("should provide expected quality in recommendations", () => {

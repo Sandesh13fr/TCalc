@@ -1,48 +1,15 @@
-import type { WorkspaceScanResult, RecommendationResult } from "@wma/core";
+import { REPORT_SCHEMA_VERSION, type WorkspaceReport, type WorkspaceScanResult, type RecommendationResult } from "@wma/core";
 
-export interface JsonReport {
-  title: string;
-  generatedAt: string;
-  workspacePath: string;
-  summary: {
-    totalFiles: number;
-    includedFiles: number;
-    excludedFiles: number;
-    totalEstimatedTokens: number;
-    includedTokens: number;
-  };
-  topTokenConsumers: Array<{
-    path: string;
-    tokens: number;
-    percentage: number;
-  }>;
-  topFolders: Array<{
-    path: string;
-    tokens: number;
-    percentage: number;
-  }>;
-  languages: Array<{
-    language: string;
-    fileCount: number;
-    tokens: number;
-    percentage: number;
-  }>;
-  recommendations: {
-    cheapestSufficient: RecommendationResult["cheapestSufficient"];
-    balanced: RecommendationResult["balanced"];
-    highConfidence: RecommendationResult["highConfidence"];
-  };
-  warnings: string[];
-  assumptions: string[];
-  optimizationChecklist: string[];
-}
+export type JsonReport = WorkspaceReport;
 
 export function generateJsonReport(scanResult: WorkspaceScanResult, recommendation: RecommendationResult | null): string {
   if (!recommendation) {
     const emptyReport: JsonReport = {
+      schemaVersion: REPORT_SCHEMA_VERSION,
       title: "Workspace Model Report",
       generatedAt: scanResult.scannedAt,
       workspacePath: scanResult.rootPath,
+      goal: null,
       summary: {
         totalFiles: scanResult.totalFiles,
         includedFiles: scanResult.includedFiles,
@@ -53,7 +20,7 @@ export function generateJsonReport(scanResult: WorkspaceScanResult, recommendati
       topTokenConsumers: [],
       topFolders: [],
       languages: [],
-      recommendations: {} as any,
+      recommendations: null,
       warnings: scanResult.warnings,
       assumptions: [],
       optimizationChecklist: [],
@@ -92,13 +59,13 @@ export function generateJsonReport(scanResult: WorkspaceScanResult, recommendati
   const topTokenConsumers = sortedFiles.slice(0, 10).map((f) => ({
     path: f.relativePath,
     tokens: f.estimatedTokens,
-    percentage: f.estimatedTokens / scanResult.includedTokens,
+    percentage: scanResult.includedTokens > 0 ? f.estimatedTokens / scanResult.includedTokens : 0,
   }));
 
   const topFolders = sortedFolders.slice(0, 10).map((f) => ({
     path: f.folderPath,
     tokens: f.totalTokens,
-    percentage: f.totalTokens / scanResult.includedTokens,
+    percentage: scanResult.includedTokens > 0 ? f.totalTokens / scanResult.includedTokens : 0,
   }));
 
   const languages = scanResult.languages
@@ -112,9 +79,11 @@ export function generateJsonReport(scanResult: WorkspaceScanResult, recommendati
     }));
 
   const report: JsonReport = {
+    schemaVersion: REPORT_SCHEMA_VERSION,
     title: "Workspace Model Report",
     generatedAt: scanResult.scannedAt,
     workspacePath: scanResult.rootPath,
+    goal: recommendation.goal,
     summary: {
       totalFiles: scanResult.totalFiles,
       includedFiles: scanResult.includedFiles,

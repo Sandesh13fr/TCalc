@@ -1,4 +1,4 @@
-import type { ModelInfo, ModelScore, ModelRecommendation, RecommendationResult, CostEstimate, WorkspaceGoal } from "@wma/core";
+import type { ModelInfo, ModelScore, ModelRecommendation, RecommendationResult, CostEstimate, PrivacySetting, WorkspaceGoal } from "@wma/core";
 import { estimateCost } from "./estimateCost.js";
 
 export interface RecommendModelsOptions {
@@ -7,7 +7,7 @@ export interface RecommendModelsOptions {
   goal: WorkspaceGoal;
   outputTokens?: number;
   budget?: number;
-  privacyMode?: "local-first" | "cloud-ok";
+  privacyMode?: PrivacySetting;
 }
 
 const DEFAULT_OUTPUT_TOKENS: Record<WorkspaceGoal, number> = {
@@ -39,7 +39,8 @@ const GOAL_DIFFICULTY: Record<WorkspaceGoal, number> = {
 export function recommendModels(options: RecommendModelsOptions): RecommendationResult {
   const { models, workspaceTokens, goal, outputTokens: optOutputTokens, privacyMode = "local-first", budget } = options;
 
-  const contextNeeded = Math.round((budget ?? workspaceTokens) * 1.2);
+  const contextTokens = budget === undefined ? workspaceTokens : Math.min(workspaceTokens, budget);
+  const contextNeeded = Math.round(contextTokens * 1.2);
   const outputTokens = optOutputTokens ?? DEFAULT_OUTPUT_TOKENS[goal];
 
   const assumptions: string[] = [
@@ -69,7 +70,7 @@ export function recommendModels(options: RecommendModelsOptions): Recommendation
       model,
       inputTokens: contextNeeded,
       outputTokens,
-      cachedInputTokens: Math.round(workspaceTokens * 0.3),
+      cachedInputTokens: Math.round(contextTokens * 0.3),
     });
 
     const contextFit = calculateContextFit(model, contextNeeded);
@@ -99,6 +100,10 @@ export function recommendModels(options: RecommendModelsOptions): Recommendation
   }
 
   const candidates = fitting.length > 0 ? fitting : overflowing;
+
+  if (candidates.length === 0) {
+    throw new RangeError(`No models are eligible for privacy mode "${privacyMode}"`);
+  }
 
   if (fitting.length === 0) {
     assumptions.push("No model fits the required context; recommend using repo-map-first strategy to reduce context");

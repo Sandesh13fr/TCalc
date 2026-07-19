@@ -4,6 +4,7 @@ import com.intellij.openapi.diagnostic.thisLogger
 import com.tcalc.plugin.settings.WmaSettingsState
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
 
 data class CliResult(
@@ -39,15 +40,18 @@ class CliRunner {
 
         return try {
             val process = processBuilder.start()
+            val stdoutFuture = CompletableFuture.supplyAsync { process.inputStream.bufferedReader().readText() }
+            val stderrFuture = CompletableFuture.supplyAsync { process.errorStream.bufferedReader().readText() }
 
             val finished = process.waitFor(timeoutSeconds.toLong(), TimeUnit.SECONDS)
             if (!finished) {
                 process.destroyForcibly()
+                process.waitFor()
                 throw CliRunnerException("CLI command timed out after ${timeoutSeconds}s")
             }
 
-            val stdout = process.inputStream.bufferedReader().readText()
-            val stderr = process.errorStream.bufferedReader().readText()
+            val stdout = stdoutFuture.get(5, TimeUnit.SECONDS)
+            val stderr = stderrFuture.get(5, TimeUnit.SECONDS)
             val exitCode = process.exitValue()
 
             if (exitCode != 0) {
@@ -95,7 +99,7 @@ class CliRunner {
 
     fun generateAgentRules(workspacePath: String): CliResult {
         return runCommand(
-            listOf("rules", workspacePath, "--target", "generic", "--mode", "repo-map-first"),
+            listOf("rules", workspacePath, "--target", "generic", "--mode", "repo-map-first", "--stdout"),
             workspacePath,
         )
     }

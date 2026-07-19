@@ -54,4 +54,6 @@ export interface WorkspaceScanResult {
   languages: LanguageBreakdown[];
   warnings: string[];
   riskFiles: WorkspaceFileInfo[];
+  cacheHits?: number;
+  cacheMisses?: number;
 }

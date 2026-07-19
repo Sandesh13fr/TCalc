@@ -12,6 +12,7 @@ export interface IgnoreResolverOptions {
   additionalIgnoreFiles?: string[];
   userExcludePatterns?: string[];
   maxFileSizeBytes?: number;
+  onWarning?: (warning: string) => void;
 }
 
 const IGNORE_FILE_NAMES = [
@@ -34,8 +35,10 @@ export class IgnoreResolver {
       try {
         const content = await readFile(path.join(rootPath, fileName), "utf-8");
         this.ig.add(content);
-      } catch {
-        // ignore file not found
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+          this.options.onWarning?.(`Failed to read ignore file ${fileName}: ${error instanceof Error ? error.message : String(error)}`);
+        }
       }
     }
     if (this.options.userExcludePatterns) {

@@ -3,6 +3,8 @@ import type {
   RepoMapResult, RepoMapFile, RepoMapFolder, RepoMapLanguage,
 } from "@wma/core";
 import { budgetRepoMap } from "../src/budgetRepoMap.js";
+import { formatRepoMapMarkdown } from "../src/formatRepoMapMarkdown.js";
+import { estimateTokens } from "@wma/tokenizers";
 
 function makeFile(relativePath: string, priority: number, estimatedTokens: number): RepoMapFile {
   return {
@@ -37,6 +39,10 @@ function makeResult(overrides: Partial<RepoMapResult>): RepoMapResult {
     recommendedExclude: [],
     agentInstructions: [],
     overflowNotes: [],
+    symbols: [],
+    imports: [],
+    routes: [],
+    symbolSummary: [],
     ...overrides,
   };
 }
@@ -49,7 +55,7 @@ describe("budgetRepoMap", () => {
     const sourceFile = makeFile("src/util.ts", 60, 200);
 
     const result = makeResult({
-      tokenBudget: 2000,
+      tokenBudget: 300,
       estimatedTokens: 100700,
       entryPoints: [entryPoint],
       testFiles: [testFile],
@@ -57,7 +63,7 @@ describe("budgetRepoMap", () => {
       importantFiles: [entryPoint, testFile, sourceFile, largeFile],
     });
 
-    const budgeted = budgetRepoMap(result, 2000);
+    const budgeted = budgetRepoMap(result, 300);
 
     const remainingPaths = budgeted.importantFiles.map((f) => f.relativePath);
     expect(remainingPaths).not.toContain("data/huge.json");
@@ -71,7 +77,7 @@ describe("budgetRepoMap", () => {
     const largeFile = makeFile("data/huge.json", 20, 100000);
 
     const result = makeResult({
-      tokenBudget: 2000,
+      tokenBudget: 300,
       estimatedTokens: 100700,
       entryPoints: [entryPoint],
       configFiles: [config],
@@ -80,7 +86,7 @@ describe("budgetRepoMap", () => {
       importantFiles: [entryPoint, config, doc, largeFile],
     });
 
-    const budgeted = budgetRepoMap(result, 2000);
+    const budgeted = budgetRepoMap(result, 300);
 
     const remainingPaths = budgeted.importantFiles.map((f) => f.relativePath);
     expect(remainingPaths).toContain("src/index.ts");
@@ -111,8 +117,8 @@ describe("budgetRepoMap", () => {
 
     const budgeted = budgetRepoMap(result, 2000);
 
-    expect(budgeted.estimatedTokens).toBeLessThanOrEqual(6000);
-    expect(budgeted.overflowNotes.length).toBeGreaterThan(0);
+    expect(budgeted.estimatedTokens).toBeLessThanOrEqual(2000);
+    expect(budgeted.overflowNotes).toHaveLength(0);
   });
 
   it("handles 16K budget without trimming when under budget", () => {
@@ -133,5 +139,42 @@ describe("budgetRepoMap", () => {
 
     expect(budgeted.importantFiles).toHaveLength(2);
     expect(budgeted.overflowNotes).toHaveLength(0);
+  });
+
+  it("budgets the final serialized Markdown", () => {
+    const files = Array.from({ length: 30 }, (_, index) =>
+      makeFile(`src/very-long-file-name-${index}.ts`, 10, 100_000));
+    const result = makeResult({
+      tokenBudget: 500,
+      estimatedTokens: 3_000_000,
+      importantFiles: files,
+      testFiles: files,
+      recommendedInclude: files,
+    });
+
+    const budgeted = budgetRepoMap(result, 500);
+    const serializedTokens = estimateTokens(formatRepoMapMarkdown(budgeted));
+
+    expect(serializedTokens).toBe(budgeted.estimatedTokens);
+    expect(serializedTokens).toBeLessThanOrEqual(500);
+  });
+
+  it("removes code metadata for trimmed source files", () => {
+    const file = makeFile("src/large.ts", 10, 100_000);
+    const result = makeResult({
+      importantFiles: [file],
+      largeFiles: [file],
+      symbols: [{ name: "large", kind: "function", relativePath: file.relativePath, priority: 1 }],
+      imports: [{ source: "./other", relativePath: file.relativePath, kind: "import" }],
+      routes: [{ relativePath: file.relativePath, routePattern: "/large", reason: "test" }],
+      symbolSummary: ["1 symbols extracted from 1 files"],
+    });
+
+    const budgeted = budgetRepoMap(result, 100);
+    expect(budgeted.importantFiles).toHaveLength(0);
+    expect(budgeted.symbols).toHaveLength(0);
+    expect(budgeted.imports).toHaveLength(0);
+    expect(budgeted.routes).toHaveLength(0);
+    expect(budgeted.symbolSummary).toHaveLength(0);
   });
 });

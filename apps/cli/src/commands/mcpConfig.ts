@@ -1,5 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { resolveTargetPath } from "../utils/paths.js";
 
 export interface McpConfigOptions {
   target: McpTarget;
@@ -17,7 +18,7 @@ function resolveDefaultCommand(): string {
 
 export function generateMcpConfig(options: McpConfigOptions): string {
   const serverCommand = options.command ?? resolveDefaultCommand();
-  const workspace = options.workspace ?? process.cwd();
+  const workspace = resolveTargetPath(options.workspace);
 
   switch (options.target) {
     case "cursor":
@@ -31,13 +32,14 @@ export function generateMcpConfig(options: McpConfigOptions): string {
   }
 }
 
-function generateCursorConfig(command: string, _workspace: string): string {
+function generateCursorConfig(command: string, workspace: string): string {
   return JSON.stringify(
     {
       mcpServers: {
         tcalc: {
           command: "node",
           args: [command],
+          env: { WMA_ALLOWED_ROOT: workspace },
           description: "Local-first workspace analysis and AI model recommendations",
         },
       },
@@ -47,7 +49,7 @@ function generateCursorConfig(command: string, _workspace: string): string {
   );
 }
 
-function generateContinueConfig(command: string, _workspace: string): string {
+function generateContinueConfig(command: string, workspace: string): string {
   return `# Continue MCP Configuration (add to config.yaml)
 experimental:
   modelContextProtocolServers:
@@ -55,17 +57,20 @@ experimental:
       command: node
       args:
         - ${JSON.stringify(command)}
+      env:
+        WMA_ALLOWED_ROOT: ${JSON.stringify(workspace)}
       description: TCalc workspace analysis tools
 `;
 }
 
-function generateClaudeDesktopConfig(command: string, _workspace: string): string {
+function generateClaudeDesktopConfig(command: string, workspace: string): string {
   return JSON.stringify(
     {
       mcpServers: {
         tcalc: {
           command: "node",
           args: [command],
+          env: { WMA_ALLOWED_ROOT: workspace },
           description: "Local-first workspace analysis and AI model recommendations",
           disabled: false,
           autoApprove: [],
@@ -77,13 +82,14 @@ function generateClaudeDesktopConfig(command: string, _workspace: string): strin
   );
 }
 
-function generateGenericConfig(command: string, _workspace: string): string {
+function generateGenericConfig(command: string, workspace: string): string {
   return JSON.stringify(
     {
       mcpServers: {
         tcalc: {
           command: "node",
           args: [command],
+          env: { WMA_ALLOWED_ROOT: workspace },
           description: "Local-first workspace analysis and AI model recommendations",
         },
       },

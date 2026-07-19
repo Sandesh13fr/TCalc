@@ -1,6 +1,6 @@
 {
   "name": "@wma/reports",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "description": "Markdown and JSON report generation for TCalc.",
   "type": "module",
@@ -17,6 +17,6 @@
     "@wma/core": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "latest"
+    "typescript": "5.9.3"
   }
 }

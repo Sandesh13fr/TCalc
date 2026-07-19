@@ -9,6 +9,7 @@ import {
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import { AGENT_TARGETS, OPTIMIZATION_MODES, PRIVACY_SETTINGS, WORKSPACE_GOALS, isPrivacySetting, isWorkspaceGoal } from "@wma/core";
 import {
   handleScanWorkspace,
   type ScanWorkspaceInput,
@@ -33,6 +34,7 @@ import {
   handleValidateModelCatalog,
   type ValidateModelCatalogInput,
 } from "./tools/validateModelCatalogTool.js";
+import { handleCompactCompletedGoal } from "./tools/compactCompletedGoalTool.js";
 import { readWorkspaceSummary } from "./resources/workspaceSummaryResource.js";
 import { readModelCatalog } from "./resources/modelCatalogResource.js";
 import {
@@ -44,7 +46,14 @@ export function createServer(): Server {
   const server = new Server(
     {
       name: "wma-mcp",
-      version: "0.1.0",
+      version: "0.1.2",
+    },
+    {
+      capabilities: {
+        tools: {},
+        resources: {},
+        prompts: {},
+      },
     },
   );
 
@@ -58,10 +67,8 @@ export function createServer(): Server {
             type: "object",
             properties: {
               rootPath: { type: "string", description: "Root path to scan (defaults to current working directory)" },
-              goal: { type: "string", description: "Workspace goal" },
-              privacyMode: { type: "string", enum: ["local-first", "cloud-ok"] },
-              maxFiles: { type: "number" },
-              tokenBudget: { type: "number" },
+              goal: { type: "string", enum: [...WORKSPACE_GOALS], description: "Workspace goal included in the summary" },
+              privacyMode: { type: "string", enum: [...PRIVACY_SETTINGS] },
             },
           },
         },
@@ -72,8 +79,8 @@ export function createServer(): Server {
             type: "object",
             properties: {
               rootPath: { type: "string", description: "Root path to scan" },
-              goal: { type: "string", description: "Workspace goal" },
-              privacyMode: { type: "string", enum: ["local-first", "cloud-ok"] },
+              goal: { type: "string", enum: [...WORKSPACE_GOALS], description: "Workspace goal" },
+              privacyMode: { type: "string", enum: [...PRIVACY_SETTINGS] },
               catalogPath: { type: "string", description: "Path to model catalog JSON" },
               tokenBudget: { type: "number", description: "Token budget limit" },
             },
@@ -86,7 +93,7 @@ export function createServer(): Server {
             type: "object",
             properties: {
               rootPath: { type: "string", description: "Root path to scan" },
-              goal: { type: "string", description: "Workspace goal" },
+              goal: { type: "string", enum: [...WORKSPACE_GOALS], description: "Workspace goal" },
               tokenBudget: { type: "number", description: "Token budget for repo map" },
               enableSymbolExtraction: { type: "boolean", description: "Enable symbol extraction" },
               maxSymbols: { type: "number", description: "Maximum symbols to extract" },
@@ -101,10 +108,10 @@ export function createServer(): Server {
             type: "object",
             properties: {
               rootPath: { type: "string", description: "Root path to scan" },
-              target: { type: "string", enum: ["generic", "cursor", "claude-code"] },
-              mode: { type: "string", enum: ["normal", "concise", "patch-only", "repo-map-first", "ask-before-reading-large-files"] },
-              goal: { type: "string", description: "Workspace goal" },
-              privacyMode: { type: "string", enum: ["local-first", "cloud-ok"] },
+              target: { type: "string", enum: [...AGENT_TARGETS] },
+              mode: { type: "string", enum: [...OPTIMIZATION_MODES] },
+              goal: { type: "string", enum: [...WORKSPACE_GOALS], description: "Workspace goal" },
+              privacyMode: { type: "string", enum: [...PRIVACY_SETTINGS] },
             },
           },
         },
@@ -115,8 +122,8 @@ export function createServer(): Server {
             type: "object",
             properties: {
               rootPath: { type: "string", description: "Root path to scan" },
-              goal: { type: "string", description: "Workspace goal" },
-              privacyMode: { type: "string", enum: ["local-first", "cloud-ok"] },
+              goal: { type: "string", enum: [...WORKSPACE_GOALS], description: "Workspace goal" },
+              privacyMode: { type: "string", enum: [...PRIVACY_SETTINGS] },
               catalogPath: { type: "string", description: "Path to model catalog JSON" },
               includeRepoMap: { type: "boolean", description: "Include repo map in report" },
               format: { type: "string", enum: ["markdown", "json"] },
@@ -130,6 +137,22 @@ export function createServer(): Server {
             type: "object",
             properties: {
               catalogPath: { type: "string", description: "Path to model catalog JSON" },
+            },
+          },
+        },
+        {
+          name: "compact_completed_goal",
+          description: "Compact a completed goal into reusable agent context with measured token savings.",
+          inputSchema: {
+            type: "object",
+            required: ["goal", "summary"],
+            properties: {
+              goal: { type: "string", enum: [...WORKSPACE_GOALS] },
+              summary: { type: "string" },
+              changedFiles: { type: "array", items: { type: "string" } },
+              decisions: { type: "array", items: { type: "string" } },
+              nextSteps: { type: "array", items: { type: "string" } },
+              sourceTokens: { type: "number" },
             },
           },
         },
@@ -153,6 +176,8 @@ export function createServer(): Server {
         return handleGenerateReport(args ?? {});
       case "validate_model_catalog":
         return handleValidateModelCatalog(args ?? {});
+      case "compact_completed_goal":
+        return handleCompactCompletedGoal(args ?? {});
       default:
         return {
           content: [
@@ -243,10 +268,14 @@ export function createServer(): Server {
     const { name, arguments: args } = request.params;
 
     if (name === "optimize_coding_agent_for_workspace") {
+      const requestedGoal = args?.goal ?? "build-mvp";
+      const requestedPrivacy = args?.privacyMode ?? "local-first";
+      if (!isWorkspaceGoal(requestedGoal)) throw new Error(`Invalid workspace goal: ${requestedGoal}`);
+      if (!isPrivacySetting(requestedPrivacy)) throw new Error(`Invalid privacy mode: ${requestedPrivacy}`);
       const promptArgs: OptimizeCodingAgentArgs = {
-        goal: (args?.goal as any) ?? "build-mvp",
+        goal: requestedGoal,
         tokenBudget: args?.tokenBudget ? Number(args.tokenBudget) : undefined,
-        privacyMode: (args?.privacyMode as any) ?? "local-first",
+        privacyMode: requestedPrivacy,
       };
       return getOptimizeCodingAgentPrompt(promptArgs);
     }

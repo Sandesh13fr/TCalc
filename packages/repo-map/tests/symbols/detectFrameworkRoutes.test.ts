@@ -39,7 +39,7 @@ function makeRepoMapFile(relativePath: string): RepoMapFile {
 
 describe("detectFrameworkRoutes", () => {
   it("detects Next.js app routes", () => {
-    const files = [makeFileInfo("app/page.tsx", ".tsx"), makeFileInfo("app/api/hello/route.ts", ".ts")];
+    const files = [makeFileInfo("app/page.jsx", ".jsx"), makeFileInfo("app/api/hello/route.js", ".js")];
     const important = files.map((f) => makeRepoMapFile(f.relativePath));
     const scanResult: WorkspaceScanResult = {
       rootPath: tempDir,
@@ -59,8 +59,8 @@ describe("detectFrameworkRoutes", () => {
     };
     const routes = detectFrameworkRoutes(scanResult, important);
     expect(routes.length).toBeGreaterThanOrEqual(2);
-    expect(routes.some((r) => r.relativePath === "app/page.tsx")).toBe(true);
-    expect(routes.some((r) => r.relativePath === "app/api/hello/route.ts")).toBe(true);
+    expect(routes.some((r) => r.relativePath === "app/page.jsx")).toBe(true);
+    expect(routes.some((r) => r.relativePath === "app/api/hello/route.js")).toBe(true);
   });
 
   it("detects Next.js pages routes", () => {

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { existsSync, cpSync, mkdirSync } from "node:fs";
+import { existsSync, cpSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -30,7 +30,9 @@ if (existsSync(ci)) {
 const readmeSrc = resolve(repoRoot, "README.md");
 const readmeDst = resolve(extRoot, "README.md");
 if (existsSync(readmeSrc)) {
-  cpSync(readmeSrc, readmeDst, { force: true });
+  const readme = readFileSync(readmeSrc, "utf-8")
+    .replace(/^.*<img[^>]+src=["']\.\/assets\/readme\/[^"']+\.svg["'][^>]*>.*\r?\n?/gim, "");
+  writeFileSync(readmeDst, readme);
   console.log(`README copied: ${readmeSrc} -> ${readmeDst}`);
 }
 

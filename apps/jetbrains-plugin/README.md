@@ -4,7 +4,7 @@ Local-first workspace token calculator, model recommender, and coding-agent opti
 
 ## Requirements
 
-- IntelliJ IDEA 2024.2+ (also compatible with WebStorm, PyCharm, and other IntelliJ Platform IDEs)
+- IntelliJ Platform 2024.2 or 2024.3 (including compatible IntelliJ-based IDEs)
 - Node.js 18+ installed on your system
 - TCalc CLI built from source (see root repo README)
 

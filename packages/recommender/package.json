@@ -1,6 +1,6 @@
 {
   "name": "@wma/recommender",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "description": "Model scoring, cost estimation, and recommendation engine.",
   "type": "module",
@@ -18,6 +18,6 @@
     "@wma/model-catalog": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "latest"
+    "typescript": "5.9.3"
   }
 }

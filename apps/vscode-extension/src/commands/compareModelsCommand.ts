@@ -1,4 +1,5 @@
 import * as vscode from "vscode";
+import { randomUUID } from "node:crypto";
 import type { RecommendationResult, ModelRecommendation, ModelInfo } from "@wma/core";
 
 export function registerCompareModelsCommand(context: vscode.ExtensionContext): vscode.Disposable {
@@ -16,7 +17,7 @@ export function registerCompareModelsCommand(context: vscode.ExtensionContext): 
       "wmaCompareModels",
       "Model Comparison",
       vscode.ViewColumn.One,
-      { enableScripts: true, localResourceRoots: [] },
+      { enableScripts: false, localResourceRoots: [] },
     );
 
     const tiers = [
@@ -29,7 +30,7 @@ export function registerCompareModelsCommand(context: vscode.ExtensionContext): 
       m => !tiers.some(t => t.modelId === m.modelId),
     );
 
-    panel.webview.html = getComparisonHtml(tiers, otherModels, lastModels ?? []);
+    panel.webview.html = getComparisonHtml(panel.webview, randomUUID(), tiers, otherModels, lastModels ?? []);
   });
 }
 
@@ -46,6 +47,8 @@ function getModelInfo(modelId: string, models: ModelInfo[]): ModelInfo | undefin
 }
 
 function getComparisonHtml(
+  webview: vscode.Webview,
+  nonce: string,
   tiers: ModelRecommendation[],
   otherModels: ModelRecommendation[],
   models: ModelInfo[],
@@ -89,9 +92,10 @@ function getComparisonHtml(
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'nonce-${nonce}';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Model Comparison</title>
-  <style>
+  <style nonce="${nonce}">
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; padding: 20px; color: var(--vscode-editor-foreground); background: var(--vscode-editor-background); }
     h1 { font-size: 1.4em; }
     h2 { font-size: 1.1em; margin-top: 24px; border-bottom: 1px solid var(--vscode-panel-border); padding-bottom: 6px; }

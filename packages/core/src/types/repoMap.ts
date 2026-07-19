@@ -48,6 +48,7 @@ export interface RepoMapSymbol {
 export interface RepoMapImport {
   source: string;
   importedFrom?: string;
+  resolvedPath?: string;
   relativePath: string;
   kind: "import" | "require" | "dynamic-import" | "export-from";
 }
@@ -55,7 +56,7 @@ export interface RepoMapImport {
 export interface RepoMapRoute {
   relativePath: string;
   routePattern?: string;
-  framework?: "nextjs" | "express" | "fastify" | "react-router" | "unknown";
+  framework?: "nextjs" | "express" | "fastify" | "react-router" | "fastapi" | "flask" | "spring" | "unknown";
   reason: string;
 }
 

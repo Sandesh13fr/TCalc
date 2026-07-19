@@ -1,14 +1,15 @@
 package com.tcalc.plugin
 
-import com.intellij.execution.filters.TextConsoleBuilderFactory
-import com.intellij.execution.ui.ConsoleView
+import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.SimpleToolWindowPanel
 import com.intellij.ui.JBColor
 import com.intellij.ui.components.JBScrollPane
 import com.intellij.ui.components.JBTextArea
 import com.tcalc.plugin.runner.CliRunner
+import com.tcalc.plugin.runner.CliResult
 import com.tcalc.plugin.runner.CliRunnerException
+import kotlinx.serialization.json.Json
 import java.awt.BorderLayout
 import java.awt.Font
 import javax.swing.Box
@@ -17,7 +18,6 @@ import javax.swing.JButton
 import javax.swing.JLabel
 import javax.swing.JPanel
 import javax.swing.SwingConstants
-import javax.swing.SwingUtilities
 
 class WmaToolWindowPanel(private val project: Project) : SimpleToolWindowPanel(true, true) {
 
@@ -101,22 +101,38 @@ class WmaToolWindowPanel(private val project: Project) : SimpleToolWindowPanel(t
         }
     }
 
-    private fun runCliTask(statusText: String, task: (CliRunner) -> Unit) {
+    private fun runCliTask(statusText: String, task: (CliRunner) -> CliResult) {
         statusLabel.text = statusText
         outputArea.text = ""
 
-        SwingUtilities.invokeLater {
+        ApplicationManager.getApplication().executeOnPooledThread {
             try {
-                val runner = CliRunner()
-                task(runner)
-                statusLabel.text = "Done"
+                val result = task(CliRunner())
+                ApplicationManager.getApplication().invokeLater { showResult(result) }
             } catch (ex: CliRunnerException) {
-                outputArea.text = "Error: ${ex.message}"
-                statusLabel.text = "Failed"
+                showError(ex.message)
             } catch (ex: Exception) {
-                outputArea.text = "Unexpected error: ${ex.message}"
-                statusLabel.text = "Failed"
+                showError("Unexpected error: ${ex.message}")
             }
         }
+    }
+
+    fun showResult(result: CliResult) {
+        outputArea.text = if (result.exitCode == 0) formatOutput(result.stdout) else result.stderr.ifBlank { "CLI exited with code ${result.exitCode}" }
+        outputArea.caretPosition = 0
+        statusLabel.text = if (result.exitCode == 0) "Done" else "Failed"
+    }
+
+    private fun showError(message: String?) {
+        ApplicationManager.getApplication().invokeLater {
+            outputArea.text = "Error: ${message ?: "Unknown error"}"
+            statusLabel.text = "Failed"
+        }
+    }
+
+    private fun formatOutput(output: String): String = try {
+        Json { prettyPrint = true }.encodeToString(kotlinx.serialization.json.JsonElement.serializer(), Json.parseToJsonElement(output))
+    } catch (_: Exception) {
+        output
     }
 }

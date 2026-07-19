@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to release (e.g. v0.1.0). Leave empty to use the current ref."
+        description: "Tag to release (e.g. v0.1.2). Leave empty to use the current ref."
         required: false
         default: ""
 
@@ -55,6 +55,15 @@ jobs:
 
       - name: Build all packages
         run: pnpm build
+
+      - name: Check versions and release tag
+        run: pnpm check:versions -- --tag "${{ inputs.tag || github.ref_name }}"
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
 
   test:
     name: Test

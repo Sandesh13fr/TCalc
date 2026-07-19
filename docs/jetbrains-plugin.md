@@ -7,7 +7,7 @@ TCalc for IntelliJ-based IDEs (IntelliJ IDEA, WebStorm, PyCharm, and more).
 ### Prerequisites
 
 - Node.js 18+ installed on your system
-- JetBrains IDE (IntelliJ IDEA 2024.2+ recommended)
+- JetBrains IDE based on IntelliJ Platform 2024.2 or 2024.3
 - TCalc repo cloned and dependencies installed (`pnpm install && pnpm build`)
 
 ### Generate the Gradle wrapper
@@ -83,7 +83,6 @@ apps/jetbrains-plugin/
 ├── gradle/wrapper/           # Gradle wrapper
 ├── src/main/kotlin/
 │   └── com/tcalc/plugin/
-│       ├── WmaPlugin.kt                     # Plugin entry point
 │       ├── WmaToolWindowFactory.kt          # Tool window factory
 │       ├── WmaToolWindowPanel.kt            # Tool window UI (buttons + output)
 │       ├── actions/
@@ -92,7 +91,8 @@ apps/jetbrains-plugin/
 │       │   ├── GenerateRepoMapAction.kt     # Generate repo map
 │       │   ├── GenerateAgentRulesAction.kt  # Generate agent rules
 │       │   ├── ExportReportAction.kt        # Export report
-│       │   └── OpenSettingsAction.kt        # Open settings
+│       │   ├── OpenSettingsAction.kt        # Open settings
+│       │   └── ActionSupport.kt             # Safe background/write helpers
 │       ├── settings/
 │       │   ├── WmaSettingsState.kt          # Persistent settings state
 │       │   └── WmaSettingsConfigurable.kt   # Settings UI panel

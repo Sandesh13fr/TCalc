@@ -1,11 +1,11 @@
-import type { WorkspaceScanResult, RecommendationResult } from "@wma/core";
+import { escapeMarkdownText, markdownCode, type WorkspaceScanResult, type RecommendationResult } from "@wma/core";
 
 function fmtCost(cost: number): string {
   return `$${cost.toFixed(4)}`;
 }
 
 function pct(n: number): string {
-  return `${(n * 100).toFixed(1)}%`;
+  return `${((Number.isFinite(n) ? n : 0) * 100).toFixed(1)}%`;
 }
 
 export function generateMarkdownReport(scanResult: WorkspaceScanResult, recommendation: RecommendationResult | null): string {
@@ -15,7 +15,7 @@ export function generateMarkdownReport(scanResult: WorkspaceScanResult, recommen
   lines.push("");
   lines.push(`**Scan Date:** ${scanResult.scannedAt}`);
   lines.push("");
-  lines.push(`**Workspace Root:** \`${scanResult.rootPath}\``);
+  lines.push(`**Workspace Root:** ${markdownCode(scanResult.rootPath)}`);
   lines.push("");
   lines.push("## Summary");
   lines.push("");
@@ -39,7 +39,7 @@ export function generateMarkdownReport(scanResult: WorkspaceScanResult, recommen
     lines.push("| # | File | Tokens | % of Total |");
     lines.push("| --- | --- | ---:| ---:|");
     top10Files.forEach((f, i) => {
-      lines.push(`| ${i + 1} | \`${f.relativePath}\` | ${f.estimatedTokens.toLocaleString()} | ${pct(f.estimatedTokens / scanResult.includedTokens)} |`);
+      lines.push(`| ${i + 1} | ${markdownCode(f.relativePath)} | ${f.estimatedTokens.toLocaleString()} | ${pct(f.estimatedTokens / scanResult.includedTokens)} |`);
     });
     lines.push("");
   }
@@ -55,7 +55,7 @@ export function generateMarkdownReport(scanResult: WorkspaceScanResult, recommen
     lines.push("| # | Folder | Files | Tokens | % of Total |");
     lines.push("| --- | --- | ---:| ---:| ---:|");
     top10Folders.forEach((f, i) => {
-      lines.push(`| ${i + 1} | \`${f.folderPath}\` | ${f.includedFiles} | ${f.totalTokens.toLocaleString()} | ${pct(f.totalTokens / scanResult.includedTokens)} |`);
+      lines.push(`| ${i + 1} | ${markdownCode(f.folderPath)} | ${f.includedFiles} | ${f.totalTokens.toLocaleString()} | ${pct(f.totalTokens / scanResult.includedTokens)} |`);
     });
     lines.push("");
   }
@@ -67,7 +67,7 @@ export function generateMarkdownReport(scanResult: WorkspaceScanResult, recommen
     lines.push("| --- | ---:| ---:| ---:|");
     const sortedLangs = [...scanResult.languages].sort((a, b) => b.totalTokens - a.totalTokens);
     sortedLangs.forEach((l) => {
-      lines.push(`| ${l.language} | ${l.fileCount} | ${l.totalTokens.toLocaleString()} | ${pct(l.percentage)} |`);
+      lines.push(`| ${escapeMarkdownText(l.language)} | ${l.fileCount} | ${l.totalTokens.toLocaleString()} | ${pct(l.percentage)} |`);
     });
     lines.push("");
   }
@@ -76,7 +76,7 @@ export function generateMarkdownReport(scanResult: WorkspaceScanResult, recommen
     lines.push("## Warnings");
     lines.push("");
     scanResult.warnings.forEach((w) => {
-      lines.push(`- ${w}`);
+      lines.push(`- ${escapeMarkdownText(w)}`);
     });
     lines.push("");
   }
@@ -85,7 +85,7 @@ export function generateMarkdownReport(scanResult: WorkspaceScanResult, recommen
     lines.push("### Risk Flags");
     lines.push("");
     scanResult.riskFiles.forEach((f) => {
-      lines.push(`- \`${f.relativePath}\` — ${f.riskFlags.join(", ")}`);
+      lines.push(`- ${markdownCode(f.relativePath)} — ${escapeMarkdownText(f.riskFlags.join(", "))}`);
     });
     lines.push("");
   }
@@ -119,7 +119,7 @@ export function generateMarkdownReport(scanResult: WorkspaceScanResult, recommen
     for (const { label, rec } of tiers) {
       lines.push(`### ${label}`);
       lines.push("");
-      lines.push(`**Model:** ${rec.displayName} (\`${rec.modelId}\`)`);
+      lines.push(`**Model:** ${escapeMarkdownText(rec.displayName)} (${markdownCode(rec.modelId)})`);
       lines.push("");
       lines.push(`**Estimated Cost:** ${fmtCost(rec.costEstimate.totalCost)}`);
       lines.push("");
@@ -133,26 +133,26 @@ export function generateMarkdownReport(scanResult: WorkspaceScanResult, recommen
       lines.push(`| Latency Fit | ${rec.score.latencyFit.toFixed(1)} |`);
       lines.push(`| Privacy Fit | ${rec.score.privacyFit.toFixed(1)} |`);
       lines.push("");
-      lines.push(`**Expected Quality:** ${rec.expectedQuality}`);
+      lines.push(`**Expected Quality:** ${escapeMarkdownText(rec.expectedQuality)}`);
       lines.push("");
       lines.push(`**Overflow Risk:** ${(rec.overflowRisk * 100).toFixed(0)}%`);
       lines.push("");
 
       if (rec.reasons.length > 0) {
         lines.push("**Reasons:**");
-        rec.reasons.forEach((r) => lines.push(`- ${r}`));
+        rec.reasons.forEach((r) => lines.push(`- ${escapeMarkdownText(r)}`));
         lines.push("");
       }
 
       if (rec.warnings.length > 0) {
         lines.push("**Warnings:**");
-        rec.warnings.forEach((w) => lines.push(`- ⚠ ${w}`));
+        rec.warnings.forEach((w) => lines.push(`- ⚠ ${escapeMarkdownText(w)}`));
         lines.push("");
       }
 
       if (rec.optimizationSuggestions.length > 0) {
         lines.push("**Optimization Suggestions:**");
-        rec.optimizationSuggestions.forEach((s) => lines.push(`- ${s}`));
+        rec.optimizationSuggestions.forEach((s) => lines.push(`- ${escapeMarkdownText(s)}`));
         lines.push("");
       }
     }
@@ -160,7 +160,7 @@ export function generateMarkdownReport(scanResult: WorkspaceScanResult, recommen
     lines.push("## Assumptions");
     lines.push("");
     if (recommendation.assumptions.length > 0) {
-      recommendation.assumptions.forEach((a) => lines.push(`- ${a}`));
+      recommendation.assumptions.forEach((a) => lines.push(`- ${escapeMarkdownText(a)}`));
     } else {
       lines.push("None provided.");
     }
@@ -172,7 +172,7 @@ export function generateMarkdownReport(scanResult: WorkspaceScanResult, recommen
     lines.push("| --- | ---:| ---:| ---:| ---:|");
     for (const { label, rec } of tiers) {
       const e = rec.costEstimate;
-      lines.push(`| ${rec.displayName} | ${fmtCost(e.inputCost)} | ${fmtCost(e.outputCost)} | ${fmtCost(e.cachedInputCost)} | ${fmtCost(e.totalCost)} |`);
+      lines.push(`| ${escapeMarkdownText(rec.displayName)} | ${fmtCost(e.inputCost)} | ${fmtCost(e.outputCost)} | ${fmtCost(e.cachedInputCost)} | ${fmtCost(e.totalCost)} |`);
     }
     if (recommendation.allScored.length > 0) {
       const otherModels = recommendation.allScored.filter(
@@ -182,7 +182,7 @@ export function generateMarkdownReport(scanResult: WorkspaceScanResult, recommen
       );
       for (const m of otherModels) {
         const e = m.costEstimate;
-        lines.push(`| ${m.displayName} | ${fmtCost(e.inputCost)} | ${fmtCost(e.outputCost)} | ${fmtCost(e.cachedInputCost)} | ${fmtCost(e.totalCost)} |`);
+        lines.push(`| ${escapeMarkdownText(m.displayName)} | ${fmtCost(e.inputCost)} | ${fmtCost(e.outputCost)} | ${fmtCost(e.cachedInputCost)} | ${fmtCost(e.totalCost)} |`);
       }
     }
     lines.push("");
@@ -199,7 +199,7 @@ export function generateMarkdownReport(scanResult: WorkspaceScanResult, recommen
     const uniqueSuggestions = [...new Set(allSuggestions)];
 
     if (uniqueSuggestions.length > 0) {
-      uniqueSuggestions.forEach((s) => checklist.push(`- [ ] ${s}`));
+      uniqueSuggestions.forEach((s) => checklist.push(`- [ ] ${escapeMarkdownText(s)}`));
     }
 
     const largeFiles = sortedFiles.filter((f) => f.estimatedTokens > 50000);

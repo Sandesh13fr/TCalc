@@ -1,16 +1,12 @@
 import * as vscode from "vscode";
-
-const GOALS = [
-  "build-mvp", "add-feature", "debug", "refactor", "migration",
-  "security-review", "test-generation", "documentation", "architecture-planning", "cleanup",
-];
+import { WORKSPACE_GOALS } from "@wma/core";
 
 export function registerSetWorkspaceGoalCommand(context: vscode.ExtensionContext): vscode.Disposable {
   return vscode.commands.registerCommand("workspaceModelAdvisor.setWorkspaceGoal", async () => {
     const currentGoal = vscode.workspace.getConfiguration("wma").get<string>("defaultGoal") ?? "build-mvp";
 
     const selected = await vscode.window.showQuickPick(
-      GOALS.map(g => ({
+      WORKSPACE_GOALS.map(g => ({
         label: g,
         description: g === currentGoal ? "current" : undefined,
       })),

@@ -38,7 +38,7 @@ node /absolute/path/to/tcalc/packages/mcp-server/dist/index.js
 Or via the CLI:
 
 ```bash
-pnpm tcalc mcp
+pnpm cli mcp
 ```
 
 ## Available MCP Tools

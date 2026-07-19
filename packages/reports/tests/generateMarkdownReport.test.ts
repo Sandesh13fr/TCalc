@@ -291,4 +291,24 @@ describe("generateMarkdownReport", () => {
     expect(report).toContain("No optimizations suggested");
     expect(report).not.toContain("Cheapest Sufficient");
   });
+
+  it("does not render NaN percentages for zero-token files", () => {
+    const scan = createMockScanResult();
+    scan.includedTokens = 0;
+    scan.files[0].estimatedTokens = 0;
+    scan.folders[0].totalTokens = 0;
+    expect(generateMarkdownReport(scan, null)).not.toContain("NaN%");
+  });
+
+  it("escapes hostile paths and warning text", () => {
+    const scanResult = createMockScanResult();
+    scanResult.rootPath = "/tmp/a`b|c";
+    scanResult.files[0].relativePath = "src/a`b|c.ts";
+    scanResult.warnings = ["warning\n## injected"];
+    const report = generateMarkdownReport(scanResult, createMockRecommendation());
+
+    expect(report).toContain("a`b&#124;c");
+    expect(report).toContain("warning \\#\\# injected");
+    expect(report).not.toContain("\n## injected");
+  });
 });

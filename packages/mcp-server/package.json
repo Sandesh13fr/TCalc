@@ -1,6 +1,6 @@
 {
   "name": "@wma/mcp-server",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "description": "MCP server for TCalc",
   "type": "module",
@@ -17,18 +17,18 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^0.4.0",
+    "@modelcontextprotocol/sdk": "^1.24.0",
     "@wma/agent-rules": "workspace:*",
     "@wma/core": "workspace:*",
     "@wma/model-catalog": "workspace:*",
+    "@wma/recommender": "workspace:*",
     "@wma/repo-map": "workspace:*",
     "@wma/reports": "workspace:*",
-    "@wma/recommender": "workspace:*",
     "@wma/scanner": "workspace:*",
     "zod": "^3.23.0"
   },
   "devDependencies": {
     "@types/node": "latest",
-    "typescript": "latest"
+    "typescript": "5.9.3"
   }
 }

@@ -1,36 +1,19 @@
 import { z } from "zod";
-import type { WorkspaceGoal, AgentTarget, OptimizationMode } from "@wma/core";
+import { AGENT_TARGETS, OPTIMIZATION_MODES, PRIVACY_SETTINGS, WORKSPACE_GOALS, getActiveModelProfile, loadTeamPolicy } from "@wma/core";
 import { scanWorkspace } from "@wma/scanner";
-import { loadModelCatalog } from "@wma/model-catalog";
+import { applyModelProfile, loadModelCatalog } from "@wma/model-catalog";
 import { recommendModels } from "@wma/recommender";
 import { generateAgentRules } from "@wma/agent-rules";
-import { validateRootPath } from "../utils/safeRootPath.js";
+import { resolveCatalogPath, validateRootPath } from "../utils/safeRootPath.js";
 import { setLatestScan, setLatestRecommendation } from "../state.js";
 
 const GenerateAgentRulesInputSchema = z.object({
   rootPath: z.string().optional(),
-  goal: z.enum([
-    "build-mvp",
-    "add-feature",
-    "debug",
-    "refactor",
-    "migration",
-    "security-review",
-    "test-generation",
-    "documentation",
-    "architecture-planning",
-    "cleanup",
-  ]).optional(),
-  target: z.enum(["generic", "cursor", "claude-code"]).optional(),
-  mode: z.enum([
-    "normal",
-    "concise",
-    "patch-only",
-    "repo-map-first",
-    "ask-before-reading-large-files",
-  ]).optional(),
-  privacyMode: z.enum(["local-first", "cloud-ok"]).optional(),
-});
+  goal: z.enum(WORKSPACE_GOALS).optional(),
+  target: z.enum(AGENT_TARGETS).optional(),
+  mode: z.enum(OPTIMIZATION_MODES).optional(),
+  privacyMode: z.enum(PRIVACY_SETTINGS).optional(),
+}).strict();
 
 export type GenerateAgentRulesInput = z.infer<typeof GenerateAgentRulesInputSchema>;
 
@@ -47,17 +30,19 @@ export async function handleGenerateAgentRules(input: Record<string, unknown>) {
   const rootPath = validateRootPath(parsed.rootPath);
   const target = parsed.target ?? "generic";
   const mode = parsed.mode ?? "repo-map-first";
-  const goal = parsed.goal ?? "build-mvp";
-  const privacyMode = parsed.privacyMode ?? "local-first";
+  const policy = await loadTeamPolicy(rootPath);
+  const goal = policy?.defaultGoal ?? parsed.goal ?? "build-mvp";
+  const privacyMode = policy?.privacyMode ?? parsed.privacyMode ?? "local-first";
 
-  const scanResult = await scanWorkspace({ rootPath });
+  const scanResult = await scanWorkspace({ rootPath, userExcludePatterns: policy?.exclude });
   setLatestScan(scanResult);
 
-  const catalog = loadModelCatalog(parsed.rootPath ?? process.cwd());
+  const catalog = loadModelCatalog(resolveCatalogPath());
+  const models = applyModelProfile(catalog.models, getActiveModelProfile(policy));
 
-  const recommendation = catalog.models.length > 0
+  const recommendation = models.length > 0
     ? recommendModels({
-        models: catalog.models,
+        models,
         workspaceTokens: scanResult.includedTokens,
         goal,
         privacyMode,
@@ -73,8 +58,8 @@ export async function handleGenerateAgentRules(input: Record<string, unknown>) {
     : [];
 
   const rules = generateAgentRules({
-    target: target as AgentTarget,
-    mode: mode as OptimizationMode,
+    target,
+    mode,
     workspaceTokens: scanResult.includedTokens,
     modelRecommendations,
   });

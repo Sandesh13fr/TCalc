@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="420" viewBox="0 0 1200 420" role="img" aria-labelledby="title desc">
+  <title id="title">TCalc</title>
+  <desc id="desc">TCalc scans a local code workspace, measures its token footprint, and turns it into model recommendations, budgeted repo maps, and agent rules.</desc>
+
+  <rect x="1" y="1" width="1198" height="418" rx="28" fill="#0B1020" stroke="#25324A" stroke-width="2"/>
+
+  <g opacity="0.18" fill="#3BA4FF">
+    <rect x="44" y="36" width="22" height="22" rx="5"/>
+    <rect x="72" y="36" width="22" height="22" rx="5"/>
+    <rect x="100" y="36" width="22" height="22" rx="5"/>
+    <rect x="44" y="64" width="22" height="22" rx="5"/>
+    <rect x="72" y="64" width="22" height="22" rx="5"/>
+  </g>
+
+  <g id="title-block" transform="translate(64 64)">
+    <text fill="#60D6E8" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="16" font-weight="700" letter-spacing="2">LOCAL-FIRST TOKEN INTELLIGENCE</text>
+    <text y="102" fill="#F7F9FC" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="88" font-weight="750" letter-spacing="-4">TCalc</text>
+    <text y="152" fill="#D9E2F2" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="28" font-weight="600">Know the size of your code before</text>
+    <text y="188" fill="#D9E2F2" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="28" font-weight="600">an AI coding agent reads it.</text>
+    <text y="232" fill="#8A98B3" font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="18">Measure tokens · choose a sufficient model · shape lean context</text>
+
+    <g transform="translate(0 272)" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" font-weight="700">
+      <rect width="136" height="38" rx="19" fill="#12243A" stroke="#285276"/>
+      <circle cx="20" cy="19" r="5" fill="#60D6E8"/>
+      <text x="34" y="24" fill="#BFEAF2">NO TELEMETRY</text>
+      <rect x="148" width="154" height="38" rx="19" fill="#12243A" stroke="#285276"/>
+      <circle cx="168" cy="19" r="5" fill="#60D6E8"/>
+      <text x="182" y="24" fill="#BFEAF2">NO SOURCE UPLOAD</text>
+      <rect x="314" width="174" height="38" rx="19" fill="#12243A" stroke="#285276"/>
+      <circle cx="334" cy="19" r="5" fill="#60D6E8"/>
+      <text x="348" y="24" fill="#BFEAF2">VS CODE · CLI · MCP</text>
+    </g>
+  </g>
+
+  <g id="project-proof" transform="translate(700 40)">
+    <rect width="452" height="340" rx="22" fill="#10182A" stroke="#2A3954"/>
+    <text x="28" y="38" fill="#8A98B3" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="14" font-weight="700" letter-spacing="1.5">EXAMPLE WORKSPACE</text>
+    <text x="395" y="38" fill="#60D6E8" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" text-anchor="end">LOCAL</text>
+
+    <path d="M50 89 V263" stroke="#31425F" stroke-width="2"/>
+    <circle cx="50" cy="94" r="9" fill="#3BA4FF"/>
+    <circle cx="50" cy="184" r="9" fill="#60D6E8"/>
+    <circle cx="50" cy="274" r="9" fill="#7EE787"/>
+
+    <g font-family="-apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
+      <text x="80" y="83" fill="#8A98B3" font-size="14" font-weight="700" letter-spacing="1">01 · SCAN</text>
+      <text x="80" y="111" fill="#F7F9FC" font-size="25" font-weight="700">103,986 tokens</text>
+      <text x="398" y="108" fill="#A9B7CD" font-size="16" text-anchor="end">92 files included</text>
+
+      <text x="80" y="173" fill="#8A98B3" font-size="14" font-weight="700" letter-spacing="1">02 · MAP</text>
+      <text x="80" y="201" fill="#F7F9FC" font-size="25" font-weight="700">1,134 tokens</text>
+      <text x="398" y="198" fill="#A9B7CD" font-size="16" text-anchor="end">2,000 budget</text>
+
+      <text x="80" y="263" fill="#8A98B3" font-size="14" font-weight="700" letter-spacing="1">03 · FIT</text>
+      <text x="80" y="291" fill="#F7F9FC" font-size="25" font-weight="700">Cheapest sufficient</text>
+      <text x="398" y="288" fill="#7EE787" font-size="16" font-weight="700" text-anchor="end">READY</text>
+    </g>
+
+    <rect x="28" y="313" width="396" height="1" fill="#263650"/>
+    <text x="28" y="334" fill="#64748F" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="12">workspace → model fit → agent-ready context</text>
+  </g>
+</svg>

@@ -1,15 +1,7 @@
 import * as vscode from "vscode";
 import path from "node:path";
 import { generateAgentRules } from "@wma/agent-rules";
-import type { AgentTarget, OptimizationMode } from "@wma/core";
-
-const TARGETS: AgentTarget[] = [
-  "cursor", "claude-code", "generic",
-];
-
-const MODES: OptimizationMode[] = [
-  "normal", "concise", "patch-only", "repo-map-first", "ask-before-large-files",
-];
+import { AGENT_TARGETS, OPTIMIZATION_MODES, type AgentTarget, type OptimizationMode } from "@wma/core";
 
 export function registerGenerateAgentRulesCommand(context: vscode.ExtensionContext): vscode.Disposable {
   return vscode.commands.registerCommand("workspaceModelAdvisor.generateAgentRules", async () => {
@@ -20,13 +12,13 @@ export function registerGenerateAgentRulesCommand(context: vscode.ExtensionConte
     }
 
     const target = await vscode.window.showQuickPick(
-      TARGETS.map(t => ({ label: t, description: getTargetDescription(t) })),
+      AGENT_TARGETS.map(t => ({ label: t, description: getTargetDescription(t) })),
       { placeHolder: "Select target agent" },
     );
     if (!target) return;
 
     const mode = await vscode.window.showQuickPick(
-      MODES.map(m => ({ label: m, description: getModeDescription(m) })),
+      OPTIMIZATION_MODES.map(m => ({ label: m, description: getModeDescription(m) })),
       { placeHolder: "Select optimization mode" },
     );
     if (!mode) return;
@@ -40,8 +32,6 @@ export function registerGenerateAgentRulesCommand(context: vscode.ExtensionConte
       workspaceTokens,
     });
 
-    const filePath = path.join(rootPath, result.fileName);
-
     const write = await vscode.window.showInformationMessage(
       `Generate ${result.fileName} with ${mode.label} mode?`,
       { modal: true, detail: `Target: ${target.label}\nMode: ${mode.label}\nFile: ${result.fileName}\nToken budget: ${result.tokenBudget.toLocaleString()}` },
@@ -50,12 +40,17 @@ export function registerGenerateAgentRulesCommand(context: vscode.ExtensionConte
 
     if (write !== "Write File") return;
 
+    const saveUri = await vscode.window.showSaveDialog({
+      defaultUri: vscode.Uri.file(path.join(rootPath, result.fileName)),
+    });
+    if (!saveUri) return;
+
     try {
       await vscode.workspace.fs.writeFile(
-        vscode.Uri.file(filePath),
+        saveUri,
         new TextEncoder().encode(result.content),
       );
-      vscode.window.showInformationMessage(`${result.fileName} generated successfully.`);
+      vscode.window.showInformationMessage(`${saveUri.fsPath} generated successfully.`);
     } catch (err) {
       vscode.window.showErrorMessage(`Failed to write ${result.fileName}: ${err instanceof Error ? err.message : String(err)}`);
     }

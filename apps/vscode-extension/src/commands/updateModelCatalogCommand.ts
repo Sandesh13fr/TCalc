@@ -51,7 +51,7 @@ export function registerUpdateModelCatalogCommand(context: vscode.ExtensionConte
     }
 
     messages.push("");
-    messages.push("Live catalog updates are not implemented yet. Update models.json directly or add a workspace override.");
+    messages.push("Optional feeds are explicit: use `wma catalog fetch <https-url> --output .tcalc/models.json`, then rerun this check.");
 
     vscode.window.showInformationMessage("Catalog check complete", { modal: true, detail: messages.join("\n") });
   });

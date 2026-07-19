@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import type { WorkspaceScanResult, RecommendationResult, ModelRecommendation } from "@wma/core";
+import { randomBytes } from "node:crypto";
 
 function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -10,7 +11,7 @@ function fmtCost(cost: number): string {
 }
 
 function pct(n: number): string {
-  return `${(n * 100).toFixed(1)}%`;
+  return `${((Number.isFinite(n) ? n : 0) * 100).toFixed(1)}%`;
 }
 
 export function createDashboardPanel(
@@ -57,12 +58,7 @@ export function createDashboardPanel(
 }
 
 function getNonce(): string {
-  let text = "";
-  const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  for (let i = 0; i < 64; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-  return text;
+  return randomBytes(32).toString("base64");
 }
 
 function getHtml(
@@ -87,10 +83,10 @@ function getHtml(
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'nonce-${nonce}'; script-src 'nonce-${nonce}';">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>TCalc</title>
-  <style>
+  <style nonce="${nonce}">
     :root {
       --bg: var(--vscode-editor-background, #1e1e1e);
       --fg: var(--vscode-editor-foreground, #d4d4d4);
@@ -156,6 +152,8 @@ function getHtml(
       padding: 8px 18px; font-size: 0.9em; cursor: pointer; margin: 12px 0 8px;
     }
     .btn:hover { opacity: 0.85; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+    .rec-reasons { margin-top: 6px; font-size: 0.8em; }
     .section-note { color: var(--muted); font-size: 0.85em; }
     td.num { text-align: right; }
     th.num { text-align: right; }
@@ -247,7 +245,7 @@ function getHtml(
     ${recommendation.assumptions.map((a: string) => `<li>${escapeHtml(a)}</li>`).join("")}
   </ul>` : `<p class="section-note">${recommendation ? "No assumptions recorded." : "No recommendations available."}</p>`}
 
-  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;">
+  <div class="actions">
     <button class="btn" onclick="postCmd('rescan')">Re-scan Workspace</button>
     <button class="btn" onclick="postCmd('changeGoal')">Change Goal</button>
     <button class="btn" onclick="postCmd('compareModels')">Compare Models</button>
@@ -275,6 +273,6 @@ function renderRecCard(label: string, rec: ModelRecommendation): string {
     <div class="rec-name">${escapeHtml(rec.displayName)}</div>
     <div class="rec-detail"><span class="rec-score ${scoreClass}">${(rec.score.totalScore * 100).toFixed(0)}/100</span></div>
     <div class="rec-detail">${fmtCost(rec.costEstimate.totalCost)}</div>
-    ${reasons ? `<div class="rec-detail" style="margin-top:6px;font-size:0.8em;">${reasons}</div>` : ""}
+    ${reasons ? `<div class="rec-detail rec-reasons">${reasons}</div>` : ""}
   </div>`;
 }

@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TCalc Team Dashboard</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main>
+    <header><p class="eyebrow">TCALC</p><h1>Workspace reports</h1><p>Self-hosted, report-only, and local by default.</p></header>
+    <section aria-labelledby="saved-heading"><h2 id="saved-heading">Saved reports</h2><div id="reports" class="grid" aria-live="polite"></div></section>
+    <section aria-labelledby="local-heading"><h2 id="local-heading">Open a local report</h2><input id="file" type="file" accept="application/json,.json"><pre id="detail"></pre></section>
+  </main>
+  <script src="/app.js" defer></script>
+</body>
+</html>

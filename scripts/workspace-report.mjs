@@ -25,9 +25,9 @@ const reportPath = resolve(outDir, "workspace-model-report.md");
 const repoMapPath = resolve(outDir, "repo-map.md");
 const recsPath = resolve(outDir, "model-recommendations.json");
 
-run("scan + report", `${cli} report ${target} --include-repo-map --output "${reportPath}"`);
-run("repo-map (budget 16000)", `${cli} repo-map ${target} --budget 16000 --output "${repoMapPath}"`);
-run("recommend (json)", `${cli} recommend ${target} --format json --output "${recsPath}"`);
+run("scan + report", `${cli} report ${target} --include-repo-map --output "${reportPath}" --force`);
+run("repo-map (budget 16000)", `${cli} repo-map ${target} --budget 16000 --output "${repoMapPath}" --force`);
+run("recommend (json)", `${cli} recommend ${target} --format json --output "${recsPath}" --force`);
 
 console.log("\n[workspace-report] done");
 console.log(`  - ${reportPath}`);

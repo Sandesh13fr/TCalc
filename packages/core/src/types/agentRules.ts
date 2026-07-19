@@ -2,29 +2,9 @@
  * Agent rules types for rule generation.
  */
 
-/** Target coding agent. */
-export type AgentTarget =
-  | "cursor"
-  | "claude-code"
-  | "codex"
-  | "cline"
-  | "roo"
-  | "continue"
-  | "aider"
-  | "generic";
+import type { AgentTarget, OptimizationMode } from "./options.js";
 
-/** Optimization mode for agent rules. */
-export type OptimizationMode =
-  | "normal"
-  | "concise"
-  | "caveman"
-  | "patch-only"
-  | "test-first"
-  | "plan-then-edit"
-  | "repo-map-first"
-  | "ask-before-large-files"
-  | "no-full-file-dumps"
-  | "use-summaries";
+export type { AgentTarget, OptimizationMode } from "./options.js";
 
 /** Generated agent rules output. */
 export interface AgentRulesOutput {

@@ -1,5 +1,7 @@
 import * as vscode from "vscode";
 import { generateMarkdownReport } from "@wma/reports";
+import { markdownCode, type WorkspaceScanResult } from "@wma/core";
+import path from "node:path";
 
 export function registerExportReportCommand(context: vscode.ExtensionContext): vscode.Disposable {
   return vscode.commands.registerCommand("workspaceModelAdvisor.exportReport", async () => {
@@ -13,7 +15,7 @@ export function registerExportReportCommand(context: vscode.ExtensionContext): v
     }
 
     const uri = await vscode.window.showSaveDialog({
-      defaultUri: vscode.Uri.file("workspace-model-report.md"),
+      defaultUri: vscode.Uri.file(path.join((lastScan as WorkspaceScanResult).rootPath, "workspace-model-report.md")),
       filters: { Markdown: ["md"] },
     });
 
@@ -22,7 +24,7 @@ export function registerExportReportCommand(context: vscode.ExtensionContext): v
     let report = generateMarkdownReport(lastScan as any, (lastRecommendation ?? null) as any);
 
     if (repoMapPath) {
-      report += `\n\n## Repo Map\n\nA repo map has been generated at \`${repoMapPath}\`. Use it with long-context coding agents for targeted workspace awareness.\n`;
+      report += `\n\n## Repo Map\n\nA repo map has been generated at ${markdownCode(repoMapPath)}. Use it with long-context coding agents for targeted workspace awareness.\n`;
     } else {
       report += `\n\n## Repo Map\n\nGenerate a repo map before using long-context coding agents.\n`;
     }

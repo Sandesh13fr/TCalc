@@ -1,7 +1,7 @@
 import type { WorkspaceScanResult, RecommendationResult, RepoMapResult } from "@wma/core";
 
 function pct(n: number): string {
-  return `${(n * 100).toFixed(1)}%`;
+  return `${((Number.isFinite(n) ? n : 0) * 100).toFixed(1)}%`;
 }
 
 function fmtCost(cost: number): string {
