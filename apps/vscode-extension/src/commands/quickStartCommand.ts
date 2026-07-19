@@ -106,7 +106,7 @@ const quickStartContent = [
   "",
   "---",
   "",
-  "_TCalc v0.1.3 \u2014 MIT License_",
+  "_TCalc v0.1.4 \u2014 MIT License_",
 ].join("\n");
 
 export function registerQuickStartCommand(): vscode.Disposable {

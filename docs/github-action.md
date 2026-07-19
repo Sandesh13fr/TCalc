@@ -1,7 +1,7 @@
 # TCalc GitHub Action
 
 ```yaml
-- uses: Sandesh13fr/TCalc@v0.1.3
+- uses: Sandesh13fr/TCalc@v0.1.4
   id: tcalc
   with:
     path: .

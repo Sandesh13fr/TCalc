@@ -103,3 +103,6 @@ P3 engineering is complete; publication and deployment remain opt-in rollout wor
 - [x] Expand the bundled catalogue to 20 models across cloud and local runtimes, plus nine provider connections.
 - [x] Upgrade the VS Code dashboard with provider coverage, ranked alternatives, privacy guidance, and accessible responsive controls.
 - [x] Document that VS Code remote-embedding CDN errors are upstream of TCalc.
+- [x] Replace the ChatGPT-hosted webpage with a deployable plain HTML/CSS/JS site.
+- [x] Add a native TCalc Activity Bar view with scan state, recommendations, and working workspace actions.
+- [x] Organize the full dashboard into accessible Overview, Models, Workspace, and Actions views.

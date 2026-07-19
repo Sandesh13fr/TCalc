@@ -106,7 +106,6 @@ function getHtml(
   const alternativeModels = recommendation
     ? [...recommendation.allScored]
         .sort((a, b) => b.score.totalScore - a.score.totalScore)
-        .slice(0, 8)
     : [];
 
   return `<!DOCTYPE html>
@@ -136,7 +135,7 @@ function getHtml(
     }
     * { box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      font-family: var(--vscode-font-family, "Segoe UI", sans-serif);
       background: var(--bg);
       color: var(--fg);
       padding: 0;
@@ -206,12 +205,23 @@ function getHtml(
     .chip { border: 1px solid var(--border); border-radius: 999px; padding: 4px 9px; color: var(--muted); }
     .callout { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 14px 16px; border: 1px solid var(--warning); border-radius: 6px; background: var(--surface); }
     .callout p { margin: 0; }
+    .tabs { position: sticky; top: 0; z-index: 5; display: flex; gap: 2px; margin: 20px 0 8px; padding: 4px; overflow-x: auto; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); }
+    .tab { min-height: 36px; flex: 1 0 auto; border: 0; border-radius: 3px; padding: 6px 14px; background: transparent; color: var(--muted); font: inherit; font-weight: 600; cursor: pointer; }
+    .tab:hover { background: var(--card-bg); color: var(--fg); }
+    .tab[aria-selected="true"] { background: var(--button-bg); color: var(--button-fg); }
+    .tab:focus-visible, .model-search:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+    .tab-panel[hidden] { display: none; }
+    .scan-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 9px; color: var(--muted); font-size: .82em; }
+    .model-tools { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+    .model-search { min-height: 38px; width: min(340px, 100%); border: 1px solid var(--vscode-input-border, var(--border)); border-radius: 3px; padding: 6px 10px; background: var(--vscode-input-background, var(--surface)); color: var(--vscode-input-foreground, var(--fg)); font: inherit; }
+    .empty-filter { color: var(--muted); }
     @media (max-width: 760px) {
       body { font-size: 16px; }
       .shell { padding: 20px 16px 40px; }
       .hero, .callout { align-items: stretch; flex-direction: column; }
       .cards { grid-template-columns: 1fr; }
       .hero .btn { width: 100%; justify-content: center; }
+      .tabs { margin-inline: -8px; }
     }
   </style>
 </head>
@@ -222,9 +232,19 @@ function getHtml(
       <div class="eyebrow">Workspace intelligence</div>
       <h1>TCalc dashboard</h1>
       <p class="lede">Understand repository size, compare model fit, and act on the recommendation without leaving VS Code.</p>
+      <div class="scan-meta"><span>${escapeHtml(scan.rootPath)}</span><span>·</span><span>Scanned ${escapeHtml(new Date(scan.scannedAt).toLocaleString())}</span></div>
     </div>
-    <button class="btn" onclick="postCmd('rescan')">Re-scan workspace</button>
+    <button class="btn" data-command="rescan">Re-scan workspace</button>
   </header>
+
+  <nav class="tabs" role="tablist" aria-label="Dashboard sections">
+    <button class="tab" role="tab" aria-selected="true" data-tab="overview">Overview</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="models">Models</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="workspace">Workspace</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="actions">Actions</button>
+  </nav>
+
+  <section class="tab-panel" role="tabpanel" data-panel="overview">
 
   <h2>Summary</h2>
   <div class="cards">
@@ -248,6 +268,9 @@ function getHtml(
   <div class="catalog" aria-label="Configured providers">
     ${providers.map((provider) => `<span class="chip">${escapeHtml(provider)}</span>`).join("")}
   </div>
+  </section>
+
+  <section class="tab-panel" role="tabpanel" data-panel="models" hidden>
 
   ${
     recommendation
@@ -263,7 +286,7 @@ function getHtml(
       ? `
   <div class="callout" role="status">
     <p><strong>Only ${contextFitCount} ${contextFitCount === 1 ? "model fits" : "models fit"} the required context.</strong> ${eligibleCount <= 1 ? "Privacy mode or a team model profile is narrowing the catalogue." : "The ranked alternatives below may need a smaller repo map."}</p>
-    <button class="btn btn-secondary" onclick="postCmd('${eligibleCount <= 1 ? "openSettings" : "generateRepoMap"}')">${eligibleCount <= 1 ? "Review settings" : "Generate repo map"}</button>
+    <button class="btn btn-secondary" data-command="${eligibleCount <= 1 ? "openSettings" : "generateRepoMap"}">${eligibleCount <= 1 ? "Review settings" : "Generate repo map"}</button>
   </div>`
       : ""
   }
@@ -272,6 +295,7 @@ function getHtml(
     alternativeModels.length > 0
       ? `
   <h2>Ranked catalogue</h2>
+  <div class="model-tools"><input class="model-search" id="model-search" type="search" placeholder="Filter by model or provider" aria-label="Filter ranked models"></div>
   <div class="table-wrap"><table>
     <tr><th>Model</th><th>Provider</th><th class="num">Fit</th><th class="num">Est. cost</th><th class="num">Context</th></tr>
     ${alternativeModels.map((rec) => renderModelRow(rec, models)).join("")}
@@ -284,6 +308,9 @@ function getHtml(
   <p class="section-note">No model recommendations available. The model catalog may be empty.</p>
   `
   }
+  </section>
+
+  <section class="tab-panel" role="tabpanel" data-panel="workspace" hidden>
 
   <h2>Top Files by Tokens</h2>
   ${
@@ -358,6 +385,9 @@ function getHtml(
   </ul>`
       : `<p class="section-note">No warnings.</p>`
   }
+  </section>
+
+  <section class="tab-panel" role="tabpanel" data-panel="actions" hidden>
 
   <h2>Assumptions</h2>
   ${
@@ -370,20 +400,37 @@ function getHtml(
   }
 
   <div class="actions">
-    <button class="btn" onclick="postCmd('rescan')">Re-scan workspace</button>
-    <button class="btn btn-secondary" onclick="postCmd('changeGoal')">Change goal</button>
-    <button class="btn btn-secondary" onclick="postCmd('compareModels')">Compare models</button>
-    <button class="btn btn-secondary" onclick="postCmd('generateAgentRules')">Generate agent rules</button>
-    <button class="btn btn-secondary" onclick="postCmd('generateRepoMap')">Generate repo map</button>
-    <button class="btn btn-secondary" onclick="postCmd('exportReport')">Export report</button>
+    <button class="btn" data-command="rescan">Re-scan workspace</button>
+    <button class="btn btn-secondary" data-command="changeGoal">Change goal</button>
+    <button class="btn btn-secondary" data-command="compareModels">Compare models</button>
+    <button class="btn btn-secondary" data-command="generateAgentRules">Generate agent rules</button>
+    <button class="btn btn-secondary" data-command="generateRepoMap">Generate repo map</button>
+    <button class="btn btn-secondary" data-command="exportReport">Export report</button>
   </div>
+  </section>
   </main>
 
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
-    function postCmd(command) {
-      vscode.postMessage({ command });
+    const state = vscode.getState() ?? {};
+    const tabs = [...document.querySelectorAll('[data-tab]')];
+    const panels = [...document.querySelectorAll('[data-panel]')];
+    function selectTab(name) {
+      tabs.forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.tab === name)));
+      panels.forEach(panel => { panel.hidden = panel.dataset.panel !== name; });
+      vscode.setState({ ...state, tab: name });
     }
+    document.addEventListener('click', event => {
+      const tab = event.target.closest('[data-tab]');
+      if (tab) selectTab(tab.dataset.tab);
+      const command = event.target.closest('[data-command]')?.dataset.command;
+      if (command) vscode.postMessage({ command });
+    });
+    document.querySelector('#model-search')?.addEventListener('input', event => {
+      const query = event.target.value.trim().toLowerCase();
+      document.querySelectorAll('[data-model]').forEach(row => { row.hidden = !row.dataset.model.includes(query); });
+    });
+    if (state.tab && tabs.some(tab => tab.dataset.tab === state.tab)) selectTab(state.tab);
   </script>
 </body>
 </html>`;
@@ -418,7 +465,8 @@ function renderRecCard(
 
 function renderModelRow(rec: ModelRecommendation, models: ModelInfo[]): string {
   const model = models.find((candidate) => candidate.id === rec.modelId);
-  return `<tr>
+  const search = `${rec.displayName} ${rec.modelId} ${model?.provider ?? ""}`.toLowerCase();
+  return `<tr data-model="${escapeHtml(search)}">
     <td><strong>${escapeHtml(rec.displayName)}</strong><br><span class="section-note path">${escapeHtml(rec.modelId)}</span></td>
     <td>${escapeHtml(model?.provider ?? "—")}</td>
     <td class="num">${(rec.score.totalScore * 100).toFixed(0)}/100</td>

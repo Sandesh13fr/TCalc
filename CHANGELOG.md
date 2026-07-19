@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.4] - 2026-07-19
+
+### Added
+
+- Native Activity Bar workspace view with scan state, recommendations, and quick actions
+- Full dashboard navigation and searchable model catalogue
+- Plain HTML/CSS/JS product website and local JSON report viewer
+
+### Fixed
+
+- Dashboard controls now work under the extension content security policy
+- Product links no longer point to the retired ChatGPT Sites deployment
+
 ## [0.1.3] - 2026-07-19
 
 ### Added

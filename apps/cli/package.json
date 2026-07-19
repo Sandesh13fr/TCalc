@@ -1,6 +1,6 @@
 {
   "name": "@wma/cli",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "description": "Command-line interface for TCalc.",
   "type": "module",

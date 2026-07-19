@@ -46,7 +46,7 @@ export function createServer(): Server {
   const server = new Server(
     {
       name: "wma-mcp",
-      version: "0.1.3",
+      version: "0.1.4",
     },
     {
       capabilities: {

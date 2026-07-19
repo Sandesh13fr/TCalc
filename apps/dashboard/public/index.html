@@ -3,15 +3,145 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TCalc Team Dashboard</title>
-  <link rel="stylesheet" href="/style.css">
+  <meta name="description" content="TCalc measures workspace tokens, compares coding models, and builds agent-ready context locally.">
+  <meta name="theme-color" content="#0b0d0f">
+  <title>TCalc — Know your context before your agent does</title>
+  <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <main>
-    <header><p class="eyebrow">TCALC</p><h1>Workspace reports</h1><p>Self-hosted, report-only, and local by default.</p></header>
-    <section aria-labelledby="saved-heading"><h2 id="saved-heading">Saved reports</h2><div id="reports" class="grid" aria-live="polite"></div></section>
-    <section aria-labelledby="local-heading"><h2 id="local-heading">Open a local report</h2><input id="file" type="file" accept="application/json,.json"><pre id="detail"></pre></section>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="TCalc home">
+      <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+      <span>TCalc</span>
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="#product">Product</a>
+      <a href="#workflow">Workflow</a>
+      <a href="#report">Report viewer</a>
+      <a href="https://github.com/Sandesh13fr/TCalc">GitHub</a>
+    </nav>
+    <a class="button button-small" href="https://marketplace.visualstudio.com/items?itemName=Sandesh13fr.tcalc">Install extension</a>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="top">
+      <div class="hero-copy">
+        <p class="eyebrow"><span></span> Local-first workspace intelligence</p>
+        <h1>Know your context.<br><em>Choose the right model.</em></h1>
+        <p class="hero-text">TCalc turns a codebase into a clear token budget, a ranked model shortlist, and agent-ready context. No source upload. No telemetry. No guesswork.</p>
+        <div class="hero-actions">
+          <a class="button" href="https://marketplace.visualstudio.com/items?itemName=Sandesh13fr.tcalc">Add to VS Code <span aria-hidden="true">↗</span></a>
+          <a class="text-link" href="https://github.com/Sandesh13fr/TCalc#use-the-cli">Use the CLI <span aria-hidden="true">→</span></a>
+        </div>
+        <ul class="proof" aria-label="Product guarantees">
+          <li>Runs locally</li><li>20 models</li><li>9 provider endpoints</li><li>Open source</li>
+        </ul>
+      </div>
+
+      <div class="product-window" aria-label="TCalc dashboard preview">
+        <div class="window-bar"><span></span><span></span><span></span><b>TCALC / WORKSPACE</b><small>LOCAL</small></div>
+        <div class="window-body">
+          <aside class="window-nav" aria-hidden="true">
+            <b>TC</b><i class="active"></i><i></i><i></i><i></i>
+          </aside>
+          <div class="window-main">
+            <div class="scan-heading">
+              <div><small>SCAN COMPLETE</small><strong>commerce-platform</strong></div>
+              <span>just now</span>
+            </div>
+            <div class="metrics">
+              <article><small>INCLUDED TOKENS</small><strong>184,760</strong><span>612 files</span></article>
+              <article><small>CONTEXT SHARE</small><strong>46.2%</strong><span>of 400k</span></article>
+              <article><small>EST. SESSION</small><strong>$1.84</strong><span>balanced pick</span></article>
+            </div>
+            <div class="preview-grid">
+              <section class="recommendation">
+                <div class="section-title"><span>MODEL SHORTLIST</span><small>RANKED</small></div>
+                <ol>
+                  <li><span class="rank">01</span><div><strong>Gemini 2.5 Pro</strong><small>BALANCED · GOOGLE AI</small></div><b>91</b></li>
+                  <li><span class="rank">02</span><div><strong>Claude Sonnet 4</strong><small>HIGH CONFIDENCE · ANTHROPIC</small></div><b>89</b></li>
+                  <li><span class="rank">03</span><div><strong>DeepSeek V3</strong><small>COST EFFICIENT · DEEPSEEK</small></div><b>86</b></li>
+                </ol>
+              </section>
+              <section class="context-map">
+                <div class="section-title"><span>CONTEXT MAP</span><small>184.7K</small></div>
+                <div class="bar bar-34"><i></i><span>TypeScript</span><b>63k</b></div>
+                <div class="bar bar-25"><i></i><span>Markdown</span><b>46k</b></div>
+                <div class="bar bar-19"><i></i><span>JSON</span><b>35k</b></div>
+                <div class="bar bar-12"><i></i><span>Other</span><b>22k</b></div>
+              </section>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="ticker" aria-label="Supported providers">
+      <span>OPENAI</span><i></i><span>ANTHROPIC</span><i></i><span>GOOGLE AI</span><i></i><span>GROQ</span><i></i><span>OPENROUTER</span><i></i><span>MISTRAL</span><i></i><span>OLLAMA</span>
+    </section>
+
+    <section class="product-section" id="product">
+      <div class="section-intro">
+        <p class="eyebrow"><span></span> One scan, useful answers</p>
+        <h2>Stop choosing models<br>by reputation alone.</h2>
+        <p>TCalc measures the actual workspace and applies your task, privacy setting, context limit, quality needs, and cost constraints.</p>
+      </div>
+      <div class="feature-grid">
+        <article class="feature feature-wide">
+          <span class="feature-number">01</span>
+          <div><h3>See where every token goes</h3><p>Break down context by file, folder, and language. Ignore generated output and flag expensive or risky paths before they reach an agent.</p></div>
+          <div class="file-list" aria-hidden="true"><span><b>src/</b><i></i><em>82.4k</em></span><span><b>docs/</b><i></i><em>41.8k</em></span><span><b>tests/</b><i></i><em>27.2k</em></span></div>
+        </article>
+        <article class="feature">
+          <span class="feature-number">02</span><h3>Rank models for the job</h3><p>Get cheapest-sufficient, balanced, and high-confidence picks—with distinct alternatives and the reasons behind every score.</p>
+        </article>
+        <article class="feature feature-dark">
+          <span class="feature-number">03</span><h3>Keep source local</h3><p>Scanning, pricing, recommendations, and report generation run on your machine. TCalc makes no model API calls.</p><strong>0 bytes uploaded</strong>
+        </article>
+        <article class="feature">
+          <span class="feature-number">04</span><h3>Build agent-ready context</h3><p>Generate a budgeted repo map, goal-aware rules, and MCP configuration for the tools already in your workflow.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="workflow" id="workflow">
+      <div class="section-intro light">
+        <p class="eyebrow"><span></span> From codebase to decision</p>
+        <h2>Three steps.<br>No cloud required.</h2>
+      </div>
+      <ol class="steps">
+        <li><span>01</span><div><h3>Scan</h3><p>Open the Activity Bar and scan the current workspace. TCalc respects ignore rules and local policy.</p></div><code>TCalc: Scan Workspace</code></li>
+        <li><span>02</span><div><h3>Compare</h3><p>Set the goal and inspect ranked fits across cloud and local model providers.</p></div><code>TCalc: Compare Models</code></li>
+        <li><span>03</span><div><h3>Ship context</h3><p>Export a report, repo map, agent rules, or a ready-to-use MCP client configuration.</p></div><code>TCalc: Generate Repo Map</code></li>
+      </ol>
+    </section>
+
+    <section class="report-section" id="report">
+      <div class="section-intro">
+        <p class="eyebrow"><span></span> Local report viewer</p>
+        <h2>Open a report.<br>Keep it in the browser.</h2>
+        <p>Drop in a JSON report generated by TCalc. It is parsed on this page and is never uploaded.</p>
+        <div class="report-actions">
+          <label class="button" for="file">Open JSON report</label>
+          <input id="file" class="visually-hidden" type="file" accept="application/json,.json">
+          <button class="text-button" id="example" type="button">Load example</button>
+        </div>
+        <p id="report-status" class="status" role="status">Showing a safe example report.</p>
+      </div>
+      <div class="report-card" id="detail" aria-live="polite"></div>
+      <section class="saved-reports" id="saved" hidden>
+        <h3>Saved team reports</h3><div id="reports" class="saved-grid"></div>
+      </section>
+    </section>
   </main>
-  <script src="/app.js" defer></script>
+
+  <footer>
+    <a class="brand brand-light" href="#top"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span><span>TCalc</span></a>
+    <p>Context intelligence for coding agents.<br>Local-first and open source.</p>
+    <div><a href="https://github.com/Sandesh13fr/TCalc">GitHub</a><a href="https://marketplace.visualstudio.com/items?itemName=Sandesh13fr.tcalc">Marketplace</a><a href="https://open-vsx.org/extension/Sandesh13fr/tcalc">Open VSX</a></div>
+    <small>MIT License · TCalc</small>
+  </footer>
+  <script src="./app.js" defer></script>
 </body>
 </html>

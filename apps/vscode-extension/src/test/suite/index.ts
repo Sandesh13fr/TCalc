@@ -9,4 +9,6 @@ export async function run(): Promise<void> {
   const commands = await vscode.commands.getCommands(true);
   assert.ok(commands.includes("workspaceModelAdvisor.scanWorkspace"));
   assert.ok(commands.includes("workspaceModelAdvisor.openDashboard"));
+  assert.ok(extension.packageJSON.contributes.viewsContainers.activitybar.some((view: { id: string }) => view.id === "tcalc"));
+  assert.ok(extension.packageJSON.contributes.views.tcalc.some((view: { id: string }) => view.id === "tcalc.sidebar"));
 }

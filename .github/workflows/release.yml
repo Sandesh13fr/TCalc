@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to release (e.g. v0.1.3). Leave empty to use the current ref."
+        description: "Tag to release (e.g. v0.1.4). Leave empty to use the current ref."
         required: false
         default: ""
 

@@ -1,6 +1,6 @@
 {
   "name": "@wma/agent-rules",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "description": "Agent rule file generation for coding agents.",
   "type": "module",

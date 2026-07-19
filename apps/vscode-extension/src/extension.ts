@@ -11,9 +11,19 @@ import { registerOpenSettingsCommand } from "./commands/openSettingsCommand.js";
 import { registerShowWelcomeCommand, showWelcomeOnFirstActivation } from "./commands/showWelcomeCommand.js";
 import { registerQuickStartCommand } from "./commands/quickStartCommand.js";
 import { registerGenerateMcpConfigCommand } from "./commands/generateMcpConfigCommand.js";
+import { TCalcSidebarProvider } from "./views/sidebarProvider.js";
 
 export function activate(context: vscode.ExtensionContext) {
-  context.subscriptions.push(registerScanWorkspaceCommand(context));
+  const sidebar = new TCalcSidebarProvider(context);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider("tcalc.sidebar", sidebar, {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
+    vscode.workspace.onDidChangeConfiguration((event) => {
+      if (event.affectsConfiguration("wma")) sidebar.refresh();
+    }),
+  );
+  context.subscriptions.push(registerScanWorkspaceCommand(context, () => sidebar.refresh()));
   context.subscriptions.push(registerOpenDashboardCommand(context));
   context.subscriptions.push(registerExportReportCommand(context));
   context.subscriptions.push(registerSetWorkspaceGoalCommand(context));

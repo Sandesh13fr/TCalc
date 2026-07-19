@@ -1,6 +1,6 @@
 {
   "name": "@wma/dashboard",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "description": "Optional self-hosted dashboard for versioned TCalc reports.",
   "type": "module",
@@ -8,6 +8,6 @@
     "build": "node scripts/build.mjs",
     "start": "node src/server.mjs",
     "test": "node --test tests/server.test.mjs",
-    "lint": "node --check src/server.mjs"
+    "lint": "node --check src/server.mjs && node --check public/app.js"
   }
 }

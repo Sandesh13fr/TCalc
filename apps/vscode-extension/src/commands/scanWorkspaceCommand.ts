@@ -5,7 +5,10 @@ import { applyModelProfile, loadModelCatalog, validateModelCatalog } from "@wma/
 import { recommendModels } from "@wma/recommender";
 import { getActiveModelProfile, loadTeamPolicy, type RecommendationResult, type WorkspaceScanResult } from "@wma/core";
 
-export function registerScanWorkspaceCommand(context: vscode.ExtensionContext): vscode.Disposable {
+export function registerScanWorkspaceCommand(
+  context: vscode.ExtensionContext,
+  onScanComplete?: () => void,
+): vscode.Disposable {
   return vscode.commands.registerCommand("workspaceModelAdvisor.scanWorkspace", async () => {
     const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!rootPath) {
@@ -80,6 +83,7 @@ export function registerScanWorkspaceCommand(context: vscode.ExtensionContext): 
         await context.workspaceState.update("wma.lastScan", scanResult);
         await context.workspaceState.update("wma.lastRecommendation", recommendation);
         await context.workspaceState.update("wma.lastModels", models);
+        onScanComplete?.();
 
         vscode.window.showInformationMessage(
           `Workspace scanned: ${scanResult.totalEstimatedTokens.toLocaleString()} estimated tokens`,

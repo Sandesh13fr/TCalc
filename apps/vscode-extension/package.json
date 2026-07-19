@@ -1,7 +1,7 @@
 {
   "name": "tcalc",
   "displayName": "TCalc",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "private": true,
   "description": "Local-first workspace token calculator, model recommender, and coding-agent optimizer.",
   "publisher": "Sandesh13fr",
@@ -38,7 +38,7 @@
   "bugs": {
     "url": "https://github.com/Sandesh13fr/TCalc/issues"
   },
-  "homepage": "https://github.com/Sandesh13fr/TCalc#readme",
+  "homepage": "https://sandesh13fr.github.io/TCalc/",
   "galleryBanner": {
     "color": "#1e1e1e",
     "theme": "dark"
@@ -55,7 +55,8 @@
     "onCommand:workspaceModelAdvisor.generateRepoMap",
     "onCommand:workspaceModelAdvisor.showWelcome",
     "onCommand:workspaceModelAdvisor.quickStart",
-    "onCommand:workspaceModelAdvisor.generateMcpConfig"
+    "onCommand:workspaceModelAdvisor.generateMcpConfig",
+    "onView:tcalc.sidebar"
   ],
   "main": "dist/extension.js",
   "capabilities": {
@@ -68,11 +69,13 @@
     "commands": [
       {
         "command": "workspaceModelAdvisor.scanWorkspace",
-        "title": "TCalc: Scan Workspace"
+        "title": "TCalc: Scan Workspace",
+        "icon": "$(refresh)"
       },
       {
         "command": "workspaceModelAdvisor.openDashboard",
-        "title": "TCalc: Open Dashboard"
+        "title": "TCalc: Open Dashboard",
+        "icon": "$(dashboard)"
       },
       {
         "command": "workspaceModelAdvisor.exportReport",
@@ -115,6 +118,38 @@
         "title": "TCalc: Generate MCP Config"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "tcalc",
+          "title": "TCalc",
+          "icon": "media/activity.svg"
+        }
+      ]
+    },
+    "views": {
+      "tcalc": [
+        {
+          "id": "tcalc.sidebar",
+          "name": "Workspace Overview",
+          "type": "webview"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "workspaceModelAdvisor.scanWorkspace",
+          "when": "view == tcalc.sidebar",
+          "group": "navigation@1"
+        },
+        {
+          "command": "workspaceModelAdvisor.openDashboard",
+          "when": "view == tcalc.sidebar",
+          "group": "navigation@2"
+        }
+      ]
+    },
     "configuration": {
       "title": "TCalc",
       "properties": {
