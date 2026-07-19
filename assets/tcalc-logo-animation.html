@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TCalc logo reveal</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      min-height: 100dvh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      background: #050607;
+    }
+    svg { width: min(70vw, 520px); height: auto; overflow: visible; }
+    [data-piece] {
+      opacity: 0;
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: build 460ms ease-out forwards;
+    }
+    [data-piece="1"] { animation-delay: 0ms; }
+    [data-piece="2"] { animation-delay: 90ms; }
+    [data-piece="3"] { animation-delay: 180ms; }
+    [data-piece="4"] { animation-delay: 270ms; }
+    [data-piece="5"] { animation-delay: 360ms; }
+    @keyframes build {
+      from { opacity: 0; transform: translateY(10px) scale(.92); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      [data-piece] { animation: none; opacity: 1; transform: none; }
+    }
+  </style>
+</head>
+<body>
+  <svg id="logo" viewBox="0 0 256 256" role="img" aria-labelledby="logo-title logo-desc">
+    <title id="logo-title">TCalc</title>
+    <desc id="logo-desc">Five cyan token tiles forming a capital T.</desc>
+    <rect width="256" height="256" rx="52" fill="#050607"/>
+    <g fill="#27aef3">
+      <rect data-piece="1" x="34" y="42" width="52" height="52" rx="11"/>
+      <rect data-piece="2" x="102" y="42" width="52" height="52" rx="11"/>
+      <rect data-piece="3" x="170" y="42" width="52" height="52" rx="11"/>
+      <rect data-piece="4" x="102" y="110" width="52" height="52" rx="11"/>
+      <rect data-piece="5" x="102" y="178" width="52" height="36" rx="11"/>
+    </g>
+  </svg>
+  <noscript>
+    <style>[data-piece] { opacity: 1; transform: none; }</style>
+  </noscript>
+  <script>
+    const time = new URLSearchParams(location.search).get("t");
+    if (time !== null) {
+      const seconds = Number.parseFloat(time);
+      document.querySelectorAll("[data-piece]").forEach((piece) => {
+        const stagger = (Number(piece.dataset.piece) - 1) * 0.09;
+        piece.style.animation = "build 460ms ease-out both";
+        piece.style.animationDelay = `${stagger - seconds}s`;
+        piece.style.animationPlayState = "paused";
+      });
+    }
+    window.__ready = true;
+  </script>
+</body>
+</html>

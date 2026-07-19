@@ -88,3 +88,9 @@ Source: project status and roadmap dated 17 July 2026.
 - [x] At least one VS Code Extension Host test passes.
 
 P3 engineering is complete; publication and deployment remain opt-in rollout work.
+
+## Website and brand
+
+- [x] Launch the TCalc product webpage with responsive, accessible UI and a real product preview.
+- [x] Replace the legacy icon with the token-tile TCalc mark across VS Code and JetBrains.
+- [x] Ship a reduced-motion-safe standalone logo reveal and static fallback.
