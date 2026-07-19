@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { ModelCatalog, ModelInfo } from "@wma/core";
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { validateCatalogFreshness, validateModelCatalog } from "../src/loadModelCatalog.js";
 
 function model(overrides: Partial<ModelInfo> = {}): ModelInfo {
@@ -46,6 +49,10 @@ describe("validateModelCatalog", () => {
   it("rejects impossible calendar dates", () => {
     expect(validateModelCatalog([model({ updatedAt: "2026-02-31" })])[0]).toContain("invalid updatedAt");
   });
+
+  it("validates optional reasoning scores", () => {
+    expect(validateModelCatalog([model({ reasoningScore: 101 })])[0]).toContain("reasoningScore");
+  });
 });
 
 describe("validateCatalogFreshness", () => {
@@ -58,5 +65,19 @@ describe("validateCatalogFreshness", () => {
   it("accepts a recently reviewed catalog", () => {
     const catalog: ModelCatalog = { version: "1.0", updatedAt: "2026-07-01", models: [] };
     expect(validateCatalogFreshness(catalog, 90, new Date("2026-07-19T00:00:00Z"))).toEqual([]);
+  });
+});
+
+describe("bundled catalogs", () => {
+  it("ships a broad model catalog whose providers are configured", () => {
+    const root = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
+    const catalog = JSON.parse(readFileSync(resolve(root, "catalogs/models.json"), "utf8"));
+    const providerCatalog = JSON.parse(readFileSync(resolve(root, "catalogs/providers.json"), "utf8"));
+    const providerIds = new Set(providerCatalog.providers.map((provider: { id: string }) => provider.id));
+
+    expect(validateModelCatalog(catalog.models)).toEqual([]);
+    expect(catalog.models.length).toBeGreaterThanOrEqual(20);
+    expect(providerCatalog.providers.length).toBeGreaterThanOrEqual(9);
+    expect(catalog.models.every((entry: ModelInfo) => providerIds.has(entry.provider))).toBe(true);
   });
 });

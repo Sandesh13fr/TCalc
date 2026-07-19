@@ -21,7 +21,7 @@ const program = new Command();
 program
   .name("wma")
   .description("TCalc — local-first workspace analysis and AI agent optimization")
-  .version("0.1.2")
+  .version("0.1.3")
   .option("--debug", "Show stack traces on error");
 
 program

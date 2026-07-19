@@ -16,7 +16,7 @@
 ## Install via CLI
 
 ```bash
-code --install-extension dist-vsix/tcalc-0.1.2.vsix
+code --install-extension dist-vsix/tcalc-0.1.3.vsix
 ```
 
 ## Verify

@@ -1,6 +1,6 @@
 {
   "name": "@wma/repo-map",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "description": "Local-first repo map generator that creates a compact Markdown summary of scanned workspaces for coding agents.",
   "type": "module",

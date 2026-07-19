@@ -74,6 +74,16 @@ const bigModel: ModelInfo = {
   updatedAt: "2025-01-01",
 };
 
+const weakModel: ModelInfo = {
+  ...midModel,
+  id: "weak",
+  displayName: "Weak Model",
+  codingScore: 45,
+  reasoningScore: 40,
+  inputPricePerMillion: 2,
+  outputPricePerMillion: 8,
+};
+
 describe("recommendModels", () => {
   it("should select cheapest sufficient model based on total cost", () => {
     const result = recommendModels({
@@ -282,5 +292,21 @@ describe("recommendModels", () => {
     ];
     const uniqueIds = new Set(tierIds);
     expect(uniqueIds.size).toBeGreaterThanOrEqual(2);
+  });
+
+  it("uses each tier's ranking when selecting a distinct fallback", () => {
+    const result = recommendModels({
+      models: [cheapModel, weakModel, midModel, bigModel],
+      workspaceTokens: 5000,
+      goal: "build-mvp",
+      privacyMode: "cloud-ok",
+    });
+    const tierIds = [
+      result.cheapestSufficient.modelId,
+      result.balanced.modelId,
+      result.highConfidence.modelId,
+    ];
+    expect(new Set(tierIds).size).toBe(3);
+    expect(tierIds).not.toContain("weak");
   });
 });

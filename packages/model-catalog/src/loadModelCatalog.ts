@@ -2,7 +2,10 @@ import { readFileSync, existsSync } from "node:fs";
 import path from "node:path";
 import type { ModelInfo, ModelCatalog } from "@wma/core";
 
-export function loadModelCatalog(catalogDirOrFile: string): ModelCatalog {
+export function loadModelCatalog(
+  catalogDirOrFile: string,
+  options: { warnIfMissing?: boolean } = {},
+): ModelCatalog {
   try {
     const resolved = path.resolve(catalogDirOrFile);
 
@@ -11,7 +14,7 @@ export function loadModelCatalog(catalogDirOrFile: string): ModelCatalog {
       : resolved;
 
     if (!existsSync(modelsPath)) {
-      console.warn(`Catalog file not found: ${modelsPath}`);
+      if (options.warnIfMissing !== false) console.warn(`Catalog file not found: ${modelsPath}`);
       return { version: "1.0", updatedAt: new Date().toISOString().split("T")[0], models: [] };
     }
 
@@ -68,6 +71,7 @@ export function validateModelCatalog(models: readonly unknown[]): string[] {
       errors.push(`Model "${id}" has invalid privacyMode`);
     }
     validateOptionalScore(value, "codingScore", id, errors);
+    if (value.reasoningScore !== undefined) validateOptionalScore(value, "reasoningScore", id, errors);
     validateOptionalScore(value, "latencyScore", id, errors);
     if (!validDateString(value.updatedAt)) errors.push(`Model "${id}" has an invalid updatedAt date`);
 

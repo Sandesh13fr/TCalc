@@ -1,11 +1,11 @@
 {
-  "version": "1.0",
-  "updatedAt": "2026-06-09",
+  "version": "1.1",
+  "updatedAt": "2026-07-19",
   "providers": [
     {
       "id": "openai",
       "displayName": "OpenAI",
-      "website": "https://platform.openai.com",
+      "website": "https://developers.openai.com",
       "apiKeyDocs": "https://platform.openai.com/api-keys",
       "supportsLocal": false,
       "defaultBaseUrl": "https://api.openai.com/v1"
@@ -13,8 +13,8 @@
     {
       "id": "anthropic",
       "displayName": "Anthropic",
-      "website": "https://anthropic.com",
-      "apiKeyDocs": "https://docs.anthropic.com/en/docs/api-keys",
+      "website": "https://www.anthropic.com",
+      "apiKeyDocs": "https://platform.claude.com/settings/keys",
       "supportsLocal": false,
       "defaultBaseUrl": "https://api.anthropic.com/v1"
     },
@@ -27,12 +27,36 @@
       "defaultBaseUrl": "https://generativelanguage.googleapis.com/v1beta"
     },
     {
-      "id": "local",
-      "displayName": "Local / Ollama",
-      "website": "https://ollama.ai",
-      "apiKeyDocs": null,
-      "supportsLocal": true,
-      "defaultBaseUrl": "http://localhost:11434"
+      "id": "xai",
+      "displayName": "xAI",
+      "website": "https://x.ai",
+      "apiKeyDocs": "https://console.x.ai",
+      "supportsLocal": false,
+      "defaultBaseUrl": "https://api.x.ai/v1"
+    },
+    {
+      "id": "deepseek",
+      "displayName": "DeepSeek",
+      "website": "https://www.deepseek.com",
+      "apiKeyDocs": "https://platform.deepseek.com/api_keys",
+      "supportsLocal": false,
+      "defaultBaseUrl": "https://api.deepseek.com"
+    },
+    {
+      "id": "mistral",
+      "displayName": "Mistral AI",
+      "website": "https://mistral.ai",
+      "apiKeyDocs": "https://console.mistral.ai/api-keys",
+      "supportsLocal": false,
+      "defaultBaseUrl": "https://api.mistral.ai/v1"
+    },
+    {
+      "id": "groq",
+      "displayName": "GroqCloud",
+      "website": "https://groq.com",
+      "apiKeyDocs": "https://console.groq.com/keys",
+      "supportsLocal": false,
+      "defaultBaseUrl": "https://api.groq.com/openai/v1"
     },
     {
       "id": "openrouter",
@@ -41,6 +65,14 @@
       "apiKeyDocs": "https://openrouter.ai/keys",
       "supportsLocal": false,
       "defaultBaseUrl": "https://openrouter.ai/api/v1"
+    },
+    {
+      "id": "local",
+      "displayName": "Local / Ollama",
+      "website": "https://ollama.com",
+      "apiKeyDocs": null,
+      "supportsLocal": true,
+      "defaultBaseUrl": "http://localhost:11434"
     }
   ]
 }

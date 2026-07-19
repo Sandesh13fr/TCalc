@@ -28,7 +28,7 @@ export function registerUpdateModelCatalogCommand(context: vscode.ExtensionConte
       const workspaceCatalogPath2 = path.join(rootPath, ".tcalc", "models.json");
 
       try {
-        const wsCatalog1 = loadModelCatalog(workspaceCatalogPath1);
+        const wsCatalog1 = loadModelCatalog(workspaceCatalogPath1, { warnIfMissing: false });
         if (wsCatalog1.models.length > 0) {
           messages.push(`Workspace override (catalogs/models.json): ${wsCatalog1.models.length} model(s).`);
           const wsWarnings = validateModelCatalog(wsCatalog1.models);
@@ -41,7 +41,7 @@ export function registerUpdateModelCatalogCommand(context: vscode.ExtensionConte
       }
 
       try {
-        const wsCatalog2 = loadModelCatalog(workspaceCatalogPath2);
+        const wsCatalog2 = loadModelCatalog(workspaceCatalogPath2, { warnIfMissing: false });
         if (wsCatalog2.models.length > 0) {
           messages.push(`Workspace override (.tcalc/models.json): ${wsCatalog2.models.length} model(s).`);
         }

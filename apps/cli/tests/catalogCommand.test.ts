@@ -13,8 +13,13 @@ describe("catalog validate command", () => {
   });
 
   it("emits JSON when requested", async () => {
-    const result = await executeCatalogValidate({ path: "catalogs/models.json", format: "json" });
-    expect(JSON.parse(result.message)).toMatchObject({ valid: true, modelCount: 9, errors: [] });
+    const result = await executeCatalogValidate({
+      path: "catalogs/models.json",
+      format: "json",
+    });
+    const payload = JSON.parse(result.message);
+    expect(payload).toMatchObject({ valid: true, errors: [] });
+    expect(payload.modelCount).toBeGreaterThanOrEqual(20);
   });
 
   it("fails on missing catalog", async () => {

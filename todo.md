@@ -94,3 +94,12 @@ P3 engineering is complete; publication and deployment remain opt-in rollout wor
 - [x] Launch the TCalc product webpage with responsive, accessible UI and a real product preview.
 - [x] Replace the legacy icon with the token-tile TCalc mark across VS Code and JetBrains.
 - [x] Ship a reduced-motion-safe standalone logo reveal and static fallback.
+
+## Extension UI and model catalogue
+
+- [x] Stop optional workspace catalogue probes from logging false missing-file errors.
+- [x] Rank a distinct next-best candidate for each recommendation tier when enough models are eligible.
+- [x] Add reasoning-aware task and confidence scoring with deterministic tie-breaking.
+- [x] Expand the bundled catalogue to 20 models across cloud and local runtimes, plus nine provider connections.
+- [x] Upgrade the VS Code dashboard with provider coverage, ranked alternatives, privacy guidance, and accessible responsive controls.
+- [x] Document that VS Code remote-embedding CDN errors are upstream of TCalc.

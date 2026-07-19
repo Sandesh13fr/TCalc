@@ -14,6 +14,7 @@ export interface ModelInfo {
   supportsLocal: boolean;
   privacyMode: PrivacyMode;
   codingScore: number | null;
+  reasoningScore?: number | null;
   latencyScore: number | null;
   updatedAt: string;
 }

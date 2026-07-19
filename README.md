@@ -128,6 +128,11 @@ pnpm cli mcp
 
 ## Project guides
 
+### Troubleshooting VS Code test output
+
+- Missing `catalogs/models.json` or `.tcalc/models.json` files are optional workspace overrides; TCalc uses the catalogue bundled with the extension when neither exists.
+- Messages that reference `embeddings.vscode-cdn.net` come from VS Code/Copilot semantic tooling, not TCalc. Update VS Code and Copilot, then run **Developer: Reload Window**. TCalc does not fetch remote embeddings. VS Code documents both its [CDN network endpoint](https://code.visualstudio.com/docs/setup/network) and that [embedding-backed features require connectivity](https://code.visualstudio.com/docs/agent-customization/language-models).
+
 - [Configuration schema](./instructions.md)
 - [Coding-agent integrations](./docs/integrations/README.md)
 - [CI reporter](./docs/ci-reporter.md)

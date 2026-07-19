@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { loadModelCatalog } from "../src/loadModelCatalog.js";
 import { mkdtempSync, writeFileSync, rmSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -18,6 +18,14 @@ describe("loadModelCatalog", () => {
   it("should return empty catalog for missing path", () => {
     const result = loadModelCatalog(join(tmpDir, "nonexistent"));
     expect(result.models).toEqual([]);
+  });
+
+  it("can silently probe an optional catalog path", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const result = loadModelCatalog(join(tmpDir, "optional"), { warnIfMissing: false });
+    expect(result.models).toEqual([]);
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it("should load catalog from a directory with models.json", () => {

@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.1.3] - 2026-07-19
+
+### Added
+
+- Responsive VS Code dashboard with provider coverage, ranked alternatives, and actionable context-fit guidance
+- Expanded catalogue with 20 models and nine provider endpoints, including four local runtimes
+
+### Fixed
+
+- Optional workspace catalogue probes no longer emit false missing-file errors
+- Recommendation tiers use their own ranked next-best candidate instead of catalog order
+- Confidence scoring now considers reasoning, coding quality, context fit, and deterministic tie-breaks
+
 ## [0.1.1] - 2026-06-13
 
 ### Added

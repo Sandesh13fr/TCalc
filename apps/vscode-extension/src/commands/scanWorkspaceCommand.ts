@@ -32,8 +32,8 @@ export function registerScanWorkspaceCommand(context: vscode.ExtensionContext): 
         const bundledCatalogPath = path.join(extPath, "catalogs");
         let catalog = loadModelCatalog(bundledCatalogPath);
 
-        const wsCatalog1 = loadModelCatalog(path.join(rootPath, "catalogs", "models.json"));
-        const wsCatalog2 = loadModelCatalog(path.join(rootPath, ".tcalc", "models.json"));
+        const wsCatalog1 = loadModelCatalog(path.join(rootPath, "catalogs", "models.json"), { warnIfMissing: false });
+        const wsCatalog2 = loadModelCatalog(path.join(rootPath, ".tcalc", "models.json"), { warnIfMissing: false });
 
         if (wsCatalog1.models.length > 0) {
           catalog = wsCatalog1;

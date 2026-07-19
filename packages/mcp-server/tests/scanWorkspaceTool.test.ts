@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { handleScanWorkspace } from "../src/tools/scanWorkspaceTool.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -22,11 +22,15 @@ describe("scanWorkspaceTool", () => {
   });
 
   it("should default to current working directory when no rootPath provided", async () => {
-    const result = await handleScanWorkspace({});
-
-    const parsed = JSON.parse(result.content[0].text);
-    expect(parsed.rootPath).toBeDefined();
-    expect(parsed.totalFiles).toBeGreaterThanOrEqual(0);
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(fixturePath);
+    try {
+      const result = await handleScanWorkspace({});
+      const parsed = JSON.parse(result.content[0].text);
+      expect(parsed.rootPath).toBe(fixturePath);
+      expect(parsed.totalFiles).toBeGreaterThan(0);
+    } finally {
+      cwd.mockRestore();
+    }
   });
 
   it("should include goal and privacyMode in schema validation", async () => {

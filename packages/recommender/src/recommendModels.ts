@@ -109,30 +109,24 @@ export function recommendModels(options: RecommendModelsOptions): Recommendation
     assumptions.push("No model fits the required context; recommend using repo-map-first strategy to reduce context");
   }
 
-  let cheapestSufficient = pickCheapestSufficient(candidates);
-  let balanced = pickBalanced(candidates);
-  let highConfidence = pickHighConfidence(candidates);
-
   const usedIds = new Set<string>();
   const duplicationReason = "Same model selected for multiple tiers due to limited fitting candidates";
+  const cheapestRanked = [...candidates].sort((a, b) =>
+    a.cost.totalCost - b.cost.totalCost || b.score.totalScore - a.score.totalScore || a.model.id.localeCompare(b.model.id));
+  const balancedRanked = [...candidates].sort((a, b) =>
+    b.score.totalScore - a.score.totalScore || a.cost.totalCost - b.cost.totalCost || a.model.id.localeCompare(b.model.id));
+  const confidenceRanked = [...candidates].sort((a, b) =>
+    confidenceScore(b) - confidenceScore(a) || b.score.totalScore - a.score.totalScore || a.model.id.localeCompare(b.model.id));
 
-  const dedup = (preferred: typeof candidates[0], remaining: typeof candidates): typeof candidates[0] => {
-    if (!preferred) return preferred;
-    if (!usedIds.has(preferred.model.id)) {
-      usedIds.add(preferred.model.id);
-      return preferred;
-    }
-    const next = remaining.find(c => !usedIds.has(c.model.id));
-    if (next) {
-      usedIds.add(next.model.id);
-      return next;
-    }
-    return preferred;
+  const pickUnused = (ranked: typeof candidates): typeof candidates[0] => {
+    const selected = ranked.find((candidate) => !usedIds.has(candidate.model.id)) ?? ranked[0];
+    usedIds.add(selected.model.id);
+    return selected;
   };
 
-  usedIds.add(cheapestSufficient.model.id);
-  balanced = dedup(balanced, candidates);
-  highConfidence = dedup(highConfidence, candidates);
+  const cheapestSufficient = pickUnused(cheapestRanked);
+  const balanced = pickUnused(balancedRanked);
+  const highConfidence = pickUnused(confidenceRanked);
 
   const toRecommendation = (item: typeof candidates[0], tier: "cheapest-sufficient" | "balanced" | "high-confidence", extraReasons: string[] = []): ModelRecommendation => ({
     modelId: item.model.id,
@@ -150,12 +144,12 @@ export function recommendModels(options: RecommendModelsOptions): Recommendation
   const balancedRecommendation = toRecommendation(
     balanced,
     "balanced",
-    balanced === cheapestSufficient || (balanced === highConfidence && highConfidence === cheapestSufficient) ? [duplicationReason] : [],
+    balanced.model.id === cheapestSufficient.model.id ? [duplicationReason] : [],
   );
   const highConfidenceRecommendation = toRecommendation(
     highConfidence,
     "high-confidence",
-    highConfidence === cheapestSufficient || highConfidence === balanced ? [duplicationReason] : [],
+    highConfidence.model.id === cheapestSufficient.model.id || highConfidence.model.id === balanced.model.id ? [duplicationReason] : [],
   );
 
   const allScored = fitting.concat(overflowing).map((s) =>
@@ -174,42 +168,10 @@ export function recommendModels(options: RecommendModelsOptions): Recommendation
   };
 }
 
-function pickCheapestSufficient(
-  candidates: Array<{ model: ModelInfo; score: ModelScore; cost: CostEstimate }>,
-) {
-  let best = candidates[0];
-  for (const c of candidates) {
-    if (c.cost.totalCost < best.cost.totalCost) {
-      best = c;
-    }
-  }
-  return best;
-}
-
-function pickHighConfidence(
-  candidates: Array<{ model: ModelInfo; score: ModelScore; cost: CostEstimate }>,
-) {
-  let best = candidates[0];
-  for (const c of candidates) {
-    const cs = c.model.codingScore ?? 0;
-    const bs = best.model.codingScore ?? 0;
-    if (cs > bs) {
-      best = c;
-    }
-  }
-  return best;
-}
-
-function pickBalanced(
-  candidates: Array<{ model: ModelInfo; score: ModelScore; cost: CostEstimate }>,
-) {
-  let best = candidates[0];
-  for (const c of candidates) {
-    if (c.score.totalScore > best.score.totalScore) {
-      best = c;
-    }
-  }
-  return best;
+function confidenceScore(candidate: { model: ModelInfo; score: ModelScore }): number {
+  const coding = (candidate.model.codingScore ?? 50) / 100;
+  const reasoning = (candidate.model.reasoningScore ?? candidate.model.codingScore ?? 50) / 100;
+  return coding * 0.55 + reasoning * 0.30 + candidate.score.contextFit * 0.15;
 }
 
 function calculateContextFit(model: ModelInfo, contextNeeded: number): number {
@@ -220,12 +182,10 @@ function calculateContextFit(model: ModelInfo, contextNeeded: number): number {
 }
 
 function calculateTaskFit(model: ModelInfo, difficulty: number): number {
-  let score = 0.5;
-  if (model.codingScore !== null && difficulty >= 3) {
-    score += (model.codingScore / 100) * 0.3;
-  }
-  if (model.supportsTools) score += 0.1;
-  return Math.min(1, score);
+  const coding = (model.codingScore ?? 50) / 100;
+  const reasoning = (model.reasoningScore ?? model.codingScore ?? 50) / 100;
+  const reasoningWeight = difficulty >= 3 ? 0.25 : 0.15;
+  return Math.min(1, coding * 0.65 + reasoning * reasoningWeight + (model.supportsTools ? 0.1 : 0));
 }
 
 function calculateCostEfficiency(cost: CostEstimate): number {

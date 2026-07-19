@@ -1,5 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { executeScan } from "../src/commands/scan.js";
+import path from "node:path";
+
+const fixturePath = path.resolve("fixtures/small-node-app");
 
 describe("scan command", () => {
   it("scan fixture workspace in JSON format", async () => {
@@ -36,9 +39,14 @@ describe("scan command", () => {
   });
 
   it("scan handles default path (cwd)", async () => {
-    const output = await executeScan({ format: "json" });
-    const parsed = JSON.parse(output);
-    expect(parsed.rootPath).toBeDefined();
-    expect(parsed.totalFiles).toBeGreaterThan(0);
+    const cwd = vi.spyOn(process, "cwd").mockReturnValue(fixturePath);
+    try {
+      const output = await executeScan({ format: "json" });
+      const parsed = JSON.parse(output);
+      expect(parsed.rootPath).toBe(fixturePath);
+      expect(parsed.totalFiles).toBeGreaterThan(0);
+    } finally {
+      cwd.mockRestore();
+    }
   });
 });
