@@ -50,8 +50,8 @@ Source: project status and roadmap dated 17 July 2026.
 
 ## External rollout
 
-- [ ] Publish the GitHub Action from a public tagged release.
-- [ ] Deploy the dashboard or catalog feed when a hosted offering is wanted.
+- [x] Publish the GitHub Action from the public `v0.1.2` tagged release.
+- [x] Deploy and validate the catalog feed from the public `main` branch.
 
 ## Platform audit remediation - 19 July 2026
 
@@ -73,6 +73,7 @@ Source: project status and roadmap dated 17 July 2026.
 - [x] Make the documented CI workspace-report command safe to rerun over its own artifacts.
 - [x] Make local Marketplace publishers select the current-version VSIX instead of an arbitrary stale artifact.
 - [x] Remove the unused MCP path sanitizer and scanner ignore-pattern accessor.
+- [x] Build CLI workspace dependencies in the isolated GitHub Actions smoke job.
 
 ## `0.1.2` release gate
 

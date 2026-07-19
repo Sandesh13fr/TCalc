@@ -179,7 +179,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build CLI
-        run: pnpm --filter @wma/cli build
+        run: pnpm --filter @wma/cli... build
 
       - name: CLI smoke tests
         run: pnpm smoke:cli
