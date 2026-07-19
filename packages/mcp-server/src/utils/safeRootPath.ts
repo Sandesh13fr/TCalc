@@ -46,16 +46,3 @@ export function resolveCatalogPath(inputPath?: string): string {
     return assertAllowed(resolved);
   }
 }
-
-export function sanitizePath(input: string): string {
-  const normalized = input.replace(/\\/g, "/");
-  const parts = normalized.split("/");
-  const sanitized: string[] = [];
-
-  for (const part of parts) {
-    if (part === "." || part === "..") continue;
-    sanitized.push(part);
-  }
-
-  return sanitized.join("/");
-}

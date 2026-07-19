@@ -49,6 +49,5 @@ export {
   validateRootPath,
   isWithinAllowedPath,
   resolveCatalogPath,
-  sanitizePath,
 } from "./utils/safeRootPath.js";
 export * from "./state.js";

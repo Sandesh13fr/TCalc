@@ -25,7 +25,6 @@ const IGNORE_FILE_NAMES = [
 
 export class IgnoreResolver {
   private ig = ignore();
-  private patterns: string[] = [];
 
   constructor(private options: IgnoreResolverOptions = {}) {}
 
@@ -44,7 +43,6 @@ export class IgnoreResolver {
     if (this.options.userExcludePatterns) {
       this.ig.add(this.options.userExcludePatterns);
     }
-    this.patterns = this.options.userExcludePatterns ?? [];
   }
 
   shouldIgnore(relativePath: string, sizeBytes: number): IgnoreResult {
@@ -56,9 +54,5 @@ export class IgnoreResolver {
       return { ignored: true, reason: "matches ignore pattern" };
     }
     return { ignored: false };
-  }
-
-  getPatterns(): string[] {
-    return this.patterns;
   }
 }

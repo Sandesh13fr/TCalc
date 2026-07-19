@@ -72,6 +72,7 @@ Source: project status and roadmap dated 17 July 2026.
 - [x] Prevent MCP library imports from auto-starting a stdio server inside CLI commands.
 - [x] Make the documented CI workspace-report command safe to rerun over its own artifacts.
 - [x] Make local Marketplace publishers select the current-version VSIX instead of an arbitrary stale artifact.
+- [x] Remove the unused MCP path sanitizer and scanner ignore-pattern accessor.
 
 ## `0.1.2` release gate
 
