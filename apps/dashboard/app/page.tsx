@@ -3,11 +3,35 @@ import Lightfall from "../components/Lightfall";
 import ReportViewer from "../components/ReportViewer";
 import { docs } from "../lib/docs";
 
-const providers = ["OpenAI", "Anthropic", "Google AI", "xAI", "Groq", "DeepSeek", "Local runtimes"];
+const providers = [
+  { name: "OpenAI", src: "/providers/openai.svg", className: "provider-invert" },
+  { name: "Google", src: "/providers/google.svg" },
+  { name: "Anthropic", src: "/providers/anthropic.svg", className: "provider-invert" },
+  { name: "Mistral AI", src: "/providers/mistral.svg" },
+  { name: "Cohere", src: "/providers/cohere.png" },
+  { name: "DeepSeek", src: "/providers/deepseek.svg" },
+];
+
 const modelRows = [
-  ["01", "Gemini 2.5 Pro", "Balanced · Google AI", "91"],
-  ["02", "Claude Sonnet 4", "High confidence · Anthropic", "89"],
-  ["03", "DeepSeek V3", "Cost efficient · DeepSeek", "86"],
+  ["1", "Gemini 2.5 Pro", "1,048,576 context", "$0.86"],
+  ["2", "GPT-4o", "128,000 context", "$1.32"],
+  ["3", "Claude Sonnet 4", "200,000 context", "$1.18"],
+  ["4", "Mistral Large 2", "128,000 context", "$0.74"],
+  ["5", "DeepSeek V3", "128,000 context", "$0.52"],
+];
+
+const featureRows = [
+  ["Accurate token counting", "Model-aware tokenization for precise estimates."],
+  ["Smart model recommendations", "Ranked by fit, context window, and cost."],
+  ["100% local and private", "Everything runs on your machine. Zero telemetry."],
+  ["Workspace aware", "Respects .gitignore, files, and language heuristics."],
+];
+
+const workflowRows = [
+  ["1", "Open a workspace", "TCalc scans your project locally."],
+  ["2", "We count your context", "Input, output, and file breakdowns."],
+  ["3", "Get model recommendations", "See the best models for your context and budget."],
+  ["4", "Pick and ship", "Choose with confidence and keep building."],
 ];
 
 const softwareSchema = {
@@ -41,104 +65,52 @@ function JsonLd({ value }: { value: object }) {
 
 export default function Home() {
   return (
-    <main id="main">
+    <main id="main" className="home-page">
       <JsonLd value={softwareSchema} />
       <JsonLd value={faqSchema} />
       <section className="hero" id="top">
-        <Lightfall
-          colors={["#31b8ff", "#087fc8", "#86dbff"]}
-          backgroundColor="#06111a"
-          speed={0.52}
-          streakCount={7}
-          streakWidth={0.75}
-          streakLength={1.25}
-          glow={0.8}
-          density={0.8}
-          twinkle={0.35}
-          zoom={3.4}
-          backgroundGlow={0.48}
-          opacity={0.65}
-          mouseStrength={0.35}
-          mouseRadius={0.75}
-        />
+        <Lightfall colors={["#31b8ff", "#087fc8", "#86dbff"]} backgroundColor="#06111a" speed={0.52} streakCount={7} streakWidth={0.75} streakLength={1.25} glow={0.8} density={0.8} twinkle={0.35} zoom={3.4} backgroundGlow={0.48} opacity={0.65} mouseStrength={0.35} mouseRadius={0.75} />
         <div className="hero-grid page-shell">
           <div className="hero-copy">
-            <p className="eyebrow"><span />Local-first workspace intelligence</p>
             <h1>Know your context.<br /><em>Choose the right model.</em></h1>
-            <p className="hero-text">TCalc measures a real codebase, shows where tokens go, and ranks models for the job. No source upload, telemetry, account, or hard-coded winner.</p>
+            <p className="hero-text">TCalc analyzes your code and prompts locally to calculate accurate token counts and recommend the best coding models for the job.</p>
             <div className="button-row">
-              <a className="button" href="https://marketplace.visualstudio.com/items?itemName=Sandesh13fr.tcalc">Install for VS Code <span aria-hidden="true">↗</span></a>
-              <Link className="button button-secondary" href="/docs/">Read the docs <span aria-hidden="true">→</span></Link>
+              <a className="button" href="https://marketplace.visualstudio.com/items?itemName=Sandesh13fr.tcalc">Install for VS Code <span aria-hidden="true">VS</span></a>
+              <Link className="button button-secondary" href="/docs/">Read the docs <span aria-hidden="true">&rarr;</span></Link>
             </div>
-            <ul className="proof" aria-label="Product guarantees">
-              <li>100% local analysis</li>
-              <li>No telemetry</li>
-              <li>MIT licensed</li>
-            </ul>
+            <ul className="proof" aria-label="Product guarantees"><li>100% local</li><li>No telemetry</li><li>Open source</li></ul>
           </div>
           <div className="product-window" aria-label="Example TCalc workspace dashboard">
-            <header className="window-bar"><span>TCALC / WORKSPACE</span><b>SCAN COMPLETE</b></header>
-            <div className="window-meta"><span><small>Workspace</small><strong>commerce-platform / src</strong></span><span><small>Goal</small><strong>Add feature</strong></span><span><small>Scan</small><strong>Just now</strong></span></div>
+            <div className="window-meta"><span><small>Workspace</small><strong>tcalc / src</strong></span><span><small>Model profile</small><strong>Coding (General)</strong></span><span><small>Scan</small><strong>Just now <i aria-label="Complete" /></strong></span></div>
             <div className="window-grid">
               <section className="token-panel">
-                <small>TOKEN SUMMARY</small>
-                <strong className="token-total">184,760</strong>
-                <p>included tokens across 612 files</p>
-                <div className="context-bars" aria-label="Example token distribution">
-                  <span><i style={{ width: "72%" }} /><b>Code</b><em>72%</em></span>
-                  <span><i style={{ width: "14%" }} /><b>Docs</b><em>14%</em></span>
-                  <span><i style={{ width: "9%" }} /><b>Tests</b><em>9%</em></span>
-                  <span><i style={{ width: "5%" }} /><b>Other</b><em>5%</em></span>
-                </div>
+                <small>TOKEN SUMMARY</small><strong className="token-total">1,246,512</strong>
+                <div className="token-facts"><span>862,132<small>Input tokens</small></span><span>384,380<small>Output tokens</small></span></div>
+                <div className="context-bars" aria-label="Example context distribution"><small>CONTEXT BREAKDOWN</small><span><i style={{ width: "72.4%" }} /><b>Code</b><em>72.4%</em></span><span><i style={{ width: "12.8%" }} /><b>Comments</b><em>12.8%</em></span><span><i style={{ width: "8.7%" }} /><b>Docs</b><em>8.7%</em></span><span><i style={{ width: "6.1%" }} /><b>Other</b><em>6.1%</em></span></div>
+                <div className="token-meta"><span>Files <b>236</b></span><span>Lines <b>18,392</b></span><span>Languages <b>TypeScript, Python</b></span></div>
               </section>
               <section className="model-panel">
-                <div className="panel-heading"><small>RECOMMENDED MODELS</small><b>RANKED</b></div>
-                <ol>{modelRows.map(([rank, name, detail, score]) => <li key={rank}><span className="rank">{rank}</span><div><strong>{name}</strong><small>{detail}</small></div><b>{score}</b></li>)}</ol>
+                <div className="panel-heading"><small>RECOMMENDED MODELS</small></div>
+                <ol>{modelRows.map(([rank, name, detail, cost]) => <li key={rank}><span className="rank">{rank}</span><div><strong>{name}{rank === "1" && <em>Best fit</em>}</strong><small>{detail}</small></div><b>{cost}<small>est. cost</small></b></li>)}</ol>
+                <div className="model-footer"><span>Pricing cached: 2m ago</span><Link href="/docs/model-catalog/">Configure models &rarr;</Link></div>
               </section>
             </div>
-            <footer className="window-footer"><span>20 models</span><span>9 provider endpoints</span><span>Local catalog</span></footer>
           </div>
         </div>
       </section>
 
-      <section className="provider-strip" aria-label="Supported model providers">
-        <span>Supported providers</span>{providers.map((provider) => <b key={provider}>{provider}</b>)}
+      <section className="provider-strip page-shell" aria-label="Supported model providers">
+        <span>Supports leading providers</span>
+        <div className="provider-logos">{providers.map((provider) => <div className="provider-logo" key={provider.name}><img src={provider.src} alt={provider.name} className={provider.className} /></div>)}<b>+ more</b></div>
       </section>
 
-      <section className="section page-shell" id="product">
-        <div className="section-heading">
-          <div><p className="eyebrow"><span />One scan, useful decisions</p><h2>Stop choosing models<br />by reputation alone.</h2></div>
-          <p>TCalc measures the workspace you have and applies your goal, context limit, privacy policy, quality threshold, and estimated cost.</p>
-        </div>
-        <div className="feature-grid">
-          <article className="feature feature-wide"><span className="feature-number">01</span><div><h3>See where every token goes</h3><p>Break down context by file, folder, and language. Flag generated, oversized, or risky paths before they reach an agent.</p></div><div className="mini-bars" aria-hidden="true"><span><b>src/</b><i style={{ width: "78%" }} /><em>82.4k</em></span><span><b>docs/</b><i style={{ width: "46%" }} /><em>41.8k</em></span><span><b>tests/</b><i style={{ width: "29%" }} /><em>27.2k</em></span></div></article>
-          <article className="feature"><span className="feature-number">02</span><h3>Rank the full catalogue</h3><p>Compare 20 bundled models and return cheapest-sufficient, balanced, and high-confidence choices with distinct reasons.</p></article>
-          <article className="feature feature-accent"><span className="feature-number">03</span><h3>Keep source local</h3><p>Scanning, recommendation, repo mapping, and report generation stay on your machine.</p><strong>0 source bytes uploaded</strong></article>
-          <article className="feature"><span className="feature-number">04</span><h3>Build agent-ready context</h3><p>Generate a budgeted repo map, goal-aware rules, CI artifacts, or local MCP configuration for the tools you already use.</p></article>
-        </div>
-      </section>
-
-      <section className="workflow" id="workflow">
-        <div className="page-shell">
-          <div className="section-heading inverted"><div><p className="eyebrow"><span />From codebase to decision</p><h2>Three steps.<br />No cloud required.</h2></div><p>The extension, CLI, and MCP server use the same provider-neutral core.</p></div>
-          <ol className="workflow-list">
-            <li><span>01</span><div><h3>Scan</h3><p>Open a workspace and let TCalc apply ignore rules, file safety checks, and token estimation locally.</p></div><code>TCalc: Scan Workspace</code></li>
-            <li><span>02</span><div><h3>Compare</h3><p>Set the current goal and review model fit, context headroom, estimated cost, and privacy constraints.</p></div><code>TCalc: Compare Models</code></li>
-            <li><span>03</span><div><h3>Prepare context</h3><p>Export a report, compact repo map, agent rules, or a ready-to-use local MCP client configuration.</p></div><code>pnpm cli repo-map . --budget 8000</code></li>
-          </ol>
-        </div>
-      </section>
-
-      <section className="section page-shell" id="documentation">
-        <div className="section-heading"><div><p className="eyebrow"><span />Documentation</p><h2>From first scan<br />to agent workflow.</h2></div><p>Task-focused guides use the same commands and configuration shipped in the repository.</p></div>
-        <div className="docs-grid">
-          {docs.slice(0, 4).map((guide) => <Link className="doc-card" href={`/docs/${guide.slug}/`} key={guide.slug}><small>{guide.category}</small><h3>{guide.title}</h3><p>{guide.description}</p><span>Read guide <b aria-hidden="true">→</b></span></Link>)}
-        </div>
-        <Link className="text-link" href="/docs/">Browse all documentation <span aria-hidden="true">→</span></Link>
+      <section className="ops-shell page-shell" id="product">
+        <article className="ops-column"><h2>Features</h2><ul>{featureRows.map(([title, text]) => <li key={title}><i aria-hidden="true" /><div><strong>{title}</strong><span>{text}</span></div></li>)}</ul></article>
+        <article className="ops-column" id="workflow"><h2>Workflow</h2><ol>{workflowRows.map(([step, title, text]) => <li key={step}><b>{step}</b><div><strong>{title}</strong><span>{text}</span></div></li>)}</ol></article>
+        <article className="ops-column" id="documentation"><h2>Documentation</h2><ul className="docs-quick">{docs.slice(0, 4).map((guide) => <li key={guide.slug}><Link href={`/docs/${guide.slug}/`}><div><strong>{guide.title}</strong><span>{guide.description}</span></div><b aria-hidden="true">&rarr;</b></Link></li>)}</ul><Link className="ops-doc-link" href="/docs/">View all docs &rarr;</Link></article>
       </section>
 
       <section className="report-section" id="report"><div className="page-shell"><ReportViewer /></div></section>
-
       <section className="section page-shell faq-section">
         <div className="section-heading"><div><p className="eyebrow"><span />Common questions</p><h2>Clear answers,<br />before the scan.</h2></div></div>
         <div className="faq-list">
