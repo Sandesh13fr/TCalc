@@ -39,8 +39,9 @@ describe("estimateCost", () => {
       outputTokens: 100_000,
       cachedInputTokens: 500_000,
     });
+    expect(result.inputCost).toBe(1.25);
     expect(result.cachedInputCost).toBe(0.625);
-    expect(result.totalCost).toBeCloseTo(2.5 + 0.625 + 1.0, 4);
+    expect(result.totalCost).toBe(1.25 + 0.625 + 1.0);
   });
 
   it("should handle free model with zero prices", () => {
@@ -69,7 +70,9 @@ describe("estimateCost", () => {
       outputTokens: 100_000,
       cachedInputTokens: 200_000,
     });
+    expect(result.inputCost).toBe(2.0);
     expect(result.cachedInputCost).toBe(0.5);
+    expect(result.totalCost).toBe(2.0 + 0.5 + 1.0);
   });
 
   it("should default cachedInputTokens to 0", () => {
@@ -99,6 +102,63 @@ describe("estimateCost", () => {
     });
     expect(result.inputCost).toBeGreaterThan(0);
     expect(result.outputCost).toBeGreaterThan(0);
+  });
+
+  it("should charge zero cached cost when cachedInputTokens is 0", () => {
+    const result = estimateCost({
+      model: testModel,
+      inputTokens: 200_000,
+      outputTokens: 40_000,
+      cachedInputTokens: 0,
+    });
+    expect(result.inputCost).toBe(0.5);
+    expect(result.cachedInputCost).toBe(0);
+    expect(result.totalCost).toBe(0.5 + 0.4);
+  });
+
+  it("should correctly split cached and non-cached input tokens", () => {
+    const result = estimateCost({
+      model: testModel,
+      inputTokens: 100_000,
+      outputTokens: 20_000,
+      cachedInputTokens: 60_000,
+    });
+    expect(result.inputCost).toBe(0.1);
+    expect(result.cachedInputCost).toBe(0.075);
+    expect(result.outputCost).toBe(0.2);
+    expect(result.totalCost).toBe(0.1 + 0.075 + 0.2);
+  });
+
+  it("should treat fully cached input as zero input cost", () => {
+    const result = estimateCost({
+      model: testModel,
+      inputTokens: 80_000,
+      outputTokens: 10_000,
+      cachedInputTokens: 80_000,
+    });
+    expect(result.inputCost).toBe(0);
+    expect(result.cachedInputCost).toBe(0.1);
+    expect(result.outputCost).toBe(0.1);
+    expect(result.totalCost).toBe(0.2);
+  });
+
+  it("should throw when cachedInputTokens exceeds inputTokens", () => {
+    expect(() =>
+      estimateCost({
+        model: testModel,
+        inputTokens: 50_000,
+        outputTokens: 10_000,
+        cachedInputTokens: 60_000,
+      }),
+    ).toThrow(RangeError);
+    expect(() =>
+      estimateCost({
+        model: testModel,
+        inputTokens: 50_000,
+        outputTokens: 10_000,
+        cachedInputTokens: 60_000,
+      }),
+    ).toThrow("cachedInputTokens (60000) cannot exceed inputTokens (50000)");
   });
 });
 

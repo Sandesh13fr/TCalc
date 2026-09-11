@@ -10,7 +10,14 @@ export interface EstimateCostOptions {
 export function estimateCost(options: EstimateCostOptions): CostEstimate {
   const { model, inputTokens, outputTokens, cachedInputTokens = 0 } = options;
 
-  const inputCost = (inputTokens / 1_000_000) * model.inputPricePerMillion;
+  if (cachedInputTokens > inputTokens) {
+    throw new RangeError(
+      `cachedInputTokens (${cachedInputTokens}) cannot exceed inputTokens (${inputTokens})`,
+    );
+  }
+
+  const nonCachedInputTokens = inputTokens - cachedInputTokens;
+  const inputCost = (nonCachedInputTokens / 1_000_000) * model.inputPricePerMillion;
   const cachedInputCost = (cachedInputTokens / 1_000_000) * (model.cachedInputPricePerMillion ?? model.inputPricePerMillion);
   const outputCost = (outputTokens / 1_000_000) * model.outputPricePerMillion;
   const totalCost = inputCost + cachedInputCost + outputCost;
