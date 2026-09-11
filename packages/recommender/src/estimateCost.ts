@@ -10,9 +10,9 @@ export interface EstimateCostOptions {
 export function estimateCost(options: EstimateCostOptions): CostEstimate {
   const { model, inputTokens, outputTokens, cachedInputTokens = 0 } = options;
 
-  if (cachedInputTokens > inputTokens) {
+  if (cachedInputTokens < 0 || cachedInputTokens > inputTokens) {
     throw new RangeError(
-      `cachedInputTokens (${cachedInputTokens}) cannot exceed inputTokens (${inputTokens})`,
+      `cachedInputTokens (${cachedInputTokens}) must be between 0 and inputTokens (${inputTokens})`,
     );
   }
 

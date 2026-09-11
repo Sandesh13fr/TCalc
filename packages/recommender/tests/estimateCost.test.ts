@@ -158,7 +158,26 @@ describe("estimateCost", () => {
         outputTokens: 10_000,
         cachedInputTokens: 60_000,
       }),
-    ).toThrow("cachedInputTokens (60000) cannot exceed inputTokens (50000)");
+    ).toThrow("cachedInputTokens (60000) must be between 0 and inputTokens (50000)");
+  });
+
+  it("should throw when cachedInputTokens is negative", () => {
+    expect(() =>
+      estimateCost({
+        model: testModel,
+        inputTokens: 100_000,
+        outputTokens: 10_000,
+        cachedInputTokens: -5000,
+      }),
+    ).toThrow(RangeError);
+    expect(() =>
+      estimateCost({
+        model: testModel,
+        inputTokens: 100_000,
+        outputTokens: 10_000,
+        cachedInputTokens: -5000,
+      }),
+    ).toThrow("cachedInputTokens (-5000) must be between 0 and inputTokens (100000)");
   });
 });
 
