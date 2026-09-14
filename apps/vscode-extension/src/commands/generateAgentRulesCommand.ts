@@ -46,10 +46,16 @@ export function registerGenerateAgentRulesCommand(context: vscode.ExtensionConte
     if (!saveUri) return;
 
     try {
-      const existing = await vscode.workspace.fs.stat(saveUri).then(
-        () => true,
-        () => false,
-      );
+      let existing = false;
+      try {
+        await vscode.workspace.fs.stat(saveUri);
+        existing = true;
+      } catch (err) {
+        if (!(err instanceof vscode.FileSystemError) || err.code !== "FileNotFound") {
+          throw err;
+        }
+      }
+
       if (existing) {
         const overwrite = await vscode.window.showWarningMessage(
           `${saveUri.fsPath} already exists. Overwrite it?`,
