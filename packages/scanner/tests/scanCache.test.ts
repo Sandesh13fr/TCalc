@@ -1,7 +1,7 @@
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadScanCache, saveScanCache, type ScanCacheEntry } from "../src/scanCache.js";
 
 const roots: string[] = [];
@@ -17,6 +17,7 @@ function entry(bytes: number): ScanCacheEntry {
 }
 
 afterEach(async () => {
+  vi.restoreAllMocks();
   await Promise.all(roots.splice(0).map((root) => rm(root, { recursive: true, force: true })));
 });
 
@@ -60,8 +61,26 @@ describe("scan cache persistence", () => {
 
     const persisted = JSON.parse(await readFile(cacheFile, "utf8")) as { files: Record<string, ScanCacheEntry> };
     const keys = Object.keys(persisted.files);
-    expect(keys === undefined).toBe(false);
+    expect(keys).toHaveLength(1);
     expect(["first.ts", "second.ts"]).toContain(keys[0]);
+    expect((await readdir(root)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+  });
+
+  it("preserves the existing cache and removes the temporary file when replacement fails", async () => {
+    const root = await temporaryRoot();
+    const cacheFile = path.join(root, "cache.json");
+    const original = new Map([["original.ts", entry(7)]]);
+    await saveScanCache(cacheFile, "tok-v1", original);
+
+    const fs = await import("node:fs/promises");
+    const renameSpy = vi.spyOn(fs, "rename").mockRejectedValueOnce(new Error("replacement failed"));
+
+    await expect(saveScanCache(cacheFile, "tok-v1", new Map([["replacement.ts", entry(9)]]))).rejects.toThrow(
+      "replacement failed",
+    );
+
+    expect(renameSpy).toHaveBeenCalledTimes(1);
+    expect(await loadScanCache(cacheFile, "tok-v1")).toEqual(original);
     expect((await readdir(root)).filter((name) => name.endsWith(".tmp"))).toEqual([]);
   });
 });
