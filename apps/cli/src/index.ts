@@ -115,7 +115,8 @@ program
   .option("--mode <mode>", "Optimization mode", parseOptimizationMode, "normal")
   .option("--output <file>", "Write output to file")
   .option("--stdout", "Print generated rules without writing a file")
-  .option("--yes", "Overwrite without confirmation in non-interactive mode")
+  .option("--yes", "Write without printing a preview in non-interactive mode")
+  .option("--force", "Overwrite an existing rules file")
   .action(async (target, opts) => {
     try {
       const result = await executeRules({
@@ -141,7 +142,14 @@ program
         return;
       }
 
-      await writeFile(outputPath, result.content, "utf-8");
+      try {
+        await writeFile(outputPath, result.content, { encoding: "utf-8", flag: opts.force ? "w" : "wx" });
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "EEXIST") {
+          throw new CliError(`Agent rules file already exists: ${outputPath}. Use --force to overwrite it.`);
+        }
+        throw error;
+      }
       console.log(`Agent rules written to ${outputPath}`);
     } catch (err) {
       handleError(err, program.opts().debug);
