@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { executeScan } from "../src/commands/scan.js";
 import path from "node:path";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 
 const fixturePath = path.resolve("fixtures/small-node-app");
 
@@ -36,6 +38,30 @@ describe("scan command", () => {
     expect(output).toContain("Total Files:");
     expect(output).toContain("Included Files:");
     expect(output).toContain("Excluded Files:");
+  });
+
+  it("surfaces malformed workspace config instead of silently using defaults", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "tcalc-bad-config-"));
+    try {
+      await writeFile(path.join(root, "index.ts"), "export const value = 1;\n");
+      await writeFile(path.join(root, ".tcalc.json"), "{ \"exclude\": [\"secret/**\"], }");
+
+      await expect(executeScan({ target: root, format: "json" })).rejects.toThrow(/Failed to load workspace config/);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects invalid workspace config field types", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "tcalc-invalid-config-"));
+    try {
+      await writeFile(path.join(root, "index.ts"), "export const value = 1;\n");
+      await writeFile(path.join(root, ".tcalc.json"), JSON.stringify({ exclude: "dist/**" }));
+
+      await expect(executeScan({ target: root, format: "json" })).rejects.toThrow(/invalid exclude/);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it("scan handles default path (cwd)", async () => {
