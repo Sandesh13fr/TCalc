@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { mkdtemp, mkdir, readdir, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { loadScanCache, saveScanCache, type ScanCacheEntry } from "../src/scanCache.js";
@@ -58,7 +58,8 @@ describe("scan cache persistence", () => {
   it("treats corrupt cache content as a cache miss", async () => {
     const root = await tempDirectory("tcalc-scan-cache-corrupt-");
     const cacheFile = path.join(root, "cache", "scan.json");
-    await mkdir(cacheFile, { recursive: true });
+    await mkdir(path.dirname(cacheFile), { recursive: true });
+    await writeFile(cacheFile, "{not-json", "utf8");
 
     const loaded = await loadScanCache(cacheFile, "tokenizer-v1");
     expect(loaded.size).toBe(0);
