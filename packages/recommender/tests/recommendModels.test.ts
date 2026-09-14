@@ -136,6 +136,45 @@ describe("recommendModels", () => {
     expect(bigInAll).toBeUndefined();
   });
 
+  it("skips hybrid models without local execution support in local-first privacy mode", () => {
+    const remoteHybrid: ModelInfo = {
+      ...midModel,
+      id: "remote-hybrid",
+      displayName: "Remote Hybrid",
+      privacyMode: "hybrid",
+      supportsLocal: false,
+    };
+
+    const result = recommendModels({
+      models: [cheapModel, remoteHybrid],
+      workspaceTokens: 5000,
+      goal: "debug",
+      privacyMode: "local-first",
+    });
+
+    expect(result.allScored.map((m) => m.modelId)).toContain("cheap");
+    expect(result.allScored.map((m) => m.modelId)).not.toContain("remote-hybrid");
+  });
+
+  it("allows hybrid models with verified local execution support in local-first privacy mode", () => {
+    const localHybrid: ModelInfo = {
+      ...midModel,
+      id: "local-hybrid",
+      displayName: "Local Hybrid",
+      privacyMode: "hybrid",
+      supportsLocal: true,
+    };
+
+    const result = recommendModels({
+      models: [localHybrid],
+      workspaceTokens: 5000,
+      goal: "debug",
+      privacyMode: "local-first",
+    });
+
+    expect(result.allScored.map((m) => m.modelId)).toContain("local-hybrid");
+  });
+
   it("reports when privacy filtering leaves no eligible models", () => {
     expect(() => recommendModels({
       models: [bigModel],
