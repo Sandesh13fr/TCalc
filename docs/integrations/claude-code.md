@@ -50,7 +50,7 @@ Or from the VS Code extension: **TCalc: Generate Agent Rules** → select `claud
 Ensure you run `pnpm build` first, then start the server with `pnpm cli mcp` from the repo root.
 
 **CLAUDE.md not being picked up**  
-The file must be at the workspace root. Regenerate with `--yes` to overwrite.
+The file must be at the workspace root. Regenerate with `--yes --force` to replace an existing file: `--yes` enables writing and `--force` explicitly authorizes overwriting the existing `CLAUDE.md`.
 
 ## Verify It Works
 
