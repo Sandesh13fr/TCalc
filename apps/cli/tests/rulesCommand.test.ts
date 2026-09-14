@@ -32,4 +32,14 @@ describe("rules command", () => {
     expect(result.fileName).toBe("CLAUDE.md");
     expect(result.content.length).toBeGreaterThan(0);
   });
+
+  it("generates Codex rules in AGENTS.md", async () => {
+    const result = await executeRules({
+      target: "fixtures/small-node-app",
+      agentTarget: "codex",
+      mode: "repo-map-first",
+    });
+    expect(result.fileName).toBe("AGENTS.md");
+    expect(result.content).toContain("codex Agent Rules");
+  });
 });
