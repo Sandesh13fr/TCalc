@@ -42,6 +42,7 @@ export const OPTIMIZATION_MODES = [
 
 export type OptimizationMode = (typeof OPTIMIZATION_MODES)[number];
 
+// local-first means strict local execution: only models with verified supportsLocal=true are eligible.
 export const PRIVACY_SETTINGS = ["local-first", "cloud-ok"] as const;
 
 export type PrivacySetting = (typeof PRIVACY_SETTINGS)[number];
