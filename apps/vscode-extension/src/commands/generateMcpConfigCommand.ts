@@ -1,9 +1,24 @@
 import * as vscode from "vscode";
 import path from "node:path";
 
-type McpTarget = "cursor" | "continue" | "claude-desktop" | "generic";
+export type McpTarget = "cursor" | "continue" | "claude-desktop" | "generic";
 
-function generateMcpConfig(target: McpTarget, serverPath: string): string {
+interface McpTargetPick extends vscode.QuickPickItem {
+  target: McpTarget;
+}
+
+const MCP_TARGETS: McpTargetPick[] = [
+  { label: "Cursor", target: "cursor", description: ".cursor/mcp.json MCP config" },
+  { label: "Continue", target: "continue", description: "config.yaml MCP entry" },
+  {
+    label: "Claude Desktop",
+    target: "claude-desktop",
+    description: "claude_desktop_config.json MCP entry",
+  },
+  { label: "Generic MCP", target: "generic", description: "Any stdio MCP client" },
+];
+
+export function generateMcpConfig(target: McpTarget, serverPath: string, workspaceRoot: string): string {
   switch (target) {
     case "cursor":
       return JSON.stringify(
@@ -12,6 +27,7 @@ function generateMcpConfig(target: McpTarget, serverPath: string): string {
             tcalc: {
               command: "node",
               args: [serverPath],
+              env: { WMA_ALLOWED_ROOT: workspaceRoot },
               description: "Local-first workspace analysis and AI model recommendations",
             },
           },
@@ -27,6 +43,8 @@ experimental:
       command: node
       args:
         - ${JSON.stringify(serverPath)}
+      env:
+        WMA_ALLOWED_ROOT: ${JSON.stringify(workspaceRoot)}
       description: TCalc workspace analysis tools
 `;
     case "claude-desktop":
@@ -36,6 +54,7 @@ experimental:
             tcalc: {
               command: "node",
               args: [serverPath],
+              env: { WMA_ALLOWED_ROOT: workspaceRoot },
               description: "Local-first workspace analysis and AI model recommendations",
               disabled: false,
               autoApprove: [],
@@ -52,6 +71,7 @@ experimental:
             tcalc: {
               command: "node",
               args: [serverPath],
+              env: { WMA_ALLOWED_ROOT: workspaceRoot },
               description: "Local-first workspace analysis and AI model recommendations",
             },
           },
@@ -62,7 +82,7 @@ experimental:
   }
 }
 
-function getSuggestedFilename(target: McpTarget): string {
+export function getSuggestedFilename(target: McpTarget): string {
   switch (target) {
     case "cursor":
       return "cursor.mcp.json";
@@ -75,37 +95,40 @@ function getSuggestedFilename(target: McpTarget): string {
   }
 }
 
-export function registerGenerateMcpConfigCommand(): vscode.Disposable {
+export function getDefaultMcpServerPath(extensionPath: string): string {
+  return path.join(extensionPath, "packages", "mcp-server", "dist", "index.js");
+}
+
+export function getMcpTargets(): readonly McpTargetPick[] {
+  return MCP_TARGETS;
+}
+
+export function registerGenerateMcpConfigCommand(context?: vscode.ExtensionContext): vscode.Disposable {
   return vscode.commands.registerCommand("workspaceModelAdvisor.generateMcpConfig", async () => {
     const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    const allowedRoot = workspaceRoot ?? process.cwd();
 
-    const target = await vscode.window.showQuickPick(
-      [
-        { label: "Cursor", description: ".cursor/mcp.json MCP config" },
-        { label: "Continue", description: "config.yaml MCP entry" },
-        { label: "Claude Desktop", description: "claude_desktop_config.json MCP entry" },
-        { label: "Generic MCP", description: "Any stdio MCP client" },
-      ],
-      { placeHolder: "Select target tool for MCP config" },
-    );
+    const target = await vscode.window.showQuickPick(MCP_TARGETS, {
+      placeHolder: "Select target tool for MCP config",
+    });
     if (!target) return;
 
-    let serverPath = "node /path/to/tcalc/packages/mcp-server/dist/index.js";
-    if (workspaceRoot) {
-      const suggested = path.join(workspaceRoot, "packages", "mcp-server", "dist", "index.js");
-      const input = await vscode.window.showInputBox({
-        prompt: "Path to MCP server entry point",
-        value: suggested,
-        placeHolder: "/absolute/path/to/mcp-server/dist/index.js",
-        title: `MCP Server Path for ${target.label}`,
-      });
-      if (input === undefined) return;
-      serverPath = input || serverPath;
-    }
+    const defaultServerPath = context
+      ? getDefaultMcpServerPath(context.extensionPath)
+      : path.join(process.cwd(), "packages", "mcp-server", "dist", "index.js");
 
-    const mcpTarget = target.label.toLowerCase() as McpTarget;
-    const configContent = generateMcpConfig(mcpTarget, serverPath);
-    const suggestedName = getSuggestedFilename(mcpTarget);
+    const input = await vscode.window.showInputBox({
+      prompt: "Path to MCP server entry point",
+      value: defaultServerPath,
+      placeHolder: "/absolute/path/to/mcp-server/dist/index.js",
+      title: `MCP Server Path for ${target.label}`,
+      validateInput: (value) => (path.isAbsolute(value.trim()) ? undefined : "Use an absolute MCP server path."),
+    });
+    if (input === undefined) return;
+
+    const serverPath = input.trim() || defaultServerPath;
+    const configContent = generateMcpConfig(target.target, serverPath, allowedRoot);
+    const suggestedName = getSuggestedFilename(target.target);
 
     const doc = await vscode.workspace.openTextDocument({
       content: configContent,
@@ -119,9 +142,7 @@ export function registerGenerateMcpConfigCommand(): vscode.Disposable {
     );
 
     if (save === "Save") {
-      const defaultUri = workspaceRoot
-        ? vscode.Uri.file(path.join(workspaceRoot, suggestedName))
-        : undefined;
+      const defaultUri = workspaceRoot ? vscode.Uri.file(path.join(workspaceRoot, suggestedName)) : undefined;
       const uri = await vscode.window.showSaveDialog({
         defaultUri,
         filters: { "Config files": ["json", "yaml"] },
