@@ -32,6 +32,16 @@ describe("generateAgentRules", () => {
     expect(result.target).toBe("claude-code");
   });
 
+  it('should return AGENTS.md content for "codex" target', () => {
+    const result = generateAgentRules({
+      target: "codex",
+      mode: "normal",
+    });
+    expect(result.fileName).toBe("AGENTS.md");
+    expect(result.content).toContain("codex Agent Rules");
+    expect(result.target).toBe("codex");
+  });
+
   it("should produce different content for different modes", () => {
     const normal = generateAgentRules({
       target: "generic",
