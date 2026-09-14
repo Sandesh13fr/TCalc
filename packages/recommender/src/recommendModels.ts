@@ -49,6 +49,9 @@ export function recommendModels(options: RecommendModelsOptions): Recommendation
     budget !== undefined
       ? `Context limited to user-specified budget of ${budget} tokens`
       : `Using full workspace tokens (${workspaceTokens}) as context`,
+    privacyMode === "local-first"
+      ? "Local-first privacy mode only considers models with verified local execution support"
+      : "Cloud-capable models may be considered",
   ];
 
   const rejected: string[] = [];
@@ -56,7 +59,7 @@ export function recommendModels(options: RecommendModelsOptions): Recommendation
   const overflowing: Array<{ model: ModelInfo; score: ModelScore; cost: CostEstimate }> = [];
 
   for (const model of models) {
-    if (privacyMode === "local-first" && model.privacyMode === "cloud") {
+    if (privacyMode === "local-first" && !model.supportsLocal) {
       continue;
     }
 
