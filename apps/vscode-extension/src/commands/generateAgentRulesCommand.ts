@@ -46,6 +46,19 @@ export function registerGenerateAgentRulesCommand(context: vscode.ExtensionConte
     if (!saveUri) return;
 
     try {
+      const existing = await vscode.workspace.fs.stat(saveUri).then(
+        () => true,
+        () => false,
+      );
+      if (existing) {
+        const overwrite = await vscode.window.showWarningMessage(
+          `${saveUri.fsPath} already exists. Overwrite it?`,
+          { modal: true, detail: "Existing agent instructions are often project-specific. Overwrite only if you have reviewed them." },
+          "Overwrite",
+        );
+        if (overwrite !== "Overwrite") return;
+      }
+
       await vscode.workspace.fs.writeFile(
         saveUri,
         new TextEncoder().encode(result.content),
