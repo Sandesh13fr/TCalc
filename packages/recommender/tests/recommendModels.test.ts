@@ -123,6 +123,72 @@ describe("recommendModels", () => {
     expect(result.rejected).not.toContain("cheap");
   });
 
+  it("rejects models whose context fits input but not input plus expected output", () => {
+    const inputOnlyFit: ModelInfo = {
+      ...cheapModel,
+      id: "input-only-fit",
+      displayName: "Input Only Fit",
+      contextWindow: 10000,
+      maxOutputTokens: 9000,
+    };
+
+    const result = recommendModels({
+      models: [inputOnlyFit, bigModel],
+      workspaceTokens: 1000,
+      goal: "build-mvp",
+      privacyMode: "cloud-ok",
+    });
+
+    expect(result.rejected).toContain("input-only-fit");
+    expect(result.cheapestSufficient.modelId).not.toBe("input-only-fit");
+    const rejectedModel = result.allScored.find((m) => m.modelId === "input-only-fit");
+    expect(rejectedModel?.overflowRisk).toBeGreaterThan(0);
+    expect(rejectedModel?.warnings).toContain("Context window insufficient for input plus expected output — overflow likely; consider repo-map-first strategy or shorter output");
+  });
+
+  it("rejects models whose max output limit is below expected output", () => {
+    const outputLimited: ModelInfo = {
+      ...bigModel,
+      id: "output-limited",
+      displayName: "Output Limited",
+      contextWindow: 200000,
+      maxOutputTokens: 1000,
+    };
+
+    const result = recommendModels({
+      models: [outputLimited, bigModel],
+      workspaceTokens: 1000,
+      goal: "build-mvp",
+      privacyMode: "cloud-ok",
+    });
+
+    expect(result.rejected).toContain("output-limited");
+    expect(result.cheapestSufficient.modelId).not.toBe("output-limited");
+    const rejectedModel = result.allScored.find((m) => m.modelId === "output-limited");
+    expect(rejectedModel?.overflowRisk).toBeGreaterThan(0);
+    expect(rejectedModel?.warnings).toContain("Maximum output tokens are below the expected answer size");
+  });
+
+  it("accepts exact context and output boundary values", () => {
+    const boundaryModel: ModelInfo = {
+      ...cheapModel,
+      id: "boundary",
+      displayName: "Boundary Model",
+      contextWindow: 9200,
+      maxOutputTokens: 8000,
+    };
+
+    const result = recommendModels({
+      models: [boundaryModel],
+      workspaceTokens: 1000,
+      goal: "build-mvp",
+    });
+
+    expect(result.rejected).not.toContain("boundary");
+    expect(result.cheapestSufficient.modelId).toBe("boundary");
+    expect(result.cheapestSufficient.overflowRisk).toBe(0);
+  });
+
   it("should skip cloud models in local-first privacy mode", () => {
     const result = recommendModels({
       models: [cheapModel, bigModel],
