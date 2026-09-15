@@ -39,6 +39,10 @@ const GOAL_DIFFICULTY: Record<WorkspaceGoal, number> = {
 export function recommendModels(options: RecommendModelsOptions): RecommendationResult {
   const { models, workspaceTokens, goal, outputTokens: optOutputTokens, privacyMode = "local-first", budget } = options;
 
+  if (optOutputTokens !== undefined && (!Number.isFinite(optOutputTokens) || !Number.isInteger(optOutputTokens) || optOutputTokens < 0)) {
+    throw new RangeError("outputTokens must be a non-negative finite integer");
+  }
+
   const contextTokens = budget === undefined ? workspaceTokens : Math.min(workspaceTokens, budget);
   const contextNeeded = Math.round(contextTokens * 1.2);
   const outputTokens = optOutputTokens ?? DEFAULT_OUTPUT_TOKENS[goal];
