@@ -156,7 +156,9 @@ export async function walkFiles(rootPath: string, currentPath: string, resolver:
             results.push(...await walkFiles(rootPath, fullPath, resolver, state));
           }
         } else if (targetStat.isFile()) {
-          results.push(fullPath);
+          if (!resolver.shouldIgnore(relativePath, targetStat.size).ignored) {
+            results.push(fullPath);
+          }
         }
       } catch (error) {
         state.warnings.push(`Failed to resolve symlink ${relativePath}: ${errorMessage(error)}`);
@@ -356,8 +358,3 @@ function computeLanguageBreakdown(files: WorkspaceFileInfo[]): LanguageBreakdown
       totalBytes: data.bytes,
       totalTokens: data.tokens,
       percentage: totalTokens > 0 ? data.tokens / totalTokens : 0,
-    });
-  }
-  breakdown.sort((a, b) => b.totalTokens - a.totalTokens);
-  return breakdown;
-}

@@ -42,6 +42,20 @@ describe("scanWorkspace traversal", () => {
     expect(result.warnings.some((warning) => warning.includes("already visited directory"))).toBe(true);
   });
 
+  it("applies ignore rules to symlinked files inside the workspace", async () => {
+    const root = await tempDirectory("tcalc-symlink-ignore-");
+    const source = path.join(root, "source.txt");
+    await writeFile(source, "sensitive workspace content");
+    await writeFile(path.join(root, ".gitignore"), "ignored-link.txt\n");
+    await symlink(source, path.join(root, "ignored-link.txt"), "file");
+    await symlink(source, path.join(root, "included-link.txt"), "file");
+
+    const result = await scanWorkspace({ rootPath: root });
+
+    expect(result.files.map((file) => file.relativePath)).toContain("included-link.txt");
+    expect(result.files.map((file) => file.relativePath)).not.toContain("ignored-link.txt");
+  });
+
   it("reports filesystem failures as warnings", async () => {
     const root = await tempDirectory("tcalc-warning-");
     const target = await tempDirectory("tcalc-missing-");
