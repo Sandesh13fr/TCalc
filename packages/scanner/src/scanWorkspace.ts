@@ -358,3 +358,8 @@ function computeLanguageBreakdown(files: WorkspaceFileInfo[]): LanguageBreakdown
       totalBytes: data.bytes,
       totalTokens: data.tokens,
       percentage: totalTokens > 0 ? data.tokens / totalTokens : 0,
+    });
+  }
+  breakdown.sort((a, b) => b.totalTokens - a.totalTokens);
+  return breakdown;
+}
