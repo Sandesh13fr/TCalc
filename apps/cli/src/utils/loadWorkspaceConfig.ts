@@ -63,7 +63,7 @@ function parseTokenBudget(value: unknown, configPath: string): WmaConfig["tokenB
 
 function parsePositiveInteger(value: unknown, fallback: number, field: string, configPath: string): number {
   if (value === undefined) return fallback;
-  if (!Number.isSafeInteger(value) || value <= 0) {
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) {
     throw new CliError(`Workspace config at ${configPath} has invalid ${field}; expected a positive integer.`);
   }
   return value;
