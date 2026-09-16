@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { RiskFlag } from "@wma/core";
@@ -17,6 +18,12 @@ interface ScanCacheFile {
 
 export const SCAN_CACHE_VERSION = 2;
 
+export interface ScanCacheFileOperations {
+  rename(source: string, destination: string): Promise<void>;
+}
+
+const defaultOperations: ScanCacheFileOperations = { rename };
+
 export async function loadScanCache(cacheFile: string | undefined, tokenizerKey: string): Promise<Map<string, ScanCacheEntry>> {
   if (!cacheFile) return new Map();
   try {
@@ -31,14 +38,22 @@ export async function loadScanCache(cacheFile: string | undefined, tokenizerKey:
   }
 }
 
-export async function saveScanCache(cacheFile: string | undefined, tokenizerKey: string, files: Map<string, ScanCacheEntry>): Promise<void> {
+export async function saveScanCache(
+  cacheFile: string | undefined,
+  tokenizerKey: string,
+  files: Map<string, ScanCacheEntry>,
+  operations: ScanCacheFileOperations = defaultOperations,
+): Promise<void> {
   if (!cacheFile) return;
   await mkdir(path.dirname(cacheFile), { recursive: true });
-  const temporary = `${cacheFile}.${process.pid}.tmp`;
+  const temporary = `${cacheFile}.${process.pid}.${randomUUID()}.tmp`;
   const payload: ScanCacheFile = { version: SCAN_CACHE_VERSION, tokenizerKey, files: Object.fromEntries(files) };
-  await writeFile(temporary, JSON.stringify(payload), "utf8");
-  await rename(temporary, cacheFile).catch(async () => {
-    await writeFile(cacheFile, JSON.stringify(payload), "utf8");
-    await rm(temporary, { force: true });
-  });
+
+  try {
+    await writeFile(temporary, JSON.stringify(payload), "utf8");
+    await operations.rename(temporary, cacheFile);
+  } catch (error) {
+    await rm(temporary, { force: true }).catch(() => undefined);
+    throw error;
+  }
 }
