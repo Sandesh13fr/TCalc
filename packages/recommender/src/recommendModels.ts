@@ -39,8 +39,8 @@ const GOAL_DIFFICULTY: Record<WorkspaceGoal, number> = {
 export function recommendModels(options: RecommendModelsOptions): RecommendationResult {
   const { models, workspaceTokens, goal, outputTokens: optOutputTokens, privacyMode = "local-first", budget } = options;
 
-  if (optOutputTokens !== undefined && (!Number.isFinite(optOutputTokens) || !Number.isInteger(optOutputTokens) || optOutputTokens < 0)) {
-    throw new RangeError("outputTokens must be a non-negative finite integer");
+  if (optOutputTokens !== undefined && (!Number.isSafeInteger(optOutputTokens) || optOutputTokens < 0)) {
+    throw new RangeError("outputTokens must be a non-negative safe integer");
   }
 
   const contextTokens = budget === undefined ? workspaceTokens : Math.min(workspaceTokens, budget);
@@ -54,6 +54,9 @@ export function recommendModels(options: RecommendModelsOptions): Recommendation
     budget !== undefined
       ? `Context limited to user-specified budget of ${budget} tokens`
       : `Using full workspace tokens (${workspaceTokens}) as context`,
+    privacyMode === "local-first"
+      ? "Local-first privacy mode only considers models with verified local execution support"
+      : "Cloud-capable models may be considered",
   ];
 
   const rejected: string[] = [];
@@ -61,7 +64,7 @@ export function recommendModels(options: RecommendModelsOptions): Recommendation
   const overflowing: Array<{ model: ModelInfo; score: ModelScore; cost: CostEstimate }> = [];
 
   for (const model of models) {
-    if (privacyMode === "local-first" && model.privacyMode === "cloud") {
+    if (privacyMode === "local-first" && !model.supportsLocal) {
       continue;
     }
 
@@ -136,7 +139,7 @@ export function recommendModels(options: RecommendModelsOptions): Recommendation
   const balanced = pickUnused(balancedRanked);
   const highConfidence = pickUnused(confidenceRanked);
 
-  const toRecommendation = (item: typeof candidates[0], tier: "cheapest-sufficient" | "balanced" | "high-confidence", extraReasons: string[] = []): ModelRecommendation => ({
+  const toRecommendation = (item: typeof candidates[0], tier: "cheapest-sufficient" | "best-available-overflow" | "balanced" | "high-confidence", extraReasons: string[] = []): ModelRecommendation => ({
     modelId: item.model.id,
     displayName: item.model.displayName,
     tier,
@@ -167,7 +170,11 @@ export function recommendModels(options: RecommendModelsOptions): Recommendation
   return {
     goal,
     workspaceTokens,
-    cheapestSufficient: toRecommendation(cheapestSufficient, "cheapest-sufficient"),
+    cheapestSufficient: toRecommendation(
+      cheapestSufficient,
+      fitting.length > 0 ? "cheapest-sufficient" : "best-available-overflow",
+      fitting.length > 0 ? [] : ["No model is sufficient; this is the least-cost overflowing fallback"],
+    ),
     balanced: balancedRecommendation,
     highConfidence: highConfidenceRecommendation,
     rejected,
