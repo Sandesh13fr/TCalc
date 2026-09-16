@@ -65,32 +65,65 @@ export function registerGenerateRepoMapCommand(context: vscode.ExtensionContext)
       tokenBudget = Number(input);
     }
 
-    let markdown: string;
-    try {
-      const repoMap = createRepoMap(lastScan, {
-        tokenBudget,
-        enableSymbolExtraction: mapType.value,
-      });
-      markdown = formatRepoMapMarkdown(repoMap);
-    } catch (err) {
+    const generated = generateRepoMapMarkdown(
+      lastScan,
+      tokenBudget,
+      mapType.value,
+    );
+    if (generated.fallbackError) {
       vscode.window.showWarningMessage(
-        `Code-aware repo map failed, generating basic map: ${err instanceof Error ? err.message : String(err)}`,
+        `Code-aware repo map failed, generating basic map: ${generated.fallbackError.message}`,
       );
-      const repoMap = createRepoMap(lastScan, {
-        tokenBudget,
-        enableSymbolExtraction: false,
-      });
-      markdown = formatRepoMapMarkdown(repoMap);
     }
 
     try {
-      await showAndOfferToSaveRepoMap(context, rootPath, markdown);
+      await showAndOfferToSaveRepoMap(context, rootPath, generated.markdown);
     } catch (err) {
       vscode.window.showErrorMessage(
         `Failed to display repo map: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
   });
+}
+
+type CreateRepoMap = typeof createRepoMap;
+type FormatRepoMap = typeof formatRepoMapMarkdown;
+
+export function generateRepoMapMarkdown(
+  lastScan: WorkspaceScanResult,
+  tokenBudget: number,
+  enableSymbolExtraction: boolean,
+  createMap: CreateRepoMap = createRepoMap,
+  formatMap: FormatRepoMap = formatRepoMapMarkdown,
+): { markdown: string; fallbackError?: Error } {
+  try {
+    const repoMap = createMap(lastScan, {
+      tokenBudget,
+      enableSymbolExtraction,
+    });
+    return { markdown: formatMap(repoMap) };
+  } catch (err) {
+    const repoMap = createMap(lastScan, {
+      tokenBudget,
+      enableSymbolExtraction: false,
+    });
+    return {
+      markdown: formatMap(repoMap),
+      fallbackError: err instanceof Error ? err : new Error(String(err)),
+    };
+  }
+}
+
+export async function persistRepoMap(
+  saveUri: vscode.Uri | undefined,
+  markdown: string,
+  writeFile: (uri: vscode.Uri, content: Uint8Array) => PromiseLike<void>,
+  updatePath: (path: string) => PromiseLike<void>,
+): Promise<boolean> {
+  if (!saveUri) return false;
+  await writeFile(saveUri, new TextEncoder().encode(markdown));
+  await updatePath(saveUri.fsPath);
+  return true;
 }
 
 async function showAndOfferToSaveRepoMap(
@@ -109,15 +142,16 @@ async function showAndOfferToSaveRepoMap(
     filters: { Markdown: ["md"] },
   });
 
-  if (!saveUri) return;
-
   try {
-    await vscode.workspace.fs.writeFile(
+    const saved = await persistRepoMap(
       saveUri,
-      new TextEncoder().encode(markdown),
+      markdown,
+      (uri, content) => vscode.workspace.fs.writeFile(uri, content),
+      (savedPath) => context.workspaceState.update("wma.repoMapPath", savedPath),
     );
-    await context.workspaceState.update("wma.repoMapPath", saveUri.fsPath);
-    vscode.window.showInformationMessage(`Repo map saved to ${saveUri.fsPath}`);
+    if (saved) {
+      vscode.window.showInformationMessage(`Repo map saved to ${saveUri!.fsPath}`);
+    }
   } catch (err) {
     vscode.window.showErrorMessage(
       `Failed to save repo map: ${err instanceof Error ? err.message : String(err)}`,
