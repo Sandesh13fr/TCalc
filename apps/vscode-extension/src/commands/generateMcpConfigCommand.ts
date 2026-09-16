@@ -96,17 +96,42 @@ export function getSuggestedFilename(target: McpTarget): string {
 }
 
 export function getDefaultMcpServerPath(extensionPath: string): string {
-  return path.join(extensionPath, "packages", "mcp-server", "dist", "index.js");
+  return path.join(extensionPath, "node_modules", "@wma", "mcp-server", "dist", "index.js");
 }
 
 export function getMcpTargets(): readonly McpTargetPick[] {
   return MCP_TARGETS;
 }
 
+async function selectWorkspaceRoot(): Promise<string | undefined> {
+  const folders = vscode.workspace.workspaceFolders ?? [];
+  if (folders.length === 1) return folders[0].uri.fsPath;
+
+  if (folders.length > 1) {
+    const selected = await vscode.window.showQuickPick(
+      folders.map((folder) => ({
+        label: folder.name,
+        description: folder.uri.fsPath,
+        folder,
+      })),
+      { placeHolder: "Select the workspace folder this MCP configuration may access" },
+    );
+    return selected?.folder.uri.fsPath;
+  }
+
+  const selected = await vscode.window.showOpenDialog({
+    canSelectFiles: false,
+    canSelectFolders: true,
+    canSelectMany: false,
+    title: "Select the workspace directory this MCP configuration may access",
+  });
+  return selected?.[0]?.fsPath;
+}
+
 export function registerGenerateMcpConfigCommand(context?: vscode.ExtensionContext): vscode.Disposable {
   return vscode.commands.registerCommand("workspaceModelAdvisor.generateMcpConfig", async () => {
-    const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    const allowedRoot = workspaceRoot ?? process.cwd();
+    const workspaceRoot = await selectWorkspaceRoot();
+    if (!workspaceRoot) return;
 
     const target = await vscode.window.showQuickPick(MCP_TARGETS, {
       placeHolder: "Select target tool for MCP config",
@@ -127,7 +152,7 @@ export function registerGenerateMcpConfigCommand(context?: vscode.ExtensionConte
     if (input === undefined) return;
 
     const serverPath = input.trim() || defaultServerPath;
-    const configContent = generateMcpConfig(target.target, serverPath, allowedRoot);
+    const configContent = generateMcpConfig(target.target, serverPath, workspaceRoot);
     const suggestedName = getSuggestedFilename(target.target);
 
     const doc = await vscode.workspace.openTextDocument({
@@ -142,7 +167,7 @@ export function registerGenerateMcpConfigCommand(context?: vscode.ExtensionConte
     );
 
     if (save === "Save") {
-      const defaultUri = workspaceRoot ? vscode.Uri.file(path.join(workspaceRoot, suggestedName)) : undefined;
+      const defaultUri = vscode.Uri.file(path.join(workspaceRoot, suggestedName));
       const uri = await vscode.window.showSaveDialog({
         defaultUri,
         filters: { "Config files": ["json", "yaml"] },
