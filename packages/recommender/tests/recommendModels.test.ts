@@ -290,6 +290,7 @@ describe("recommendModels", () => {
       models: [cheapModel, midModel],
       workspaceTokens: 5000,
       goal: "debug",
+      privacyMode: "cloud-ok",
     });
     const tierIds = [
       result.cheapestSufficient.modelId,
@@ -323,6 +324,7 @@ describe("recommendModels", () => {
       models: [cheapModel, midModel],
       workspaceTokens: 5000,
       goal: "debug",
+      privacyMode: "cloud-ok",
     });
     const tierIds = [
       result.cheapestSufficient.modelId,
