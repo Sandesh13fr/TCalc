@@ -65,14 +65,13 @@ export function registerGenerateRepoMapCommand(context: vscode.ExtensionContext)
       tokenBudget = Number(input);
     }
 
+    let markdown: string;
     try {
       const repoMap = createRepoMap(lastScan, {
         tokenBudget,
         enableSymbolExtraction: mapType.value,
       });
-      const markdown = formatRepoMapMarkdown(repoMap);
-
-      await showAndOfferToSaveRepoMap(context, rootPath, markdown);
+      markdown = formatRepoMapMarkdown(repoMap);
     } catch (err) {
       vscode.window.showWarningMessage(
         `Code-aware repo map failed, generating basic map: ${err instanceof Error ? err.message : String(err)}`,
@@ -81,9 +80,15 @@ export function registerGenerateRepoMapCommand(context: vscode.ExtensionContext)
         tokenBudget,
         enableSymbolExtraction: false,
       });
-      const markdown = formatRepoMapMarkdown(repoMap);
+      markdown = formatRepoMapMarkdown(repoMap);
+    }
 
+    try {
       await showAndOfferToSaveRepoMap(context, rootPath, markdown);
+    } catch (err) {
+      vscode.window.showErrorMessage(
+        `Failed to display repo map: ${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   });
 }
