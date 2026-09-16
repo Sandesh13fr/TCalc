@@ -4,7 +4,7 @@ import type { WorkspaceGoal } from "./options.js";
 
 export type { WorkspaceGoal } from "./options.js";
 
-export type RecommendationTier = "cheapest-sufficient" | "balanced" | "high-confidence";
+export type RecommendationTier = "cheapest-sufficient" | "best-available-overflow" | "balanced" | "high-confidence";
 
 export interface ModelScore {
   contextFit: number;
