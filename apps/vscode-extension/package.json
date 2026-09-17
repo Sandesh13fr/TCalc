@@ -196,6 +196,7 @@
     "@wma/agent-rules": "workspace:*",
     "@wma/core": "workspace:*",
     "@wma/model-catalog": "workspace:*",
+    "@wma/mcp-server": "workspace:*",
     "@wma/recommender": "workspace:*",
     "@wma/repo-map": "workspace:*",
     "@wma/reports": "workspace:*",
