@@ -8,7 +8,7 @@ export interface RulesOutputOptions {
   yes: boolean;
   force: boolean;
   log?: (message: string) => void;
-  write?: typeof writeFile;
+  write?: (path: string, content: string, options: { encoding: "utf-8"; flag: "w" | "wx" }) => Promise<unknown>;
 }
 
 export async function handleRulesOutput(options: RulesOutputOptions): Promise<"stdout" | "preview" | "written"> {
@@ -25,7 +25,7 @@ export async function handleRulesOutput(options: RulesOutputOptions): Promise<"s
     return "preview";
   }
 
-  const write = options.write ?? writeFile;
+  const write = options.write ?? ((path, content, writeOptions) => writeFile(path, content, writeOptions));
   try {
     await write(options.outputPath, options.content, {
       encoding: "utf-8",
