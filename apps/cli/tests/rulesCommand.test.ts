@@ -53,7 +53,7 @@ describe("rules command", () => {
       yes: false,
       force: false,
       log: message => messages.push(message),
-      write: (async () => { writes += 1; }) as any,
+      write: async () => { writes += 1; },
     });
 
     expect(result).toBe("preview");
@@ -72,7 +72,7 @@ describe("rules command", () => {
       log: () => undefined,
       write: (async (_path: unknown, _content: unknown, options: { flag?: string }) => {
         flag = options.flag;
-      }) as any,
+      }),
     });
     expect(flag).toBe("wx");
   });
@@ -88,7 +88,7 @@ describe("rules command", () => {
       log: () => undefined,
       write: (async (_path: unknown, _content: unknown, options: { flag?: string }) => {
         flag = options.flag;
-      }) as any,
+      }),
     });
     expect(flag).toBe("w");
   });
@@ -103,7 +103,7 @@ describe("rules command", () => {
       log: () => undefined,
       write: (async () => {
         throw Object.assign(new Error("exists"), { code: "EEXIST" });
-      }) as any,
+      }),
     })).rejects.toThrow("Use --force to overwrite it");
   });
 });
