@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { existsSync } from "node:fs";
 import path from "node:path";
 import * as vscode from "vscode";
 import {
@@ -46,6 +47,12 @@ export async function run(): Promise<void> {
   assert.equal(getSuggestedFilename("generic"), "mcp-stdio.json");
   assert.equal(
     getDefaultMcpServerPath("/opt/tcalc"),
-    path.join("/opt/tcalc", "packages", "mcp-server", "dist", "index.js"),
+    path.join("/opt/tcalc", "node_modules", "@wma", "mcp-server", "dist", "index.js"),
+  );
+
+  const packagedMcpEntry = getDefaultMcpServerPath(extension.extensionPath);
+  assert.ok(
+    existsSync(packagedMcpEntry),
+    `Packaged MCP server entry point should exist: ${packagedMcpEntry}`,
   );
 }
