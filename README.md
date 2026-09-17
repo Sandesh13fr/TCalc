@@ -67,6 +67,7 @@ Build once, then scan, compare, or generate only the context you need:
 ```bash
 pnpm install
 pnpm build
+pnpm --dir apps/cli inspect:artifact # verifies the built CLI includes its model catalogs
 
 pnpm cli scan ./my-project
 pnpm cli recommend ./my-project --goal build-mvp

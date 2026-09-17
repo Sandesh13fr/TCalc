@@ -26,7 +26,7 @@
     "smoke:all": "pnpm smoke:cli && pnpm smoke:mcp",
     "benchmark:scanner": "node scripts/benchmark-scanner.mjs",
     "test:security": "vitest run packages/mcp-server/tests/security.test.ts packages/scanner/tests/scanWorkspace.test.ts apps/cli/tests/examplesSecurity.test.ts packages/reports/tests/generateMarkdownReport.test.ts packages/repo-map/tests/formatRepoMapMarkdown.test.ts",
-    "ci": "node scripts/check-no-telemetry.mjs && pnpm check:action && pnpm build && pnpm test && pnpm lint && pnpm typecheck && pnpm scan:fixtures && pnpm package:vscode && pnpm package:vscode:inspect && pnpm smoke:all",
+    "ci": "node scripts/check-no-telemetry.mjs && pnpm check:action && pnpm build && pnpm --dir apps/cli inspect:artifact && pnpm test && pnpm lint && pnpm typecheck && pnpm scan:fixtures && pnpm package:vscode && pnpm package:vscode:inspect && pnpm smoke:all",
     "ci:smoke": "pnpm smoke:cli",
     "ci:workspace-report": "node scripts/workspace-report.mjs",
     "check:extension-metadata": "node scripts/check-extension-metadata.mjs",
