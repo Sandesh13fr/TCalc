@@ -10,12 +10,13 @@
     "wma": "./dist/index.js"
   },
   "scripts": {
-    "build": "tsc -b",
+    "build": "tsc -b && node scripts/copy-catalogs.mjs",
     "dev": "tsc -b --watch",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "start": "node dist/index.js",
-    "lint": "eslint src/"
+    "lint": "eslint src/",
+    "inspect:artifact": "node scripts/inspect-artifact.mjs"
   },
   "dependencies": {
     "@wma/agent-rules": "workspace:*",
