@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, rm, stat, symlink, writeFile, readFile } from "node:fs/
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { scanWorkspace } from "../src/scanWorkspace.js";
+import { SCAN_CACHE_VERSION } from "../src/scanCache.js";
 
 const cleanup: string[] = [];
 afterEach(async () => Promise.all(cleanup.splice(0).map((directory) => rm(directory, { recursive: true, force: true }))));
@@ -145,7 +146,7 @@ describe("scanWorkspace traversal", () => {
     // Legacy entry must not be reused as a cache hit.
     expect(result.cacheHits ?? 0).toBe(0);
     const persisted = JSON.parse(await readFile(cacheFile, "utf8"));
-    expect(persisted.version).toBe(2);
+    expect(persisted.version).toBe(SCAN_CACHE_VERSION);
   });
 });
 
