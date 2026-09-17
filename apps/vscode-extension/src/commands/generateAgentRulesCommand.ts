@@ -2,6 +2,7 @@ import * as vscode from "vscode";
 import path from "node:path";
 import { generateAgentRules } from "@wma/agent-rules";
 import { AGENT_TARGETS, OPTIMIZATION_MODES, type AgentTarget, type OptimizationMode } from "@wma/core";
+import { writeGeneratedRules } from "./writeGeneratedRules.js";
 
 export function registerGenerateAgentRulesCommand(context: vscode.ExtensionContext): vscode.Disposable {
   return vscode.commands.registerCommand("workspaceModelAdvisor.generateAgentRules", async () => {
@@ -46,10 +47,22 @@ export function registerGenerateAgentRulesCommand(context: vscode.ExtensionConte
     if (!saveUri) return;
 
     try {
-      await vscode.workspace.fs.writeFile(
-        saveUri,
-        new TextEncoder().encode(result.content),
-      );
+      const outcome = await writeGeneratedRules({
+        uri: saveUri,
+        content: new TextEncoder().encode(result.content),
+        fs: vscode.workspace.fs,
+        confirmOverwrite: async () => {
+          const overwrite = await vscode.window.showWarningMessage(
+            `${saveUri.fsPath} already exists. Overwrite it?`,
+            { modal: true, detail: "Existing agent instructions are often project-specific. Overwrite only if you have reviewed them." },
+            "Overwrite",
+          );
+          return overwrite === "Overwrite";
+        },
+        isFileNotFound: error =>
+          error instanceof vscode.FileSystemError && error.code === "FileNotFound",
+      });
+      if (outcome === "cancelled") return;
       vscode.window.showInformationMessage(`${saveUri.fsPath} generated successfully.`);
     } catch (err) {
       vscode.window.showErrorMessage(`Failed to write ${result.fileName}: ${err instanceof Error ? err.message : String(err)}`);

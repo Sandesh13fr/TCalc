@@ -18,7 +18,7 @@ function getFileName(target: AgentTarget): string {
     case "claude-code":
       return "CLAUDE.md";
     case "codex":
-      return ".codexrules";
+      return "AGENTS.md";
     case "cline":
       return ".clinerules";
     case "roo":
