@@ -12,6 +12,7 @@ import { executeCatalogFetch, executeCatalogValidate } from "./commands/catalog.
 import { generateMcpConfig } from "./commands/mcpConfig.js";
 import { resolveTargetPath } from "./utils/paths.js";
 import { handleError, CliError } from "./utils/errors.js";
+import { handleRulesOutput } from "./utils/rulesOutput.js";
 import { parseAgentTarget, parseGoal, parseMcpTarget, parseOptimizationMode, parsePositiveInteger, parsePrivacyMode, parseReportFormat, parseScanFormat, parseTableFormat } from "./utils/options.js";
 import { startServer } from "@wma/mcp-server";
 import { executeCompact } from "./commands/compact.js";
@@ -130,27 +131,13 @@ program
 
       const outputPath = opts.output || path.join(resolveTargetPath(target), result.fileName);
 
-      if (opts.stdout) {
-        console.log(result.content);
-        return;
-      }
-
-      if (!opts.yes) {
-        console.log(`Would write to: ${outputPath}`);
-        console.log("");
-        console.log(result.content);
-        return;
-      }
-
-      try {
-        await writeFile(outputPath, result.content, { encoding: "utf-8", flag: opts.force ? "w" : "wx" });
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code === "EEXIST") {
-          throw new CliError(`Agent rules file already exists: ${outputPath}. Use --force to overwrite it.`);
-        }
-        throw error;
-      }
-      console.log(`Agent rules written to ${outputPath}`);
+      await handleRulesOutput({
+        content: result.content,
+        outputPath,
+        stdout: Boolean(opts.stdout),
+        yes: Boolean(opts.yes),
+        force: Boolean(opts.force),
+      });
     } catch (err) {
       handleError(err, program.opts().debug);
     }
