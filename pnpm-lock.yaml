@@ -50,6 +50,9 @@ importers:
       '@wma/model-catalog':
         specifier: workspace:*
         version: link:../../packages/model-catalog
+      '@wma/mcp-server':
+        specifier: workspace:*
+        version: link:../../packages/mcp-server
       '@wma/recommender':
         specifier: workspace:*
         version: link:../../packages/recommender

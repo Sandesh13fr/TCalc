@@ -34,7 +34,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(registerOpenSettingsCommand());
   context.subscriptions.push(registerShowWelcomeCommand(context));
   context.subscriptions.push(registerQuickStartCommand());
-  context.subscriptions.push(registerGenerateMcpConfigCommand());
+  context.subscriptions.push(registerGenerateMcpConfigCommand(context));
 
   showWelcomeOnFirstActivation(context);
 }

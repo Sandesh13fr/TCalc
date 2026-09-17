@@ -31,7 +31,6 @@ const argv = [
   "--out",
   outFile,
   "--allow-missing-repository",
-  "--no-dependencies",
 ];
 
 main(argv);
