@@ -27,5 +27,15 @@ function validateLoadedCatalog(catalog: ModelCatalog, source: string): ModelCata
 }
 
 function getBundledCatalogPath(): string {
-  return fileURLToPath(new URL("../../../../catalogs", import.meta.url));
+  const candidates = [
+    new URL("../catalogs", import.meta.url),
+    new URL("../../../../catalogs", import.meta.url),
+  ];
+
+  for (const candidate of candidates) {
+    const path = fileURLToPath(candidate);
+    if (existsSync(path)) return path;
+  }
+
+  throw new CliError("Bundled model catalog is missing from the CLI installation");
 }
