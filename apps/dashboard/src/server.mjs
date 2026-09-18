@@ -16,11 +16,14 @@ export function createDashboardServer(options = {}) {
   const dataDir = path.resolve(options.dataDir ?? process.env.TCALC_DATA_DIR ?? ".tcalc-dashboard");
   const token = options.token ?? process.env.TCALC_DASHBOARD_TOKEN;
   const publicDir = path.resolve(options.publicDir ?? defaultPublicDir);
+  const warn = typeof options.warn === "function"
+    ? options.warn
+    : (options.logger && typeof options.logger.warn === "function" ? options.logger.warn.bind(options.logger) : console.warn);
 
   return createServer(async (request, response) => {
     try {
       const url = new URL(request.url ?? "/", "http://localhost");
-      if (request.method === "GET" && url.pathname === "/api/reports") return json(response, 200, await listReports(dataDir));
+      if (request.method === "GET" && url.pathname === "/api/reports") return json(response, 200, await listReports(dataDir, warn));
       if (request.method === "POST" && url.pathname === "/api/reports") {
         if (!token) return json(response, 503, { error: "Report uploads are disabled until TCALC_DASHBOARD_TOKEN is set" });
         if (request.headers.authorization !== `Bearer ${token}`) return json(response, 401, { error: "Unauthorized" });
@@ -88,17 +91,63 @@ async function serveStatic(response, publicDir, pathname) {
   return false;
 }
 
-async function listReports(dataDir) {
+async function listReports(dataDir, warn = console.warn) {
   try {
     const files = (await readdir(dataDir)).filter((file) => /^[\w-]+\.json$/.test(file));
-    const reports = await Promise.all(files.map(async (file) => {
-      const report = JSON.parse(await readFile(path.join(dataDir, file), "utf8"));
-      return { id: file.slice(0, -5), title: report.title, generatedAt: report.generatedAt, goal: report.goal, summary: report.summary };
-    }));
-    return reports.sort((a, b) => String(b.generatedAt).localeCompare(String(a.generatedAt)));
+    const entries = await Promise.all(files.map((file) => parseReportFile(dataDir, file, warn)));
+    const reports = entries.filter((report) => report !== null);
+    return reports.sort((a, b) => {
+      const timeCompare = String(b.generatedAt).localeCompare(String(a.generatedAt));
+      if (timeCompare !== 0) return timeCompare;
+      return String(b.id).localeCompare(String(a.id));
+    });
   } catch (error) {
     if (error.code === "ENOENT") return [];
     throw error;
+  }
+}
+
+async function parseReportFile(dataDir, file, warn) {
+  try {
+    let content;
+    try {
+      content = await readFile(path.join(dataDir, file), "utf8");
+    } catch {
+      safeWarn(warn, `Skipping invalid report file "${file}": failed to read file`);
+      return null;
+    }
+
+    let report;
+    try {
+      report = JSON.parse(content);
+    } catch {
+      safeWarn(warn, `Skipping invalid report file "${file}": malformed JSON`);
+      return null;
+    }
+
+    if (!isWorkspaceReport(report)) {
+      safeWarn(warn, `Skipping invalid report file "${file}": invalid report schema or incompatible version`);
+      return null;
+    }
+
+    return {
+      id: file.slice(0, -5),
+      title: report.title,
+      generatedAt: report.generatedAt,
+      goal: report.goal,
+      summary: report.summary,
+    };
+  } catch {
+    safeWarn(warn, `Skipping invalid report file "${file}": unexpected error processing file`);
+    return null;
+  }
+}
+
+function safeWarn(warn, message) {
+  try {
+    if (typeof warn === "function") warn(message);
+  } catch {
+    // Ignore diagnostic logging failure
   }
 }
 
