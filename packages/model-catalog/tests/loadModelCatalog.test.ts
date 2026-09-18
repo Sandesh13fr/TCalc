@@ -53,10 +53,20 @@ describe("loadModelCatalog", () => {
     expect(result.models[0].id).toBe("a");
   });
 
-  it("should return empty catalog for invalid JSON", () => {
+  it("should throw for invalid JSON instead of returning an empty catalog", () => {
     const filePath = join(tmpDir, "bad.json");
     writeFileSync(filePath, "not valid json");
-    const result = loadModelCatalog(filePath);
-    expect(result.models).toEqual([]);
+    expect(() => loadModelCatalog(filePath)).toThrow(SyntaxError);
+  });
+
+  it("should rethrow non-ENOENT errors (e.g. EISDIR) instead of returning empty", () => {
+    const dirAsFile = join(tmpDir, "dir-as-file");
+    mkdirSync(dirAsFile);
+    mkdirSync(join(dirAsFile, "models.json"));
+    expect(() => loadModelCatalog(dirAsFile)).toThrow();
+  });
+
+  it("should throw for missing files in strict mode", () => {
+    expect(() => loadModelCatalog(join(tmpDir, "missing-strict"), { strict: true })).toThrow();
   });
 });
