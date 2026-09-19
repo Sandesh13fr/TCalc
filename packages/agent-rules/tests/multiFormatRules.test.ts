@@ -5,7 +5,7 @@ import {
   generateGeminiRules,
   generateMultiFormatRules,
 } from "../src/index.js";
-import type { AgentRulesOutput } from "@wma/core";
+import { isOptimizationMode, type AgentRulesOutput } from "@wma/core";
 
 describe("MultiFormat Agent Rules", () => {
   it("generates valid Windsurf rules with custom build and test commands", () => {
@@ -25,7 +25,7 @@ describe("MultiFormat Agent Rules", () => {
     expect(rules.content).toContain("pnpm build:fast");
     expect(rules.content).toContain("Be extremely direct");
     expect(rules.avoidFiles).toContain("dist/");
-    expect(rules.estimatedTokens).toBeGreaterThan(50);
+    expect(rules.tokenBudget).toBe(16000);
   });
 
   it("generates GitHub Copilot instructions with PR readiness guidelines", () => {
@@ -47,7 +47,7 @@ describe("MultiFormat Agent Rules", () => {
 
   it("generates Gemini system instructions with Planning Mode guidelines", () => {
     const rules = generateGeminiRules({
-      mode: "balanced",
+      mode: "normal",
       workspaceTokens: 120000,
       systemRole: "Staff AI Solutions Architect",
       toolingNotes: ["Preserve all docstrings", "Execute Vitest checks"],
@@ -96,5 +96,16 @@ describe("MultiFormat Agent Rules", () => {
     expect(bundle.windsurf.fileName).toBe(".windsurfrules");
     expect(bundle.copilot.fileName).toBe(".github/copilot-instructions.md");
     expect(bundle.gemini.fileName).toBe("GEMINI.md");
+  });
+
+  it("defaults every format to a valid optimization mode and token budget", () => {
+    const bundle = generateMultiFormatRules("all", { workspaceTokens: 1000 }) as Record<string, AgentRulesOutput>;
+
+    for (const output of Object.values(bundle)) {
+      expect(output.mode).toBe("normal");
+      expect(isOptimizationMode(output.mode)).toBe(true);
+      expect(output.tokenBudget).toBe(64000);
+      expect(output.content).not.toContain("Mode: balanced");
+    }
   });
 });

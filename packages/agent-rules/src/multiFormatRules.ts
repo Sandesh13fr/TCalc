@@ -28,7 +28,7 @@ export function generateMultiFormatRules(
   format: ExtendedAgentFormat,
   options: MultiFormatRulesOptions = {},
 ): AgentRulesOutput | Record<string, AgentRulesOutput> {
-  const mode = options.mode ?? "balanced";
+  const mode = options.mode ?? "normal";
 
   switch (format) {
     case "cursor":
