@@ -89,68 +89,91 @@ export async function scanWorkspace(options: ScanOptions): Promise<WorkspaceScan
   const languages = computeLanguageBreakdown(included);
   const riskFiles = allFiles.filter(f => f.riskFlags.length > 0);
 
-  return {
-    rootPath,
-    scannedAt: new Date().toISOString(),
-    ...stats,
-    files: allFiles,
-    folders,
-    languages,
-    warnings,
-    riskFiles,
-    ...(options.cacheFile ? { cacheHits, cacheMisses } : {}),
-  };
-}
-
-export async function walkFiles(rootPath: string, currentPath: string, resolver: IgnoreResolver, context?: WalkContext): Promise<string[]> {
+  export async function walkFiles(rootPath: string, currentPath: string, resolver: IgnoreResolver, context?: WalkContext): Promise<string[]> {
   const state = context ?? {
     rootRealPath: await realpath(rootPath),
     visited: new Set<string>(),
     skipRelativePaths: new Set<string>(),
     warnings: [],
   };
-  state.signal?.throwIfAborted();
+  
   const results: string[] = [];
-  let currentRealPath: string;
-  try {
-    currentRealPath = await realpath(currentPath);
-  } catch (error) {
-    state.warnings.push(`Failed to resolve ${relativeDisplay(rootPath, currentPath)}: ${errorMessage(error)}`);
-    return results;
-  }
-  if (!isWithinRoot(state.rootRealPath, currentRealPath)) {
-    state.warnings.push(`Skipped path outside workspace: ${relativeDisplay(rootPath, currentPath)}`);
-    return results;
-  }
-  if (state.visited.has(currentRealPath)) {
-    state.warnings.push(`Skipped already visited directory: ${relativeDisplay(rootPath, currentPath)}`);
-    return results;
-  }
-  state.visited.add(currentRealPath);
+  const queue: string[] = [currentPath]; // Initialize the queue with the starting directory
 
-  let entries;
-  try {
-    entries = await readdir(currentPath, { withFileTypes: true });
-  } catch (error) {
-    state.warnings.push(`Failed to read directory ${relativeDisplay(rootPath, currentPath)}: ${errorMessage(error)}`);
-    return results;
-  }
-  for (const entry of entries) {
+  while (queue.length > 0) {
     state.signal?.throwIfAborted();
-    const fullPath = path.join(currentPath, entry.name);
-    const entryName = entry.name;
-    if (entryName === ".git" || entryName === ".svn" || entryName === ".hg") continue;
-    const relativePath = path.relative(rootPath, fullPath).replace(/\\/g, "/");
-    if (state.skipRelativePaths.has(relativePath)) continue;
+    
+    // Dequeue the next path
+    const targetPath = queue.shift()!;
+    
+    let currentRealPath: string;
+    try {
+      currentRealPath = await realpath(targetPath);
+    } catch (error) {
+      state.warnings.push(`Failed to resolve ${relativeDisplay(rootPath, targetPath)}: ${errorMessage(error)}`);
+      continue;
+    }
 
-    if (entry.isSymbolicLink()) {
-      try {
-        const targetRealPath = await realpath(fullPath);
-        if (!isWithinRoot(state.rootRealPath, targetRealPath)) {
-          state.warnings.push(`Skipped symlink outside workspace: ${relativePath}`);
-          continue;
+    if (!isWithinRoot(state.rootRealPath, currentRealPath)) {
+      state.warnings.push(`Skipped path outside workspace: ${relativeDisplay(rootPath, targetPath)}`);
+      continue;
+    }
+
+    if (state.visited.has(currentRealPath)) {
+      state.warnings.push(`Skipped already visited directory: ${relativeDisplay(rootPath, targetPath)}`);
+      continue;
+    }
+    state.visited.add(currentRealPath);
+
+    let entries;
+    try {
+      entries = await readdir(targetPath, { withFileTypes: true });
+    } catch (error) {
+      state.warnings.push(`Failed to read directory ${relativeDisplay(rootPath, targetPath)}: ${errorMessage(error)}`);
+      continue;
+    }
+
+    for (const entry of entries) {
+      state.signal?.throwIfAborted();
+      const fullPath = path.join(targetPath, entry.name);
+      const entryName = entry.name;
+      
+      if (entryName === ".git" || entryName === ".svn" || entryName === ".hg") continue;
+      
+      const relativePath = path.relative(rootPath, fullPath).replace(/\\/g, "/");
+      if (state.skipRelativePaths.has(relativePath)) continue;
+
+      if (entry.isSymbolicLink()) {
+        try {
+          const targetRealPath = await realpath(fullPath);
+          if (!isWithinRoot(state.rootRealPath, targetRealPath)) {
+            state.warnings.push(`Skipped symlink outside workspace: ${relativePath}`);
+            continue;
+          }
+          const targetStat = await stat(fullPath);
+          if (targetStat.isDirectory()) {
+            if (!resolver.shouldIgnore(relativePath + "/", 0).ignored) {
+              queue.push(fullPath); // Enqueue the symlinked directory
+            }
+          } else if (targetStat.isFile()) {
+            if (!resolver.shouldIgnore(relativePath, targetStat.size).ignored) {
+              results.push(fullPath);
+            }
+          }
+        } catch (error) {
+          state.warnings.push(`Failed to resolve symlink ${relativePath}: ${errorMessage(error)}`);
         }
-        const targetStat = await stat(fullPath);
+      } else if (entry.isDirectory()) {
+        if (resolver.shouldIgnore(relativePath + "/", 0).ignored) continue;
+        queue.push(fullPath); // Enqueue the directory instead of recursing
+      } else if (entry.isFile()) {
+        results.push(fullPath);
+      }
+    }
+  }
+
+  return results;
+}
         if (targetStat.isDirectory()) {
           if (!resolver.shouldIgnore(relativePath + "/", 0).ignored) {
             results.push(...await walkFiles(rootPath, fullPath, resolver, state));
