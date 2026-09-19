@@ -144,8 +144,8 @@ export function analyzeTokenDrift(
     .sort((a, b) => a.tokenDelta - b.tokenDelta)
     .slice(0, 10);
 
-  const baselineTotalTokens = baseline.totalTokens ?? 0;
-  const currentTotalTokens = current.totalTokens ?? 0;
+  const baselineTotalTokens = baseline.totalEstimatedTokens ?? 0;
+  const currentTotalTokens = current.totalEstimatedTokens ?? 0;
   const netTokenDelta = currentTotalTokens - baselineTotalTokens;
 
   let netPercentChange = 0;
