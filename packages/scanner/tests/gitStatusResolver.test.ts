@@ -179,4 +179,23 @@ describe("createGitStatusFilterPredicate", () => {
     expect(matcher("C:/repo/project/packages/scanner/src/scan.ts")).toBe(true);
     expect(matcher("C:/repo/project/packages/other/src/index.ts")).toBe(false);
   });
+
+  it("only matches path suffixes on segment boundaries", () => {
+    const entries = parseGitStatusPorcelain("M  a.ts\nM  packages/scanner/src/scan.ts");
+    const matcher = createGitStatusFilterPredicate(entries, "all-dirty");
+
+    expect(matcher("a.ts")).toBe(true);
+    expect(matcher("data.ts")).toBe(false);
+    expect(matcher("src/data.ts")).toBe(false);
+    expect(matcher("src/scan.ts")).toBe(true);
+    expect(matcher("rescan.ts")).toBe(false);
+  });
+
+  it("does not treat the workspace root itself as a dirty file", () => {
+    const entries = parseGitStatusPorcelain("M  packages/scanner/src/scan.ts");
+    const matcher = createGitStatusFilterPredicate(entries, "all-dirty", "/repo/project");
+
+    expect(matcher("/repo/project")).toBe(false);
+    expect(matcher("/repo/project/packages/scanner/src/scan.ts")).toBe(true);
+  });
 });
