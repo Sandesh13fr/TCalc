@@ -108,13 +108,29 @@ export default function ReportViewer() {
           </ol>
         </>}
       </article>
-      {savedReports.length > 0 && <section className="saved-reports"><h3>Saved team reports</h3>{savedReports.map((saved) => <button key={saved.id} type="button" onClick={async () => {
-        try {
-          const response = await fetch(`/api/reports/${encodeURIComponent(saved.id)}`);
-          if (!response.ok) throw new Error("Could not load that saved report.");
-          openReport(await response.json(), `Opened saved report ${saved.title}.`);
-        } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
-      }}>{saved.title} · {saved.summary.includedTokens.toLocaleString()} tokens</button>)}</section>}
+      {savedReports.length > 0 && <section className="saved-reports">
+        <div className="saved-reports-heading"><div><p className="eyebrow"><span />Report archive</p><h3>Saved team reports</h3></div><span>{savedReports.length} report{savedReports.length === 1 ? "" : "s"}</span></div>
+        <div className="report-table-wrap">
+          <table className="report-table">
+            <caption className="visually-hidden">Saved team reports</caption>
+            <thead><tr><th scope="col">Report</th><th scope="col">Goal</th><th scope="col">Files</th><th scope="col">Tokens</th><th scope="col">Generated</th><th scope="col"><span className="visually-hidden">Action</span></th></tr></thead>
+            <tbody>{savedReports.map((saved) => <tr key={saved.id}>
+              <th scope="row"><strong>{saved.title}</strong><small>{saved.id}</small></th>
+              <td>{saved.goal ?? "—"}</td>
+              <td>{saved.summary.includedFiles.toLocaleString()}</td>
+              <td>{saved.summary.includedTokens.toLocaleString()}</td>
+              <td>{saved.generatedAt ? new Date(saved.generatedAt).toLocaleDateString() : "—"}</td>
+              <td><button className="table-action" type="button" onClick={async () => {
+                try {
+                  const response = await fetch(`/api/reports/${encodeURIComponent(saved.id)}`);
+                  if (!response.ok) throw new Error("Could not load that saved report.");
+                  openReport(await response.json(), `Opened saved report ${saved.title}.`);
+                } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }
+              }}>Open <span aria-hidden="true">&rarr;</span></button></td>
+            </tr>)}</tbody>
+          </table>
+        </div>
+      </section>}
     </div>
   );
 }
