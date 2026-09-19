@@ -1,9 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { z } from "zod";
-function estimateTokens(text: string): number {
-  return Math.max(1, Math.ceil(text.length / 3.8));
-}
+import { estimateFileTokens } from "@wma/tokenizers";
 import { validateRootPath } from "../utils/safeRootPath.js";
 
 export const EstimateFilesTokensInputSchema = z.object({
@@ -124,7 +122,7 @@ export async function handleEstimateFilesTokens(args: unknown): Promise<{
       }
 
       const content = fs.readFileSync(resolvedPath, "utf-8");
-      const tokens = estimateTokens(content);
+      const tokens = estimateFileTokens(content, rel);
 
       existingFiles++;
       totalBytes += stat.size;
