@@ -28,7 +28,7 @@ program
 program
   .command("init [path]")
   .description("Initialize a tailored .workspace-model-advisor.json config file")
-  .option("--goal <goal>", "Workspace goal (code_review|refactor|agentic_chat|cost_audit)", parseGoal)
+  .option("--goal <goal>", "Workspace goal", parseGoal)
   .option("--privacy <mode>", "Privacy mode (local-first|cloud-ok)", parsePrivacyMode)
   .option("--force", "Overwrite an existing configuration file")
   .option("--dry-run", "Preview generated configuration without writing to disk")

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { detectProjectStack, executeInit } from "../src/commands/init.js";
 import { CliError } from "../src/utils/errors.js";
+import { DEFAULT_CONFIG } from "@wma/core";
 
 describe("initCommand wizard", () => {
   let tempDir: string;
@@ -113,6 +114,19 @@ describe("initCommand wizard", () => {
       expect(parsed.defaultGoal).toBe("refactor");
       expect(parsed.privacyMode).toBe("local-first");
       expect(parsed.exclude).toContain("target");
+    });
+
+    it("writes only known configuration keys", async () => {
+      await executeInit({ target: tempDir });
+
+      const configFile = path.join(tempDir, ".workspace-model-advisor.json");
+      const parsed = JSON.parse(await readFile(configFile, "utf8"));
+
+      // The repository does not publish a schema.json, so a $schema URL would 404 in editors.
+      expect(parsed).not.toHaveProperty("$schema");
+      for (const key of Object.keys(parsed)) {
+        expect(Object.keys(DEFAULT_CONFIG)).toContain(key);
+      }
     });
 
     it("fails when configuration file already exists and force flag is absent", async () => {
