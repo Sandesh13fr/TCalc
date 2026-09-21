@@ -63,6 +63,7 @@ export async function scanWorkspace(options: ScanOptions): Promise<WorkspaceScan
     const chunk = filePaths.slice(i, i + CONCURRENCY_LIMIT);
     const results = await Promise.all(chunk.map(filePath => scanSingleFile(rootPath, filePath, resolver, warnings, cache, options)));
     for (const result of results) {
+      if (!result) continue;
       allFiles.push(result.info);
       nextCache.set(result.info.relativePath, result.cacheEntry);
       if (result.cacheHit) cacheHits++;
@@ -198,7 +199,7 @@ async function scanSingleFile(
   warnings: string[],
   cache: Map<string, ScanCacheEntry>,
   options: ScanOptions,
-): Promise<ScannedFile> {
+): Promise<ScannedFile | undefined> {
   const signal = options.signal;
   signal?.throwIfAborted();
   let entryStat;
@@ -206,11 +207,11 @@ async function scanSingleFile(
     entryStat = await stat(filePath);
   } catch (error) {
     warnings.push(`Failed to stat ${path.relative(rootPath, filePath)}: ${errorMessage(error)}`);
-    entryStat = undefined;
+    return undefined;
   }
   const relativePath = path.relative(rootPath, filePath).replace(/\\/g, "/");
   const extension = path.extname(filePath).toLowerCase();
-  const fileSize = entryStat ? Number(entryStat.size) : 0;
+  const fileSize = Number(entryStat.size);
   const classification = classifyFile(relativePath, fileSize);
   const riskFlags = [...classification.riskFlags];
 
