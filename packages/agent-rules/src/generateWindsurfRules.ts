@@ -1,4 +1,5 @@
 import type { OptimizationMode, AgentRulesOutput } from "@wma/core";
+import { getTokenBudget } from "./generateRules.js";
 
 export interface WindsurfRulesOptions {
   mode?: OptimizationMode;
@@ -9,7 +10,7 @@ export interface WindsurfRulesOptions {
 }
 
 export function generateWindsurfRules(options: WindsurfRulesOptions = {}): AgentRulesOutput {
-  const mode = options.mode ?? "balanced";
+  const mode = options.mode ?? "normal";
   const tokens = options.workspaceTokens ?? 0;
   const testCmd = options.testCommand ?? "pnpm test";
   const buildCmd = options.buildCommand ?? "pnpm build";
@@ -96,8 +97,7 @@ export function generateWindsurfRules(options: WindsurfRulesOptions = {}): Agent
     fileName: ".windsurfrules",
     content,
     mode,
-    estimatedTokens: Math.ceil(content.length / 4),
-    rulesCount: 6,
+    tokenBudget: getTokenBudget(mode),
     avoidFiles: avoidPatterns,
   };
 }

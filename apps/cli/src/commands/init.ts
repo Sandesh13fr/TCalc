@@ -98,8 +98,7 @@ export async function executeInit(options: InitOptions): Promise<string> {
   const goal = (options.goal as WorkspaceGoal) ?? DEFAULT_CONFIG.defaultGoal;
   const privacy = (options.privacy as PrivacySetting) ?? (stack.primaryLanguage === "rust" ? "local-first" : DEFAULT_CONFIG.privacyMode);
 
-  const newConfig: WmaConfig = {
-    $schema: "https://raw.githubusercontent.com/Sandesh13fr/TCalc/Development/schema.json",
+  const newConfig: Partial<WmaConfig> = {
     defaultGoal: goal,
     privacyMode: privacy,
     exclude: stack.recommendedExcludes,
