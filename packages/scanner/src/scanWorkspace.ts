@@ -109,68 +109,85 @@ export async function walkFiles(rootPath: string, currentPath: string, resolver:
     skipRelativePaths: new Set<string>(),
     warnings: [],
   };
-  state.signal?.throwIfAborted();
+  
   const results: string[] = [];
-  let currentRealPath: string;
-  try {
-    currentRealPath = await realpath(currentPath);
-  } catch (error) {
-    state.warnings.push(`Failed to resolve ${relativeDisplay(rootPath, currentPath)}: ${errorMessage(error)}`);
-    return results;
-  }
-  if (!isWithinRoot(state.rootRealPath, currentRealPath)) {
-    state.warnings.push(`Skipped path outside workspace: ${relativeDisplay(rootPath, currentPath)}`);
-    return results;
-  }
-  if (state.visited.has(currentRealPath)) {
-    state.warnings.push(`Skipped already visited directory: ${relativeDisplay(rootPath, currentPath)}`);
-    return results;
-  }
-  state.visited.add(currentRealPath);
-
-  let entries;
-  try {
-    entries = await readdir(currentPath, { withFileTypes: true });
-  } catch (error) {
-    state.warnings.push(`Failed to read directory ${relativeDisplay(rootPath, currentPath)}: ${errorMessage(error)}`);
-    return results;
-  }
-  for (const entry of entries) {
+  const stack: string[] = [currentPath];
+  
+  while (stack.length > 0) {
     state.signal?.throwIfAborted();
-    const fullPath = path.join(currentPath, entry.name);
-    const entryName = entry.name;
-    if (entryName === ".git" || entryName === ".svn" || entryName === ".hg") continue;
-    const relativePath = path.relative(rootPath, fullPath).replace(/\\/g, "/");
-    if (state.skipRelativePaths.has(relativePath)) continue;
+    
+    // Constant-time removal for high performance
+    const targetPath = stack.pop()!;
+    
+    let currentRealPath: string;
+    try {
+      currentRealPath = await realpath(targetPath);
+    } catch (error) {
+      state.warnings.push(`Failed to resolve ${relativeDisplay(rootPath, targetPath)}: ${errorMessage(error)}`);
+      continue;
+    }
 
-    if (entry.isSymbolicLink()) {
-      try {
-        const targetRealPath = await realpath(fullPath);
-        if (!isWithinRoot(state.rootRealPath, targetRealPath)) {
-          state.warnings.push(`Skipped symlink outside workspace: ${relativePath}`);
-          continue;
-        }
-        const targetStat = await stat(fullPath);
-        if (targetStat.isDirectory()) {
-          if (!resolver.shouldIgnore(relativePath + "/", 0).ignored) {
-            results.push(...await walkFiles(rootPath, fullPath, resolver, state));
+    if (!isWithinRoot(state.rootRealPath, currentRealPath)) {
+      state.warnings.push(`Skipped path outside workspace: ${relativeDisplay(rootPath, targetPath)}`);
+      continue;
+    }
+
+    if (state.visited.has(currentRealPath)) {
+      state.warnings.push(`Skipped already visited directory: ${relativeDisplay(rootPath, targetPath)}`);
+      continue;
+    }
+    state.visited.add(currentRealPath);
+
+    let entries;
+    try {
+      entries = await readdir(targetPath, { withFileTypes: true });
+    } catch (error) {
+      state.warnings.push(`Failed to read directory ${relativeDisplay(rootPath, targetPath)}: ${errorMessage(error)}`);
+      continue;
+    }
+
+    // Reverse the loop to push children onto the stack in reverse order,
+    // preserving the original depth-first traversal semantics for symlinks
+    for (let i = entries.length - 1; i >= 0; i--) {
+      const entry = entries[i];
+      state.signal?.throwIfAborted();
+      const fullPath = path.join(targetPath, entry.name);
+      const entryName = entry.name;
+      
+      if (entryName === ".git" || entryName === ".svn" || entryName === ".hg") continue;
+      
+      const relativePath = path.relative(rootPath, fullPath).replace(/\\/g, "/");
+      if (state.skipRelativePaths.has(relativePath)) continue;
+
+      if (entry.isSymbolicLink()) {
+        try {
+          const targetRealPath = await realpath(fullPath);
+          if (!isWithinRoot(state.rootRealPath, targetRealPath)) {
+            state.warnings.push(`Skipped symlink outside workspace: ${relativePath}`);
+            continue;
           }
-        } else if (targetStat.isFile()) {
-          if (!resolver.shouldIgnore(relativePath, targetStat.size).ignored) {
-            results.push(fullPath);
+          const targetStat = await stat(fullPath);
+          if (targetStat.isDirectory()) {
+            if (!resolver.shouldIgnore(relativePath + "/", 0).ignored) {
+              stack.push(fullPath); 
+            }
+          } else if (targetStat.isFile()) {
+            if (!resolver.shouldIgnore(relativePath, targetStat.size).ignored) {
+              results.push(fullPath);
+            }
           }
+        } catch (error) {
+          state.warnings.push(`Failed to resolve symlink ${relativePath}: ${errorMessage(error)}`);
         }
-      } catch (error) {
-        state.warnings.push(`Failed to resolve symlink ${relativePath}: ${errorMessage(error)}`);
+      } else if (entry.isDirectory()) {
+        if (resolver.shouldIgnore(relativePath + "/", 0).ignored) continue;
+        stack.push(fullPath); 
+      } else if (entry.isFile()) {
+        results.push(fullPath);
       }
-    } else if (entry.isDirectory()) {
-      if (resolver.shouldIgnore(relativePath + "/", 0).ignored) continue;
-      const subResults = await walkFiles(rootPath, fullPath, resolver, state);
-      results.push(...subResults);
-    } else if (entry.isFile()) {
-      results.push(fullPath);
     }
   }
+
   return results;
 }
 
