@@ -1,4 +1,5 @@
 import type { OptimizationMode, AgentRulesOutput } from "@wma/core";
+import { getTokenBudget } from "./generateRules.js";
 
 export interface CopilotInstructionsOptions {
   mode?: OptimizationMode;
@@ -10,7 +11,7 @@ export interface CopilotInstructionsOptions {
 export function generateCopilotInstructions(
   options: CopilotInstructionsOptions = {},
 ): AgentRulesOutput {
-  const mode = options.mode ?? "balanced";
+  const mode = options.mode ?? "normal";
   const tokens = options.workspaceTokens ?? 0;
   const description = options.projectDescription ?? "Local-first token and context optimization workspace";
 
@@ -69,8 +70,7 @@ export function generateCopilotInstructions(
     fileName: ".github/copilot-instructions.md",
     content,
     mode,
-    estimatedTokens: Math.ceil(content.length / 4),
-    rulesCount: 5,
+    tokenBudget: getTokenBudget(mode),
     avoidFiles: avoidPatterns,
   };
 }

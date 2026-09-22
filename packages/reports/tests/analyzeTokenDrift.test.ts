@@ -21,22 +21,24 @@ function makeFile(
 }
 
 function makeScanResult(files: WorkspaceFileInfo[]): WorkspaceScanResult {
-  const totalTokens = files.reduce((s, f) => s + f.estimatedTokens, 0);
+  const totalEstimatedTokens = files.reduce((s, f) => s + f.estimatedTokens, 0);
   const totalBytes = files.reduce((s, f) => s + f.bytes, 0);
+  const included = files.filter((f) => f.included);
   return {
     rootPath: "/workspace",
-    files,
-    totalFiles: files.length,
-    scannedFiles: files.length,
-    includedFiles: files.filter((f) => f.included).length,
-    excludedFiles: files.filter((f) => !f.included).length,
-    totalBytes,
-    totalTokens,
-    confidence: "high",
     scannedAt: new Date().toISOString(),
-    durationMs: 10,
-    folderStats: [],
+    totalFiles: files.length,
+    includedFiles: included.length,
+    excludedFiles: files.length - included.length,
+    totalBytes,
+    includedBytes: included.reduce((s, f) => s + f.bytes, 0),
+    totalEstimatedTokens,
+    includedTokens: included.reduce((s, f) => s + f.estimatedTokens, 0),
+    files,
+    folders: [],
+    languages: [],
     warnings: [],
+    riskFiles: [],
   };
 }
 

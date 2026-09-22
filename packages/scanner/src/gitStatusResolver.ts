@@ -158,13 +158,18 @@ export function createGitStatusFilterPredicate(
     }
     normalized = normalized.toLowerCase();
 
+    if (!normalized) {
+      return false;
+    }
+
     // Check direct path match or suffix match
     if (matchingPaths.has(normalized)) {
       return true;
     }
 
+    // Suffixes must start at a path segment so "src/a.ts" does not match "src/data.ts".
     for (const target of matchingPaths) {
-      if (normalized.endsWith(target) || target.endsWith(normalized)) {
+      if (normalized.endsWith(`/${target}`) || target.endsWith(`/${normalized}`)) {
         return true;
       }
     }
