@@ -67,6 +67,9 @@ function buildTradeoffSummary(baselineCost: number, targetCost: number, model: M
     const percent = Math.round((Math.abs(diff) / baselineCost) * 100);
     return `Delivers ${percent}% cost reduction. Ideal for offloading standard repetitive development prompts.`;
   }
+  if (baselineCost <= 0) {
+    return `Adds ${diff.toFixed(2)}/mo over a free baseline in exchange for hosted frontier reasoning capability.`;
+  }
   const increasePercent = Math.round((diff / baselineCost) * 100);
   return `Invests ${increasePercent}% higher spend for superior frontier reasoning capability on complex edge-cases.`;
 }
@@ -127,22 +130,26 @@ export function analyzeCostOptimization(options: CostOptimizationOptions): CostO
       ? [...alternativePlans].sort((a, b) => a.totalMonthlySpend - b.totalMonthlySpend)[0]
       : undefined;
 
+  // Only plans that are actually cheaper than the baseline can be recommended as a switch or offload tier.
+  const savingPlans = alternativePlans.filter((p) => p.monthlySavings > 0);
+  const cheapestSavingPlan = cheapestViablePlan && cheapestViablePlan.monthlySavings > 0 ? cheapestViablePlan : undefined;
+
   // Recommended plan balances savings (savingsPercent > 20%) while maintaining high contextFitScore >= 0.9
   const recommendedPlan =
-    alternativePlans.find((p) => p.savingsPercent >= 20 && p.contextFitScore >= 0.9) ??
-    cheapestViablePlan;
+    savingPlans.find((p) => p.savingsPercent >= 20 && p.contextFitScore >= 0.9) ??
+    cheapestSavingPlan;
 
   // Compute Hybrid Tiered Strategy (60% fast/triage, 30% balanced editing, 10% complex frontier)
   const fastCandidate =
-    alternativePlans.find((p) => p.savingsPercent > 40) ?? cheapestViablePlan;
+    savingPlans.find((p) => p.savingsPercent > 40) ?? cheapestSavingPlan;
   const balancedCandidate =
-    alternativePlans.find((p) => p.savingsPercent >= 10 && p.savingsPercent <= 40) ?? alternativePlans[0];
+    savingPlans.find((p) => p.savingsPercent >= 10 && p.savingsPercent <= 40) ?? savingPlans[0];
   const frontierModel = baselineModel;
 
   const hybridRules: HybridTieredDispatchRule[] = [];
   let blendedMonthlyCost = 0;
 
-  if (fastCandidate && balancedCandidate) {
+  if (fastCandidate && balancedCandidate && totalTeamRuns > 0) {
     const triageRuns = Math.round(totalTeamRuns * 0.6);
     const editingRuns = Math.round(totalTeamRuns * 0.3);
     const reasoningRuns = totalTeamRuns - triageRuns - editingRuns;

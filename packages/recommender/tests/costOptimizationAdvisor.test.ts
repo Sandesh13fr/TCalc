@@ -205,4 +205,30 @@ describe("analyzeCostOptimization", () => {
     expect(advice.hybridStrategy.rules[0].tier).toBe("balanced_editing");
     expect(advice.hybridStrategy.rules[0].trafficPercentage).toBe(100);
   });
+
+  it("does not recommend or offload to candidates that cost more than the baseline", () => {
+    const advice = analyzeCostOptimization({
+      baselineModel: gpt4oMini,
+      candidateModels: [sonnetModel, haikuModel],
+    });
+
+    expect(advice.alternativePlans.every((p) => p.monthlySavings < 0)).toBe(true);
+    expect(advice.recommendedPlan).toBeUndefined();
+    expect(advice.hybridStrategy.rules).toHaveLength(1);
+    expect(advice.hybridStrategy.rules[0].modelId).toBe(gpt4oMini.id);
+    expect(advice.hybridStrategy.blendedMonthlyCost).toBe(advice.baselineMonthlySpend);
+    expect(advice.hybridStrategy.monthlySavings).toBe(0);
+  });
+
+  it("describes paid candidates against a free baseline without an infinite percentage", () => {
+    const advice = analyzeCostOptimization({
+      baselineModel: localLlama,
+      candidateModels: [haikuModel],
+    });
+
+    const [plan] = advice.alternativePlans;
+    expect(plan.tradeoffSummary).not.toMatch(/Infinity|NaN/);
+    expect(plan.tradeoffSummary).toContain("free baseline");
+    expect(advice.recommendedPlan).toBeUndefined();
+  });
 });
