@@ -3,7 +3,17 @@ import Lightfall from "../components/Lightfall";
 import ReportViewer from "../components/ReportViewer";
 import { docs } from "../lib/docs";
 
-const providers = [
+interface Provider {
+  name: string;
+  src: string;
+  className?: string;
+}
+
+type ModelRow = [string, string, string, string];
+
+type FeatureRow = [string, string];
+
+const providers: Provider[] = [
   { name: "OpenAI", src: "/providers/openai.svg", className: "provider-invert" },
   { name: "Google", src: "/providers/google.svg" },
   { name: "Anthropic", src: "/providers/anthropic.svg", className: "provider-invert" },
@@ -12,7 +22,7 @@ const providers = [
   { name: "DeepSeek", src: "/providers/deepseek.svg" },
 ];
 
-const modelRows = [
+const modelRows: ModelRow[] = [
   ["1", "Gemini 2.5 Pro", "1,048,576 context", "$0.86"],
   ["2", "GPT-4o", "128,000 context", "$1.32"],
   ["3", "Claude Sonnet 4", "200,000 context", "$1.18"],
@@ -20,7 +30,7 @@ const modelRows = [
   ["5", "DeepSeek V3", "128,000 context", "$0.52"],
 ];
 
-const featureRows = [
+const featureRows: FeatureRow[] = [
   ["Accurate token counting", "Model-aware tokenization for precise estimates."],
   ["Smart model recommendations", "Ranked by fit, context window, and cost."],
   ["100% local and private", "Everything runs on your machine. Zero telemetry."],
