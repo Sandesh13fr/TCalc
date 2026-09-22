@@ -73,6 +73,7 @@ export function registerScanWorkspaceCommand(
               goal: goal as any,
               privacyMode: privacyMode as any,
               budget: policy?.maxTokenBudget,
+              preferredModelIds: profile?.preferredModelIds,
             });
           } catch (err) {
             scanResult.warnings.push(`Recommendations failed: ${err instanceof Error ? err.message : String(err)}`);
