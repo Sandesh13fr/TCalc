@@ -6,6 +6,7 @@ import { handleEstimateFilesTokens } from "../src/tools/estimateFilesTokensTool.
 import { createServer } from "../src/server.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { scanWorkspace } from "@wma/scanner";
 
 describe("estimateFilesTokensTool", () => {
   let tempDir: string;
@@ -21,6 +22,22 @@ describe("estimateFilesTokensTool", () => {
   afterEach(async () => {
     delete process.env.WMA_ALLOWED_ROOT;
     await rm(tempDir, { recursive: true, force: true });
+  });
+
+  it("reports the same per-file tokens as scan_workspace", async () => {
+    await writeFile(path.join(tempDir, "config.json"), JSON.stringify({ name: "tcalc", values: [1, 2, 3] }, null, 2));
+    await writeFile(path.join(tempDir, "empty.ts"), "");
+
+    const filePaths = ["src/index.ts", "src/utils.ts", "config.json", "empty.ts"];
+    const result = await handleEstimateFilesTokens({ workspaceRoot: tempDir, filePaths });
+    const parsed = JSON.parse(result.content[0].text);
+    const scan = await scanWorkspace({ rootPath: tempDir });
+
+    for (const relativePath of filePaths) {
+      const estimated = parsed.files.find((f: { relativePath: string }) => f.relativePath === relativePath);
+      const scanned = scan.files.find((f) => f.relativePath === relativePath);
+      expect(estimated?.estimatedTokens, relativePath).toBe(scanned?.estimatedTokens);
+    }
   });
 
   it("fails on invalid input missing filePaths", async () => {

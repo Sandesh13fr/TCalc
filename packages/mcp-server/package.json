@@ -25,6 +25,7 @@
     "@wma/repo-map": "workspace:*",
     "@wma/reports": "workspace:*",
     "@wma/scanner": "workspace:*",
+    "@wma/tokenizers": "workspace:*",
     "zod": "^3.23.0"
   },
   "devDependencies": {
