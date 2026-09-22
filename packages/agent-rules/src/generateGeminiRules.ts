@@ -1,4 +1,5 @@
 import type { OptimizationMode, AgentRulesOutput } from "@wma/core";
+import { getTokenBudget } from "./generateRules.js";
 
 export interface GeminiRulesOptions {
   mode?: OptimizationMode;
@@ -8,7 +9,7 @@ export interface GeminiRulesOptions {
 }
 
 export function generateGeminiRules(options: GeminiRulesOptions = {}): AgentRulesOutput {
-  const mode = options.mode ?? "balanced";
+  const mode = options.mode ?? "normal";
   const tokens = options.workspaceTokens ?? 0;
   const systemRole = options.systemRole ?? "Senior Full-Stack Architect & Optimization Specialist";
 
@@ -69,8 +70,7 @@ export function generateGeminiRules(options: GeminiRulesOptions = {}): AgentRule
     fileName: "GEMINI.md",
     content,
     mode,
-    estimatedTokens: Math.ceil(content.length / 4),
-    rulesCount: 5,
+    tokenBudget: getTokenBudget(mode),
     avoidFiles: avoidPatterns,
   };
 }

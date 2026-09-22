@@ -12,7 +12,9 @@ export async function run(): Promise<void> {
   assert.ok(commands.includes("workspaceModelAdvisor.openDashboard"));
   assert.ok(extension.packageJSON.contributes.viewsContainers.activitybar.some((view: { id: string }) => view.id === "tcalc"));
   assert.ok(extension.packageJSON.contributes.views.tcalc.some((view: { id: string }) => view.id === "tcalc.sidebar"));
+  const fileChanges = new vscode.EventEmitter<vscode.FileChangeEvent[]>();
   const virtualProvider = vscode.workspace.registerFileSystemProvider("tcalc-test", {
+    onDidChangeFile: fileChanges.event,
     stat: () => ({ type: vscode.FileType.Directory, ctime: 0, mtime: 0, size: 0 }),
     readDirectory: () => [],
     createDirectory: () => undefined,
@@ -33,5 +35,6 @@ export async function run(): Promise<void> {
     assert.match(VIRTUAL_WORKSPACE_ERROR, /open folder/i);
   } finally {
     virtualProvider.dispose();
+    fileChanges.dispose();
   }
 }
