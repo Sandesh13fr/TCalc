@@ -56,6 +56,7 @@ program
   .option("--output <file>", "Write output to file")
   .option("--force", "Overwrite an existing output file")
   .option("--cache", "Reuse unchanged file estimates from .tcalc/scan-cache.json")
+  .option("--copy", "Copy scan output to clipboard")
   .action(async (target, opts) => {
     try {
       const output = await executeScan({
@@ -65,6 +66,7 @@ program
         format: opts.format,
         output: opts.output,
         cache: opts.cache,
+        copy: opts.copy,
         debug: program.opts().debug,
       });
       await writeOutput(output, opts.output, opts.force);

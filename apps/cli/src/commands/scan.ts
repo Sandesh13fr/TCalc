@@ -2,6 +2,7 @@ import { scanWorkspace } from "@wma/scanner";
 import { formatScanTable, formatScanJson } from "../utils/output.js";
 import { resolveTargetPath } from "../utils/paths.js";
 import { loadWorkspaceConfig } from "../utils/loadWorkspaceConfig.js";
+import { copyToClipboard } from "../utils/clipboard.js";
 import path from "node:path";
 
 export interface ScanOptions {
@@ -12,6 +13,7 @@ export interface ScanOptions {
   output?: string;
   debug?: boolean;
   cache?: boolean;
+  copy?: boolean;
 }
 
 export async function executeScan(options: ScanOptions): Promise<string> {
@@ -37,6 +39,11 @@ export async function executeScan(options: ScanOptions): Promise<string> {
     default:
       output = formatScanTable(scanResult);
       break;
+  }
+
+  if (options.copy) {
+    await copyToClipboard(output);
+    console.error("Scan result copied to clipboard.");
   }
 
   return output;

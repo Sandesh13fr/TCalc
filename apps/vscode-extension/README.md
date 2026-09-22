@@ -67,7 +67,7 @@ Build once, then scan, compare, or generate only the context you need:
 pnpm install
 pnpm build
 
-pnpm cli scan ./my-project
+pnpm cli scan ./my-project --copy
 pnpm cli recommend ./my-project --goal build-mvp
 pnpm cli repo-map ./my-project --budget 8000
 pnpm cli rules ./my-project --target codex --mode repo-map-first
@@ -122,7 +122,7 @@ pnpm cli mcp
 | `apps/cli` | Commander-based CLI |
 | `apps/vscode-extension` | VS Code dashboard and commands |
 | `apps/jetbrains-plugin` | IntelliJ Platform plugin MVP |
-| `apps/dashboard` | Plain HTML/CSS/JS website and optional report service |
+| `apps/dashboard` | Next.js website, documentation, local report viewer, and optional report service |
 
 </details>
 

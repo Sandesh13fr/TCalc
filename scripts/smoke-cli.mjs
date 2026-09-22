@@ -29,8 +29,10 @@ function main() {
   console.log("");
 
   run("help", `${cli} --help`);
+  run("scan help", `${cli} scan --help`);
   run("scan fixture (table)", `${cli} scan ${fixture} --format table`);
   run("scan fixture (json)", `${cli} scan ${fixture} --format json`);
+  run("scan fixture (copy)", `${cli} scan ${fixture} --copy`);
   run("recommend fixture", `${cli} recommend ${fixture} --catalog catalogs/models.json --format json`);
   run("repo-map fixture", `${cli} repo-map ${fixture} --budget 8000`);
   run("repo-map fixture (json)", `${cli} repo-map ${fixture} --budget 8000 --format json`);

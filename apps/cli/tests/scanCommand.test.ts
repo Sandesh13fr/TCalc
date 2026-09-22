@@ -1,5 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { executeScan } from "../src/commands/scan.js";
+import { setClipboardAdapter, resetClipboardAdapter, type ClipboardAdapter } from "../src/utils/clipboard.js";
+import { CliError } from "../src/utils/errors.js";
 import path from "node:path";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -7,6 +9,14 @@ import { tmpdir } from "node:os";
 const fixturePath = path.resolve("fixtures/small-node-app");
 
 describe("scan command", () => {
+  beforeEach(() => {
+    resetClipboardAdapter();
+  });
+
+  afterEach(() => {
+    resetClipboardAdapter();
+  });
+
   it("scan fixture workspace in JSON format", async () => {
     const output = await executeScan({
       target: "fixtures/small-node-app",
@@ -74,5 +84,45 @@ describe("scan command", () => {
     } finally {
       cwd.mockRestore();
     }
+  });
+
+  it("copies output to clipboard when copy option is true", async () => {
+    let copiedText = "";
+    const mockAdapter: ClipboardAdapter = {
+      async writeText(text: string) {
+        copiedText = text;
+      },
+    };
+    setClipboardAdapter(mockAdapter);
+
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const output = await executeScan({
+        target: "fixtures/small-node-app",
+        format: "json",
+        copy: true,
+      });
+
+      expect(copiedText).toBe(output);
+      expect(consoleErrorSpy).toHaveBeenCalledWith("Scan result copied to clipboard.");
+    } finally {
+      consoleErrorSpy.mockRestore();
+    }
+  });
+
+  it("handles clipboard failures when copy option is true", async () => {
+    const failingAdapter: ClipboardAdapter = {
+      async writeText() {
+        throw new CliError("Failed to copy scan result to clipboard: tool unavailable.");
+      },
+    };
+    setClipboardAdapter(failingAdapter);
+
+    await expect(
+      executeScan({
+        target: "fixtures/small-node-app",
+        copy: true,
+      })
+    ).rejects.toThrow("Failed to copy scan result to clipboard: tool unavailable.");
   });
 });
