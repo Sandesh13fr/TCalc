@@ -2,12 +2,12 @@ name: JetBrains Plugin Build
 
 on:
   push:
-    branches: [main]
+    branches: [main, Development]
     paths:
       - "apps/jetbrains-plugin/**"
       - ".github/workflows/jetbrains-build.yml"
   pull_request:
-    branches: [main]
+    branches: [main, Development]
     paths:
       - "apps/jetbrains-plugin/**"
       - ".github/workflows/jetbrains-build.yml"

@@ -1,5 +1,6 @@
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import type { RiskFlag } from "@wma/core";
 
 export interface ScanCacheEntry {
@@ -34,11 +35,13 @@ export async function loadScanCache(cacheFile: string | undefined, tokenizerKey:
 export async function saveScanCache(cacheFile: string | undefined, tokenizerKey: string, files: Map<string, ScanCacheEntry>): Promise<void> {
   if (!cacheFile) return;
   await mkdir(path.dirname(cacheFile), { recursive: true });
-  const temporary = `${cacheFile}.${process.pid}.tmp`;
+  const temporary = `${cacheFile}.${process.pid}.${randomUUID()}.tmp`;
   const payload: ScanCacheFile = { version: SCAN_CACHE_VERSION, tokenizerKey, files: Object.fromEntries(files) };
-  await writeFile(temporary, JSON.stringify(payload), "utf8");
-  await rename(temporary, cacheFile).catch(async () => {
-    await writeFile(cacheFile, JSON.stringify(payload), "utf8");
-    await rm(temporary, { force: true });
-  });
+
+  try {
+    await writeFile(temporary, JSON.stringify(payload), "utf8");
+    await rename(temporary, cacheFile);
+  } finally {
+    await rm(temporary, { force: true }).catch(() => undefined);
+  }
 }

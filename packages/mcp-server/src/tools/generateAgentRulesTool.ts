@@ -48,6 +48,7 @@ export async function handleGenerateAgentRules(input: Record<string, unknown>) {
         workspaceTokens: scanResult.includedTokens,
         goal,
         privacyMode,
+        preferredModelIds: profile?.preferredModelIds,
       })
     : null;
 

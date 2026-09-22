@@ -40,6 +40,7 @@ export async function executeReport(options: ReportOptions): Promise<string> {
         workspaceTokens: scanResult.includedTokens,
         goal,
         privacyMode: privacy,
+        preferredModelIds: profile?.preferredModelIds,
       });
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
