@@ -43,21 +43,7 @@
     "color": "#1e1e1e",
     "theme": "dark"
   },
-  "activationEvents": [
-    "onCommand:workspaceModelAdvisor.scanWorkspace",
-    "onCommand:workspaceModelAdvisor.openDashboard",
-    "onCommand:workspaceModelAdvisor.exportReport",
-    "onCommand:workspaceModelAdvisor.setWorkspaceGoal",
-    "onCommand:workspaceModelAdvisor.compareModels",
-    "onCommand:workspaceModelAdvisor.generateAgentRules",
-    "onCommand:workspaceModelAdvisor.updateModelCatalog",
-    "onCommand:workspaceModelAdvisor.openSettings",
-    "onCommand:workspaceModelAdvisor.generateRepoMap",
-    "onCommand:workspaceModelAdvisor.showWelcome",
-    "onCommand:workspaceModelAdvisor.quickStart",
-    "onCommand:workspaceModelAdvisor.generateMcpConfig",
-    "onView:tcalc.sidebar"
-  ],
+  "activationEvents": [],
   "main": "dist/extension.js",
   "capabilities": {
     "untrustedWorkspaces": {
@@ -135,7 +121,8 @@
         {
           "id": "tcalc.sidebar",
           "name": "Workspace Overview",
-          "type": "webview"
+          "type": "webview",
+          "icon": "media/activity.svg"
         }
       ]
     },
