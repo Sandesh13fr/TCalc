@@ -44,9 +44,20 @@ export function generateMarkdownReport(scanResult: WorkspaceScanResult, recommen
     lines.push("");
   }
 
+  const folderIncludedTokens = (folderPath: string): number => {
+    const prefix = folderPath === "." ? "" : `${folderPath.replace(/\/$/, "")}/`;
+    return sortedFiles.reduce((total, file) => {
+      if (folderPath === "." || file.relativePath.startsWith(prefix)) {
+        return total + file.estimatedTokens;
+      }
+      return total;
+    }, 0);
+  };
+
   const sortedFolders = [...scanResult.folders]
     .filter((f) => f.includedFiles > 0)
-    .sort((a, b) => b.totalTokens - a.totalTokens);
+    .map((f) => ({ ...f, includedTokens: folderIncludedTokens(f.folderPath) }))
+    .sort((a, b) => b.includedTokens - a.includedTokens);
   const top10Folders = sortedFolders.slice(0, 10);
 
   if (top10Folders.length > 0) {
@@ -55,7 +66,7 @@ export function generateMarkdownReport(scanResult: WorkspaceScanResult, recommen
     lines.push("| # | Folder | Files | Tokens | % of Total |");
     lines.push("| --- | --- | ---:| ---:| ---:|");
     top10Folders.forEach((f, i) => {
-      lines.push(`| ${i + 1} | ${markdownCode(f.folderPath)} | ${f.includedFiles} | ${f.totalTokens.toLocaleString()} | ${pct(f.totalTokens / scanResult.includedTokens)} |`);
+      lines.push(`| ${i + 1} | ${markdownCode(f.folderPath)} | ${f.includedFiles} | ${f.includedTokens.toLocaleString()} | ${pct(f.includedTokens / scanResult.includedTokens)} |`);
     });
     lines.push("");
   }

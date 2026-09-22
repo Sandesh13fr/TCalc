@@ -4,3 +4,5 @@ export { countWorkspaceTokens } from "./countWorkspaceTokens.js";
 export type { WorkspaceTokenCount } from "./countWorkspaceTokens.js";
 export { estimateProviderTokens } from "./providerTokenizer.js";
 export type { ProviderTokenizer } from "./providerTokenizer.js";
+export { estimateTokenDensity } from "./tokenDensityEstimator.js";
+export type * from "./types/density.js";

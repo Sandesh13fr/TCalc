@@ -44,6 +44,7 @@ export async function handleGenerateReport(input: Record<string, unknown>) {
   if (models.length > 0) {
     recommendation = recommendModels({
       models,
+      preferredModelIds: profile?.preferredModelIds,
       workspaceTokens: scanResult.includedTokens,
       goal,
       privacyMode,

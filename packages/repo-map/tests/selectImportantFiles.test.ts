@@ -118,6 +118,35 @@ describe("selectImportantFiles", () => {
     expect(selected.configFiles.length).toBeGreaterThanOrEqual(2);
   });
 
+  it("keeps scanner-classified generated files listed after exclusion", () => {
+    const result = makeScanResult([
+      makeFile({ relativePath: "src/vendor.min.js", extension: ".js", estimatedTokens: 5000, included: false, excludedReason: "generated", riskFlags: ["generated"] }),
+      makeFile({ relativePath: "src/index.ts", extension: ".ts" }),
+    ]);
+    const selected = selectImportantFiles(result, { tokenBudget: 8000 });
+
+    const generated = selected.generatedFiles.find((f) => f.relativePath === "src/vendor.min.js");
+    expect(generated).toBeDefined();
+    expect(selected.excludedFiles.map((f) => f.relativePath)).toContain("src/vendor.min.js");
+
+    // Exclusion is a token-budget decision, so the file must not be recommended for inclusion.
+    expect(selected.importantFiles.map((f) => f.relativePath)).not.toContain("src/vendor.min.js");
+    expect(selected.recommendedInclude.map((f) => f.relativePath)).not.toContain("src/vendor.min.js");
+
+    const excludeCount = selected.recommendedExclude.filter((f) => f.relativePath === "src/vendor.min.js").length;
+    expect(excludeCount).toBe(1);
+  });
+
+  it("recommends each overlapping file for exclusion only once", () => {
+    const result = makeScanResult([
+      makeFile({ relativePath: "dist/bundle.min.js", extension: ".js", estimatedTokens: 8000, riskFlags: ["generated"] }),
+    ]);
+    const selected = selectImportantFiles(result, { tokenBudget: 8000 });
+
+    const paths = selected.recommendedExclude.map((f) => f.relativePath);
+    expect(paths).toEqual([...new Set(paths)]);
+  });
+
   it("marks excluded files", () => {
     const result = makeScanResult([
       makeFile({ relativePath: "node_modules/foo/index.js", extension: ".js", included: false, excludedReason: "In .gitignore" }),

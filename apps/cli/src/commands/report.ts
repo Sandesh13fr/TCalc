@@ -36,13 +36,16 @@ export async function executeReport(options: ReportOptions): Promise<string> {
     try {
       recommendation = recommendModels({
         models,
+        preferredModelIds: profile?.preferredModelIds,
         workspaceTokens: scanResult.includedTokens,
         goal,
         privacyMode: privacy,
         preferredModelIds: profile?.preferredModelIds,
       });
-    } catch {
-      // proceed without recommendations
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      scanResult.warnings.push(`Recommendations unavailable: ${reason}`);
+      if (options.debug) console.warn(`Recommendation failed: ${reason}`);
     }
   }
 

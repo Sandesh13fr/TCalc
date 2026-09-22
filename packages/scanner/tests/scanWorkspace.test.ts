@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, stat, symlink, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { scanWorkspace } from "../src/scanWorkspace.js";
@@ -66,6 +66,20 @@ describe("scanWorkspace traversal", () => {
     expect(result.warnings.some((warning) => warning.includes("already visited directory"))).toBe(true);
   });
 
+  it("applies ignore rules to symlinked files inside the workspace", async () => {
+    const root = await tempDirectory("tcalc-symlink-ignore-");
+    const source = path.join(root, "source.txt");
+    await writeFile(source, "sensitive workspace content");
+    await writeFile(path.join(root, ".gitignore"), "ignored-link.txt\n");
+    await symlink(source, path.join(root, "ignored-link.txt"), "file");
+    await symlink(source, path.join(root, "included-link.txt"), "file");
+
+    const result = await scanWorkspace({ rootPath: root });
+
+    expect(result.files.map((file) => file.relativePath)).toContain("included-link.txt");
+    expect(result.files.map((file) => file.relativePath)).not.toContain("ignored-link.txt");
+  });
+
   it("reports filesystem failures as warnings", async () => {
     const root = await tempDirectory("tcalc-warning-");
     const target = await tempDirectory("tcalc-missing-");
@@ -93,6 +107,36 @@ describe("scanWorkspace traversal", () => {
     expect(second.totalFiles).toBe(first.totalFiles);
     expect(second.files.some((file) => file.path === cacheFile)).toBe(false);
     expect(third.cacheMisses).toBeGreaterThan(0);
+  });
+
+  it("rebuilds version 2 caches so stale SQL dump flags do not survive upgrades", async () => {
+    const root = await tempDirectory("tcalc-cache-sql-upgrade-");
+    const cacheFile = path.join(root, ".cache", "scan.json");
+    const source = path.join(root, "query.sql");
+    await writeFile(source, "SELECT id FROM users;");
+    const sourceStat = await stat(source);
+    await mkdir(path.dirname(cacheFile), { recursive: true });
+    await writeFile(cacheFile, JSON.stringify({
+      version: 2,
+      tokenizerKey: "heuristic-v1",
+      files: {
+        "query.sql": {
+          bytes: sourceStat.size,
+          mtimeMs: sourceStat.mtimeMs,
+          estimatedTokens: 1,
+          riskFlags: ["database-dump"],
+        },
+      },
+    }));
+
+    const result = await scanWorkspace({ rootPath: root, cacheFile });
+    const query = result.files.find((file) => file.relativePath === "query.sql");
+    const rebuiltCache = JSON.parse(await readFile(cacheFile, "utf8")) as { version: number };
+
+    expect(result.cacheHits).toBe(0);
+    expect(query?.riskFlags).not.toContain("database-dump");
+    expect(query?.included).toBe(true);
+    expect(rebuiltCache.version).toBe(3);
   });
 
   it("uses an optional provider tokenizer in the scan path", async () => {
@@ -134,6 +178,59 @@ describe("scanWorkspace traversal", () => {
 
     // Only the surviving file contributes to the total file count.
     expect(result.totalFiles).toBe(1);
+  });
+
+  it("excludes generated assets outside build directories from the workspace total", async () => {
+    const root = await tempDirectory("tcalc-generated-");
+    const source = path.join(root, "src");
+    await mkdir(source);
+    await writeFile(path.join(source, "index.ts"), "export const value = 1;");
+    await writeFile(path.join(source, "vendor.min.js"), `${"a".repeat(2000)};`);
+
+    const result = await scanWorkspace({ rootPath: root });
+
+    const vendor = result.files.find((file) => file.relativePath === "src/vendor.min.js");
+    const index = result.files.find((file) => file.relativePath === "src/index.ts");
+    expect(vendor?.riskFlags).toContain("generated");
+    expect(vendor?.included).toBe(false);
+    expect(vendor?.estimatedTokens).toBeGreaterThan(0);
+    expect(result.includedTokens).toBe(index?.estimatedTokens);
+  });
+
+  it("discards legacy v1 caches so post-4KB secrets are rescanned and excluded", async () => {
+    const root = await tempDirectory("tcalc-legacy-cache-");
+    const fileName = "late-secret.ts";
+    const filePath = path.join(root, fileName);
+    const content = `${"a".repeat(5000)}\napi_key = "12345678901234567890"\n`;
+    await writeFile(filePath, content);
+    const fileStat = await stat(filePath);
+    const cacheFile = path.join(root, ".cache", "scan.json");
+    await mkdir(path.dirname(cacheFile), { recursive: true });
+    // Legacy preview-only cache entry: same bytes/mtime but no secret flag.
+    const legacy = {
+      version: 1,
+      tokenizerKey: "heuristic-v1",
+      files: {
+        [fileName]: {
+          bytes: Number(fileStat.size),
+          mtimeMs: fileStat.mtimeMs,
+          estimatedTokens: 10,
+          riskFlags: [],
+        },
+      },
+    };
+    await writeFile(cacheFile, JSON.stringify(legacy), "utf8");
+
+    const result = await scanWorkspace({ rootPath: root, cacheFile });
+
+    const scanned = result.files.find((f) => f.relativePath === fileName);
+    expect(scanned).toBeDefined();
+    expect(scanned!.riskFlags).toContain("secret");
+    expect(scanned!.included).toBe(false);
+    // Legacy entry must not be reused as a cache hit.
+    expect(result.cacheHits ?? 0).toBe(0);
+    const persisted = JSON.parse(await readFile(cacheFile, "utf8"));
+    expect(persisted.version).toBe(2);
   });
 });
 

@@ -8,10 +8,11 @@ export interface RecommendModelsOptions {
   outputTokens?: number;
   budget?: number;
   privacyMode?: PrivacySetting;
-  /** IDs of models the team has designated as preferred. Used only as a final
-   * tiebreaker after cost, totalScore, and confidenceScore are all equal.
-   * Cannot make an ineligible or objectively lower-ranked model win. */
-  preferredModelIds?: string[];
+  /**
+   * Model ids a team policy prefers. Used only to break ties between candidates the scoring logic
+   * already ranks equally; it never changes how a model is scored or whether it is eligible.
+   */
+  preferredModelIds?: readonly string[];
 }
 
 const DEFAULT_OUTPUT_TOKENS: Record<WorkspaceGoal, number> = {
@@ -41,12 +42,24 @@ const GOAL_DIFFICULTY: Record<WorkspaceGoal, number> = {
 };
 
 export function recommendModels(options: RecommendModelsOptions): RecommendationResult {
-  const { models, workspaceTokens, goal, outputTokens: optOutputTokens, privacyMode = "local-first", budget, preferredModelIds } = options;
-  const preferred = new Set(preferredModelIds ?? []);
+  const { models, workspaceTokens, goal, outputTokens: optOutputTokens, privacyMode = "local-first", budget } = options;
+  const preferredIds = new Set(options.preferredModelIds ?? []);
+  const preferenceRank = (a: { model: ModelInfo }, b: { model: ModelInfo }): number =>
+    Number(preferredIds.has(b.model.id)) - Number(preferredIds.has(a.model.id));
+
+  if (!Number.isFinite(workspaceTokens) || workspaceTokens < 0) {
+    throw new RangeError(`workspaceTokens must be a finite number >= 0 (got ${workspaceTokens})`);
+  }
+  if (budget !== undefined && (!Number.isFinite(budget) || budget < 0)) {
+    throw new RangeError(`budget must be a finite number >= 0 (got ${budget})`);
+  }
+  if (optOutputTokens !== undefined && (!Number.isFinite(optOutputTokens) || optOutputTokens <= 0)) {
+    throw new RangeError(`outputTokens must be a finite number > 0 (got ${optOutputTokens})`);
+  }
 
   const contextTokens = budget === undefined ? workspaceTokens : Math.min(workspaceTokens, budget);
   const contextNeeded = Math.round(contextTokens * 1.2);
-  const outputTokens = optOutputTokens ?? DEFAULT_OUTPUT_TOKENS[goal];
+  const outputTokens = optOutputTokens ?? DEFAULT_OUTPUT_TOKENS[goal] ?? 4000;
 
   const assumptions: string[] = [
     `Output tokens estimated for "${goal}" goal: ${outputTokens}`,
@@ -54,6 +67,9 @@ export function recommendModels(options: RecommendModelsOptions): Recommendation
     budget !== undefined
       ? `Context limited to user-specified budget of ${budget} tokens`
       : `Using full workspace tokens (${workspaceTokens}) as context`,
+    privacyMode === "local-first"
+      ? "Local-first privacy mode only considers models with verified local execution support"
+      : "Cloud-capable models may be considered",
   ];
 
   const rejected: string[] = [];
@@ -61,7 +77,7 @@ export function recommendModels(options: RecommendModelsOptions): Recommendation
   const overflowing: Array<{ model: ModelInfo; score: ModelScore; cost: CostEstimate }> = [];
 
   for (const model of models) {
-    if (privacyMode === "local-first" && model.privacyMode === "cloud") {
+    if (privacyMode === "local-first" && !model.supportsLocal) {
       continue;
     }
 
@@ -116,16 +132,14 @@ export function recommendModels(options: RecommendModelsOptions): Recommendation
 
   const usedIds = new Set<string>();
   const duplicationReason = "Same model selected for multiple tiers due to limited fitting candidates";
-  // Preference tiebreaker: only consulted when all preceding substantive criteria are equal.
-  const byPreference = (a: { model: ModelInfo }, b: { model: ModelInfo }): number =>
-    Number(preferred.has(b.model.id)) - Number(preferred.has(a.model.id))
-    || a.model.id.localeCompare(b.model.id);
+  // Team preference is the last resort before the alphabetical tiebreak: it only separates
+  // candidates the scoring keys above have already ranked equally.
   const cheapestRanked = [...candidates].sort((a, b) =>
-    a.cost.totalCost - b.cost.totalCost || b.score.totalScore - a.score.totalScore || byPreference(a, b));
+    a.cost.totalCost - b.cost.totalCost || b.score.totalScore - a.score.totalScore || preferenceRank(a, b) || a.model.id.localeCompare(b.model.id));
   const balancedRanked = [...candidates].sort((a, b) =>
-    b.score.totalScore - a.score.totalScore || a.cost.totalCost - b.cost.totalCost || byPreference(a, b));
+    b.score.totalScore - a.score.totalScore || a.cost.totalCost - b.cost.totalCost || preferenceRank(a, b) || a.model.id.localeCompare(b.model.id));
   const confidenceRanked = [...candidates].sort((a, b) =>
-    confidenceScore(b) - confidenceScore(a) || b.score.totalScore - a.score.totalScore || byPreference(a, b));
+    confidenceScore(b) - confidenceScore(a) || b.score.totalScore - a.score.totalScore || preferenceRank(a, b) || a.model.id.localeCompare(b.model.id));
 
   const pickUnused = (ranked: typeof candidates): typeof candidates[0] => {
     const selected = ranked.find((candidate) => !usedIds.has(candidate.model.id)) ?? ranked[0];
@@ -184,6 +198,7 @@ function confidenceScore(candidate: { model: ModelInfo; score: ModelScore }): nu
 }
 
 function calculateContextFit(model: ModelInfo, contextNeeded: number): number {
+  if (contextNeeded <= 0) return 1.0;
   if (model.contextWindow >= contextNeeded * 2) return 1.0;
   if (model.contextWindow >= contextNeeded) return 0.8;
   if (model.contextWindow >= contextNeeded * 0.75) return 0.5;
@@ -203,6 +218,7 @@ function calculateCostEfficiency(cost: CostEstimate): number {
 }
 
 function calculateOverflowRisk(model: ModelInfo, contextNeeded: number): number {
+  if (contextNeeded <= 0) return 0;
   if (model.contextWindow >= contextNeeded) return 0;
   return Math.min(1, 1 - model.contextWindow / contextNeeded);
 }

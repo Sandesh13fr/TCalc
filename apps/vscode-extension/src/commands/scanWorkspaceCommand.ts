@@ -68,6 +68,7 @@ export function registerScanWorkspaceCommand(
           try {
             recommendation = recommendModels({
               models,
+              preferredModelIds: profile?.preferredModelIds,
               workspaceTokens: scanResult.includedTokens,
               goal: goal as any,
               privacyMode: privacyMode as any,

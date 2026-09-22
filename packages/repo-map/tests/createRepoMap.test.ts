@@ -127,6 +127,37 @@ describe("createRepoMap", () => {
     expect(ts).toBeDefined();
   });
 
+  it("warns about generated files that the scanner excluded", () => {
+    const files: WorkspaceFileInfo[] = [
+      makeFile({ relativePath: "src/index.ts", extension: ".ts", estimatedTokens: 200 }),
+      makeFile({ relativePath: "src/vendor.min.js", extension: ".js", estimatedTokens: 5000, included: false, excludedReason: "generated", riskFlags: ["generated"] }),
+    ];
+    const scan: WorkspaceScanResult = {
+      rootPath: "/workspace",
+      scannedAt: new Date().toISOString(),
+      totalFiles: files.length,
+      includedFiles: files.filter((f) => f.included).length,
+      excludedFiles: files.filter((f) => !f.included).length,
+      totalBytes: files.reduce((s, f) => s + f.bytes, 0),
+      includedBytes: files.filter((f) => f.included).reduce((s, f) => s + f.bytes, 0),
+      totalEstimatedTokens: files.reduce((s, f) => s + f.estimatedTokens, 0),
+      includedTokens: files.filter((f) => f.included).reduce((s, f) => s + f.estimatedTokens, 0),
+      files,
+      folders: [],
+      languages: [],
+      warnings: [],
+      riskFiles: files.filter((f) => f.riskFlags.length > 0),
+    };
+    const result = createRepoMap(scan, { tokenBudget: 8000 });
+
+    expect(result.generatedFiles.map((f) => f.relativePath)).toContain("src/vendor.min.js");
+    expect(result.agentInstructions.some((line) => line.includes("generated file(s)"))).toBe(true);
+
+    // The excluded file keeps its tokens out of the map's important set.
+    expect(result.importantFiles.map((f) => f.relativePath)).not.toContain("src/vendor.min.js");
+    expect(result.recommendedExclude.filter((f) => f.relativePath === "src/vendor.min.js")).toHaveLength(1);
+  });
+
   it("handles empty scan result gracefully", () => {
     const scan: WorkspaceScanResult = {
       rootPath: "/empty",

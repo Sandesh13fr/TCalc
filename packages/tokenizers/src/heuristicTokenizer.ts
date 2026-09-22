@@ -1,3 +1,5 @@
+import path from "node:path";
+
 export type TokenConfidence = "exact" | "provider-estimated" | "tokenizer-estimated" | "heuristic";
 
 export interface TokenEstimate {
@@ -16,7 +18,7 @@ export function estimateTokens(text: string): number {
 
 export function estimateFileTokens(content: string, filename?: string): number {
   if (!filename) return estimateTokens(content);
-  const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+  const ext = path.extname(filename).slice(1).toLowerCase();
   return Math.round(estimateTokens(content) * (EXTENSION_ADJUSTMENTS[ext] ?? 1));
 }
 
@@ -35,7 +37,7 @@ export class HeuristicTokenizer {
   estimateFile(filename: string, content: string): TokenEstimate {
     const base = this.estimate(content);
 
-    const ext = filename.split(".").pop()?.toLowerCase();
+    const ext = path.extname(filename).slice(1).toLowerCase();
     const factor = EXTENSION_ADJUSTMENTS[ext ?? ""] ?? 1.0;
     const adjusted = Math.round(base.tokens * factor);
 

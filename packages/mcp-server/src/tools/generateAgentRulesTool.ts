@@ -44,6 +44,7 @@ export async function handleGenerateAgentRules(input: Record<string, unknown>) {
   const recommendation = models.length > 0
     ? recommendModels({
         models,
+        preferredModelIds: profile?.preferredModelIds,
         workspaceTokens: scanResult.includedTokens,
         goal,
         privacyMode,

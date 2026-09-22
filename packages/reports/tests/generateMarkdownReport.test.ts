@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { generateMarkdownReport } from "../src/generateMarkdownReport.js";
+import { generateJsonReport } from "../src/generateJsonReport.js";
 import type { WorkspaceScanResult, RecommendationResult } from "@wma/core";
 
 function createMockScanResult(): WorkspaceScanResult {
@@ -255,6 +256,39 @@ describe("generateMarkdownReport", () => {
     const report = generateMarkdownReport(createMockScanResult(), createMockRecommendation());
     expect(report).toContain("Top 10 Folders");
     expect(report).toContain("src");
+  });
+
+  it("uses the same included-file folder totals as the JSON report", () => {
+    const scan = createMockScanResult();
+    scan.includedTokens = 1500;
+    scan.totalEstimatedTokens = 10500;
+    scan.files.push({
+      path: "/test/workspace/src/generated.js",
+      relativePath: "src/generated.js",
+      extension: ".js",
+      language: "JavaScript",
+      bytes: 36000,
+      estimatedTokens: 9000,
+      included: false,
+      excludedReason: "generated file",
+      riskFlags: [],
+    });
+    scan.folders[0] = {
+      ...scan.folders[0],
+      totalFiles: 3,
+      totalTokens: 10250,
+      includedFiles: 2,
+      excludedFiles: 1,
+    };
+
+    const json = JSON.parse(generateJsonReport(scan, null));
+    const srcFolder = json.topFolders.find((folder: { path: string }) => folder.path === "src");
+    const markdown = generateMarkdownReport(scan, null);
+
+    expect(srcFolder.tokens).toBe(1250);
+    expect(srcFolder.percentage).toBeCloseTo(1250 / 1500);
+    expect(markdown).toContain("| 1 | `src` | 2 | 1,250 | 83.3% |");
+    expect(markdown).not.toContain("10,250");
   });
 
   it("should include assumptions section content", () => {

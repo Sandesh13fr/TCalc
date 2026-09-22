@@ -157,7 +157,9 @@ export async function walkFiles(rootPath: string, currentPath: string, resolver:
             results.push(...await walkFiles(rootPath, fullPath, resolver, state));
           }
         } else if (targetStat.isFile()) {
-          results.push(fullPath);
+          if (!resolver.shouldIgnore(relativePath, targetStat.size).ignored) {
+            results.push(fullPath);
+          }
         }
       } catch (error) {
         state.warnings.push(`Failed to resolve symlink ${relativePath}: ${errorMessage(error)}`);
@@ -240,6 +242,15 @@ async function scanSingleFile(
           ? estimateProviderTokens(text, options.tokenizer, options.tokenizerModel, (value) => estimateFileTokens(value, relativePath)).tokens
           : estimateFileTokens(text, relativePath);
         contentPreview = text.slice(0, fileSizeConfig.maxContentPreviewBytes);
+        // Scan the full text for secrets: preview-only scans miss
+        // credentials past 4KB and would incorrectly mark the file included.
+        const contentFlags = detectSecretRisk(relativePath, text);
+        for (const flag of contentFlags) {
+          if (!riskFlags.includes(flag)) riskFlags.push(flag);
+        }
+        if (riskFlags.includes("secret")) {
+          excludedBySecret = true;
+        }
       } catch (error) {
         if (signal?.aborted) signal.throwIfAborted();
         warnings.push(`Failed to read ${relativePath}: ${errorMessage(error)}`);
@@ -249,7 +260,7 @@ async function scanSingleFile(
       estimatedTokens = estimateTokensFromBytes(fileSize);
     }
 
-    if (contentPreview) {
+    if (!excludedBySecret && contentPreview) {
       const contentFlags = detectSecretRisk(relativePath, contentPreview);
       for (const flag of contentFlags) {
         if (!riskFlags.includes(flag)) riskFlags.push(flag);

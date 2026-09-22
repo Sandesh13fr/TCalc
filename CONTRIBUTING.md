@@ -30,7 +30,7 @@ pnpm test
 | GitHub Action / CI / release    | `action.yml`, `.github/workflows/`, `scripts/` | `pnpm check:action` where applicable; explain checks that cannot run locally                                          |
 | Documentation / catalog data    | `README.md`, `docs/`, `catalogs/`              | Check links and examples; use `node apps/cli/dist/index.js catalog validate catalogs/models.json` for catalog changes |
 
-Select **every** affected area in the PR template. A change in `packages/recommender/`, for example, may affect the CLI, MCP server, and editor recommendations; mention those downstream effects rather than labeling it only “shared package.”
+Select **every** affected area in the PR template. A change in `packages/recommender/`, for example, may affect the CLI, MCP server, and editor recommendations; mention those downstream effects rather than labeling it only "shared package."
 
 ## Prepare a pull request
 
@@ -71,3 +71,40 @@ scripts/                Build, smoke, and verification utilities
 - Add Vitest tests for TypeScript behavior, Node tests for the dashboard server, and Kotlin tests for JetBrains behavior.
 - Do not add telemetry or default source upload. An optional network feature must be explicit, user-controlled, and documented.
 - Preserve existing files unless the user confirms an overwrite. Explain changes to CLI output, MCP schemas, report formats, or editor commands because consumers may depend on them.
+
+## Development
+
+```bash
+pnpm dev              # Watch all packages
+pnpm test             # Run all tests
+pnpm lint             # Lint all packages
+pnpm typecheck        # Type-check all packages
+pnpm scan:fixtures    # Smoke-test CLI on fixtures
+```
+
+## Packaging
+
+```bash
+pnpm package:vscode:preflight   # Typecheck, lint, check for telemetry
+pnpm package:vscode              # Build VSIX
+pnpm package:vscode:inspect      # Verify VSIX contents
+```
+
+## Pull Requests
+
+1. Create a feature branch from `Development`
+2. Add tests for any new functionality
+3. Ensure all tests pass (`pnpm test`)
+4. Run preflight checks (`pnpm package:vscode:preflight`)
+5. Open a PR against `Development`
+
+### Required Status Checks
+
+Pull requests targeting **`Development`** must pass the **CI Success** status check before they can be merged. This aggregate check ensures that the required CI jobs complete successfully.
+
+## Code Style
+
+- TypeScript strict mode
+- No telemetry, no external API calls in core packages
+- Functions are preferred over classes
+- Tests use vitest

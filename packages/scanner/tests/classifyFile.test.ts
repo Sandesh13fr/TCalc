@@ -65,11 +65,52 @@ describe("classifyFile", () => {
 
   it("should classify generated extensions", () => {
     const result = classifyFile("script.min.js", 1000);
-    expect(result.isGenerated).toBe(false);
+    expect(result.isGenerated).toBe(true);
+    expect(result.riskFlags).toContain("generated");
   });
 
-  it("should detect database-dump risk", () => {
+  it("should flag minified and bundled assets outside build directories", () => {
+    for (const file of ["public/vendor.min.js", "assets/app.bundle.js", "static/js/main.chunk.js", "web/styles.min.css"]) {
+      const result = classifyFile(file, 1000);
+      expect(result.isGenerated, file).toBe(true);
+      expect(result.riskFlags, file).toContain("generated");
+    }
+  });
+
+  it("should not treat ordinary sources as generated", () => {
+    expect(classifyFile("src/bundler.js", 1000).isGenerated).toBe(false);
+    expect(classifyFile("src/minimap.css", 1000).isGenerated).toBe(false);
+  });
+
+  it("should detect database-dump risk for dump-like SQL files", () => {
     const result = classifyFile("backup.sql", 1000);
+    expect(result.riskFlags).toContain("database-dump");
+  });
+
+  it("should detect delimited dump markers case-insensitively", () => {
+    expect(classifyFile("archives/customer-export_2026.SQL", 1000).riskFlags).toContain("database-dump");
+    expect(classifyFile("archives/nightly_snapshot.sql", 1000).riskFlags).toContain("database-dump");
+  });
+
+  it("should not infer dumps from SQL content-like source filenames", () => {
+    expect(classifyFile("db/schema.sql", 1000).riskFlags).not.toContain("database-dump");
+    expect(classifyFile("db/seed-data.sql", 1000).riskFlags).not.toContain("database-dump");
+  });
+
+  it("should include SQL migration files as source by default", () => {
+    const result = classifyFile("migrations/001_init.sql", 1000);
+    expect(result.language).toBe("SQL");
+    expect(result.riskFlags).not.toContain("database-dump");
+  });
+
+  it("should include normal SQL query files as source by default", () => {
+    const result = classifyFile("src/queries/get-users.sql", 1000);
+    expect(result.language).toBe("SQL");
+    expect(result.riskFlags).not.toContain("database-dump");
+  });
+
+  it("should keep binary database files marked as database dumps", () => {
+    const result = classifyFile("data/app.sqlite", 1000);
     expect(result.riskFlags).toContain("database-dump");
   });
 

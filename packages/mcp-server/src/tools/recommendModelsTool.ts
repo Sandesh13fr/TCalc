@@ -56,6 +56,7 @@ export async function handleRecommendModels(input: Record<string, unknown>) {
 
   const recommendation = recommendModels({
     models,
+    preferredModelIds: profile?.preferredModelIds,
     workspaceTokens: scanResult.includedTokens,
     goal,
     privacyMode,

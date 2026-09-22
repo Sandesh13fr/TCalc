@@ -15,6 +15,7 @@ import { handleError, CliError } from "./utils/errors.js";
 import { parseAgentTarget, parseGoal, parseMcpTarget, parseOptimizationMode, parsePositiveInteger, parsePrivacyMode, parseReportFormat, parseScanFormat, parseTableFormat } from "./utils/options.js";
 import { startServer } from "@wma/mcp-server";
 import { executeCompact } from "./commands/compact.js";
+import { executeInit } from "./commands/init.js";
 
 const program = new Command();
 
@@ -23,6 +24,28 @@ program
   .description("TCalc — local-first workspace analysis and AI agent optimization")
   .version("0.1.4")
   .option("--debug", "Show stack traces on error");
+
+program
+  .command("init [path]")
+  .description("Initialize a tailored .workspace-model-advisor.json config file")
+  .option("--goal <goal>", "Workspace goal (code_review|refactor|agentic_chat|cost_audit)", parseGoal)
+  .option("--privacy <mode>", "Privacy mode (local-first|cloud-ok)", parsePrivacyMode)
+  .option("--force", "Overwrite an existing configuration file")
+  .option("--dry-run", "Preview generated configuration without writing to disk")
+  .action(async (target, opts) => {
+    try {
+      const output = await executeInit({
+        target,
+        goal: opts.goal,
+        privacy: opts.privacy,
+        force: opts.force,
+        dryRun: opts.dryRun,
+      });
+      console.log(output);
+    } catch (err) {
+      handleError(err, program.opts().debug);
+    }
+  });
 
 program
   .command("scan [path]")
