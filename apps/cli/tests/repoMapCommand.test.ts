@@ -129,7 +129,14 @@ describe("repo-map command", () => {
       );
 
       expect(included).toBeDefined();
-      expect(scan.includedTokens).toBe(included.estimatedTokens);
+      const nonGeneratedFiles = scan.files.filter(
+        (file: { relativePath: string }) => !file.relativePath.startsWith("packages/app/generated/"),
+      );
+      const nonGeneratedTokens = nonGeneratedFiles.reduce(
+        (sum: number, file: { estimatedTokens: number }) => sum + file.estimatedTokens,
+        0,
+      );
+      expect(scan.includedTokens).toBe(nonGeneratedTokens);
       expect(scan.files.map((file: { relativePath: string }) => file.relativePath))
         .not.toContain("packages/app/generated/ignored.ts");
 
