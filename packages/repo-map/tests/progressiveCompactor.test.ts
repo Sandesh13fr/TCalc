@@ -131,4 +131,38 @@ def process_data(items):
     expect(result.stage).toBe(3);
     expect(result.code).toContain("export interface UserDTO");
   });
+
+  it("Issue 101: preserves string and regex literals", () => {
+    const code = `
+      const url = "https://example.com/api";
+      const regex = /https:\\/\\//;
+      // This is a real comment
+      const template = \`
+        // not a comment
+      \`;
+    `;
+    const stripped = stripComments(code);
+    expect(stripped).toContain('"https://example.com/api"');
+    expect(stripped).toContain('/https:\\/\\//');
+    expect(stripped).toContain('// not a comment');
+    expect(stripped).not.toContain('This is a real comment');
+  });
+
+  it("Issue 102: does not collapse control flow blocks", () => {
+    const code = `
+      if (ready) {
+        console.log("ok");
+      }
+      for (let i = 0; i < 10; i++) {
+        break;
+      }
+      function keepMe() {
+        return true;
+      }
+    `;
+    const collapsed = collapseFunctionBodies(code);
+    expect(collapsed).toContain('console.log("ok");');
+    expect(collapsed).toContain('break;');
+    expect(collapsed).toContain('function keepMe() { /* collapsed */ }');
+  });
 });

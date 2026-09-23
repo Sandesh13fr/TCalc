@@ -10,18 +10,106 @@ import type {
 export function stripComments(code: string, language?: string): string {
   const isPython = language?.toLowerCase().includes("python") || language?.toLowerCase() === "py";
 
-  let result = code;
-  if (!isPython) {
-    // Strip multi-line comments /* ... */
-    result = result.replace(/\/\*[\s\S]*?\*\//g, "");
-    // Strip single-line comments // ...
-    result = result.replace(/(^|[^\\])\/\/.*$/gm, "$1");
+  let result = "";
+  let i = 0;
+  
+  if (isPython) {
+    while (i < code.length) {
+      if (code.startsWith('"""', i) || code.startsWith("'''", i)) {
+        const quote = code.slice(i, i + 3);
+        const end = code.indexOf(quote, i + 3);
+        if (end !== -1) {
+          result += quote + "..." + quote;
+          i = end + 3;
+        } else {
+          result += code.slice(i);
+          break;
+        }
+      } else if (code[i] === '"' || code[i] === "'") {
+        const quote = code[i];
+        result += quote;
+        i++;
+        while (i < code.length) {
+          if (code[i] === '\\') {
+            result += code[i];
+            if (i + 1 < code.length) {
+              result += code[i + 1];
+              i++;
+            }
+          } else if (code[i] === quote) {
+            result += quote;
+            i++;
+            break;
+          } else {
+            result += code[i];
+          }
+          i++;
+        }
+      } else if (code[i] === '#') {
+        while (i < code.length && code[i] !== '\n') {
+          i++;
+        }
+      } else {
+        result += code[i];
+        i++;
+      }
+    }
   } else {
-    // Python comments # ...
-    result = result.replace(/(^|[^\\])#.*$/gm, "$1");
-    // Python triple-quoted docstrings """ ... """
-    result = result.replace(/"""[\s\S]*?"""/g, '"""..."""');
-    result = result.replace(/'''[\s\S]*?'''/g, "'''...'''");
+    while (i < code.length) {
+      if (code[i] === '"' || code[i] === "'" || code[i] === '`') {
+        const quote = code[i];
+        result += quote;
+        i++;
+        while (i < code.length) {
+          if (code[i] === '\\') {
+            result += code[i];
+            if (i + 1 < code.length) {
+              result += code[i + 1];
+              i++;
+            }
+          } else if (code[i] === quote) {
+            result += quote;
+            i++;
+            break;
+          } else {
+            result += code[i];
+          }
+          i++;
+        }
+      } else if (code.startsWith('//', i)) {
+        while (i < code.length && code[i] !== '\n') {
+          i++;
+        }
+      } else if (code.startsWith('/*', i)) {
+        const end = code.indexOf('*/', i + 2);
+        if (end !== -1) {
+          i = end + 2;
+        } else {
+          i = code.length;
+        }
+      } else if (code[i] === '/') {
+        let isRegex = false;
+        let j = i + 1;
+        let validRegex = false;
+        if (j < code.length && code[j] !== ' ' && code[j] !== '*' && code[j] !== '/' && code[j] !== '\n') {
+            while (j < code.length && code[j] !== '\n') {
+                if (code[j] === '\\') { j += 2; continue; }
+                if (code[j] === '/') { validRegex = true; j++; break; }
+                j++;
+            }
+        }
+        if (validRegex) {
+            result += code.slice(i, j);
+            i = j;
+        } else {
+            result += code[i];
+            i++;
+        }
+      } else {
+        result += code[i];
+        i++;
+      }
+    }
   }
 
   // Remove empty comment lines and excessive consecutive blank lines
@@ -48,14 +136,17 @@ export function collapseFunctionBodies(code: string): string {
 
     // Check if line looks like a function, method, constructor, or arrow function
     const isClassHeader = /^(export\s+)?(abstract\s+)?class\s+/.test(trimmed);
+    const genericSignatureMatch = trimmed.match(/\b([A-Za-z0-9_$]+)\s*\([^)]*\)\s*(?::\s*[^;{]+)?\s*\{?$/);
+    const isControlFlow = genericSignatureMatch && ["if", "for", "while", "switch", "catch", "with"].includes(genericSignatureMatch[1]);
+    
     const isSignature =
-      !isClassHeader &&
+      !isClassHeader && !isControlFlow &&
       (trimmed.startsWith("function ") ||
         trimmed.startsWith("export function ") ||
         trimmed.startsWith("async function ") ||
         trimmed.startsWith("export async function ") ||
         trimmed.startsWith("constructor") ||
-        /\b[A-Za-z0-9_$]+\s*\([^)]*\)\s*(?::\s*[^;{]+)?\s*\{?$/.test(trimmed) ||
+        (genericSignatureMatch !== null) ||
         /^(const|let|var)\s+[A-Za-z0-9_$]+\s*=\s*(async\s*)?\([^)]*\)\s*(=>)?\s*\{?$/.test(trimmed));
 
     if (isSignature && !inBlock) {
