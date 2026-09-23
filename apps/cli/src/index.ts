@@ -23,8 +23,17 @@ program
   .name("wma")
   .description("TCalc — local-first workspace analysis and AI agent optimization")
   .version("0.1.4")
-  .option("--debug", "Show stack traces on error");
-
+  .option("--debug", "Show stack traces on error")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  $ wma scan ./my-project
+  $ wma recommend ./my-project
+  $ wma repo-map ./my-project
+  $ wma rules ./my-project --target cursor
+`,
+  );
 program
   .command("init [path]")
   .description("Initialize a tailored .workspace-model-advisor.json config file")
