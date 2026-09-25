@@ -316,6 +316,30 @@ async function writeOutput(content: string, outputPath?: string, force = false):
   }
 }
 
+program.addHelpText(
+  "after",
+  `
+Examples:
+  Scan a workspace
+    $ wma scan ./my-project
+    $ wma scan ./my-project --goal chat --format json
+
+  Get model recommendations
+    $ wma recommend ./my-project --goal chat
+    $ wma recommend ./my-project --token-budget 8000 --format json
+
+  Generate a repository map
+    $ wma repo-map ./my-project --format markdown
+    $ wma repo-map ./my-project --budget 4000 --no-symbols
+
+  Work with agent rules
+    $ wma rules ./my-project --target cursor --stdout
+    $ wma rules ./my-project --target claude-desktop --output AGENTS.md
+
+Run "wma <command> --help" to see all options for a specific command.
+`
+);
+
 program.parse(process.argv);
 
 function collect(value: string, values: string[]): string[] {
