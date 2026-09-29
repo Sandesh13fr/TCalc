@@ -4,31 +4,291 @@ import type {
   CompactorOptions,
 } from "./compactionLevels.js";
 
+const REGEX_PRECEDING_KEYWORDS = new Set([
+  "return",
+  "case",
+  "throw",
+  "yield",
+  "await",
+  "typeof",
+  "void",
+  "delete",
+  "instanceof",
+  "in",
+  "do",
+  "else",
+]);
+
+function isRegexStartToken(token: string): boolean {
+  if (!token) return true;
+  if (REGEX_PRECEDING_KEYWORDS.has(token)) return true;
+  // Common operators and punctuation preceding an expression
+  return /^[([{:;,=+\-*%&|^!~<>?]+$/.test(token);
+}
+
+function stripCommentsNonPython(code: string): string {
+  let result = "";
+  const len = code.length;
+  let i = 0;
+  let lastToken = "";
+
+  while (i < len) {
+    const ch = code[i];
+
+    // Single-line comment //
+    if (ch === "/" && code[i + 1] === "/") {
+      i += 2;
+      while (i < len && code[i] !== "\n" && code[i] !== "\r") {
+        i++;
+      }
+      continue;
+    }
+
+    // Multi-line comment /* ... */
+    if (ch === "/" && code[i + 1] === "*") {
+      i += 2;
+      while (i < len && !(code[i] === "*" && code[i + 1] === "/")) {
+        i++;
+      }
+      if (i < len) {
+        i += 2; // consume */
+      }
+      continue;
+    }
+
+    // Single-quoted string '...'
+    if (ch === "'") {
+      result += ch;
+      i++;
+      while (i < len) {
+        const c = code[i];
+        result += c;
+        if (c === "\\") {
+          i++;
+          if (i < len) {
+            result += code[i];
+          }
+        } else if (c === "'") {
+          i++;
+          break;
+        } else if (c === "\n" || c === "\r") {
+          break;
+        }
+        i++;
+      }
+      lastToken = "'";
+      continue;
+    }
+
+    // Double-quoted string "..."
+    if (ch === '"') {
+      result += ch;
+      i++;
+      while (i < len) {
+        const c = code[i];
+        result += c;
+        if (c === "\\") {
+          i++;
+          if (i < len) {
+            result += code[i];
+          }
+        } else if (c === '"') {
+          i++;
+          break;
+        } else if (c === "\n" || c === "\r") {
+          break;
+        }
+        i++;
+      }
+      lastToken = '"';
+      continue;
+    }
+
+    // Template literal `...`
+    if (ch === "`") {
+      result += ch;
+      i++;
+      while (i < len) {
+        const c = code[i];
+        result += c;
+        if (c === "\\") {
+          i++;
+          if (i < len) {
+            result += code[i];
+          }
+        } else if (c === "`") {
+          i++;
+          break;
+        }
+        i++;
+      }
+      lastToken = "`";
+      continue;
+    }
+
+    // Regular expression literal /.../
+    if (ch === "/" && isRegexStartToken(lastToken)) {
+      result += ch;
+      i++;
+      let inCharClass = false;
+      while (i < len) {
+        const c = code[i];
+        result += c;
+        if (c === "\\") {
+          i++;
+          if (i < len) {
+            result += code[i];
+          }
+        } else if (c === "[") {
+          inCharClass = true;
+        } else if (c === "]" && inCharClass) {
+          inCharClass = false;
+        } else if (c === "/" && !inCharClass) {
+          i++;
+          // Consume regex flags if any
+          while (i < len && /[a-z]/i.test(code[i])) {
+            result += code[i];
+            i++;
+          }
+          break;
+        } else if (c === "\n" || c === "\r") {
+          break;
+        }
+        i++;
+      }
+      lastToken = "/";
+      continue;
+    }
+
+    // Track last identifier / operator token
+    if (/[a-zA-Z0-9_$]/.test(ch)) {
+      let word = "";
+      while (i < len && /[a-zA-Z0-9_$]/.test(code[i])) {
+        word += code[i];
+        result += code[i];
+        i++;
+      }
+      lastToken = word;
+      continue;
+    }
+
+    if (ch !== " " && ch !== "\t" && ch !== "\r" && ch !== "\n") {
+      lastToken = ch;
+    }
+
+    result += ch;
+    i++;
+  }
+
+  return result;
+}
+
+function stripCommentsPython(code: string): string {
+  let result = "";
+  const len = code.length;
+  let i = 0;
+
+  while (i < len) {
+    // Triple-quoted docstrings """ ... """
+    if (code.startsWith('"""', i)) {
+      i += 3;
+      while (i < len && !code.startsWith('"""', i)) {
+        if (code[i] === "\\") i++;
+        i++;
+      }
+      if (i < len) i += 3;
+      result += '"""..."""';
+      continue;
+    }
+
+    // Triple-quoted docstrings ''' ... '''
+    if (code.startsWith("'''", i)) {
+      i += 3;
+      while (i < len && !code.startsWith("'''", i)) {
+        if (code[i] === "\\") i++;
+        i++;
+      }
+      if (i < len) i += 3;
+      result += "'''...'''";
+      continue;
+    }
+
+    // Single-line comment # ...
+    if (code[i] === "#") {
+      while (i < len && code[i] !== "\n" && code[i] !== "\r") {
+        i++;
+      }
+      continue;
+    }
+
+    // Single-quoted string '...'
+    if (code[i] === "'") {
+      result += "'";
+      i++;
+      while (i < len) {
+        const c = code[i];
+        result += c;
+        if (c === "\\") {
+          i++;
+          if (i < len) result += code[i];
+        } else if (c === "'") {
+          i++;
+          break;
+        } else if (c === "\n" || c === "\r") {
+          break;
+        }
+        i++;
+      }
+      continue;
+    }
+
+    // Double-quoted string "..."
+    if (code[i] === '"') {
+      result += '"';
+      i++;
+      while (i < len) {
+        const c = code[i];
+        result += c;
+        if (c === "\\") {
+          i++;
+          if (i < len) result += code[i];
+        } else if (c === '"') {
+          i++;
+          break;
+        } else if (c === "\n" || c === "\r") {
+          break;
+        }
+        i++;
+      }
+      continue;
+    }
+
+    result += code[i];
+    i++;
+  }
+
+  return result;
+}
+
 /**
  * Stage 1: Strip single-line, multi-line comments and docstrings.
  */
 export function stripComments(code: string, language?: string): string {
-  const isPython = language?.toLowerCase().includes("python") || language?.toLowerCase() === "py";
-
-  let result = code;
-  if (!isPython) {
-    // Strip multi-line comments /* ... */
-    result = result.replace(/\/\*[\s\S]*?\*\//g, "");
-    // Strip single-line comments // ...
-    result = result.replace(/(^|[^\\])\/\/.*$/gm, "$1");
-  } else {
-    // Python comments # ...
-    result = result.replace(/(^|[^\\])#.*$/gm, "$1");
-    // Python triple-quoted docstrings """ ... """
-    result = result.replace(/"""[\s\S]*?"""/g, '"""..."""');
-    result = result.replace(/'''[\s\S]*?'''/g, "'''...'''");
-  }
+  const isPython =
+    language?.toLowerCase().includes("python") ||
+    language?.toLowerCase() === "py";
+  const result = isPython
+    ? stripCommentsPython(code)
+    : stripCommentsNonPython(code);
 
   // Remove empty comment lines and excessive consecutive blank lines
   return result
     .split("\n")
     .map((line) => line.trimEnd())
-    .filter((line, idx, arr) => line.length > 0 || (idx > 0 && arr[idx - 1].length > 0))
+    .filter(
+      (line, idx, arr) =>
+        line.length > 0 || (idx > 0 && arr[idx - 1].length > 0),
+    )
     .join("\n");
 }
 
@@ -56,7 +316,9 @@ export function collapseFunctionBodies(code: string): string {
         trimmed.startsWith("export async function ") ||
         trimmed.startsWith("constructor") ||
         /\b[A-Za-z0-9_$]+\s*\([^)]*\)\s*(?::\s*[^;{]+)?\s*\{?$/.test(trimmed) ||
-        /^(const|let|var)\s+[A-Za-z0-9_$]+\s*=\s*(async\s*)?\([^)]*\)\s*(=>)?\s*\{?$/.test(trimmed));
+        /^(const|let|var)\s+[A-Za-z0-9_$]+\s*=\s*(async\s*)?\([^)]*\)\s*(=>)?\s*\{?$/.test(
+          trimmed,
+        ));
 
     if (isSignature && !inBlock) {
       if (line.includes("{")) {
@@ -208,7 +470,9 @@ export function progressiveCompact(
       compactedChars: stage1Code.length,
       originalTokens,
       compactedTokens: stage1Tokens,
-      reductionPercentage: Number((((originalTokens - stage1Tokens) / originalTokens) * 100).toFixed(2)),
+      reductionPercentage: Number(
+        (((originalTokens - stage1Tokens) / originalTokens) * 100).toFixed(2),
+      ),
       code: stage1Code,
     };
   }
@@ -223,7 +487,9 @@ export function progressiveCompact(
       compactedChars: stage2Code.length,
       originalTokens,
       compactedTokens: stage2Tokens,
-      reductionPercentage: Number((((originalTokens - stage2Tokens) / originalTokens) * 100).toFixed(2)),
+      reductionPercentage: Number(
+        (((originalTokens - stage2Tokens) / originalTokens) * 100).toFixed(2),
+      ),
       code: stage2Code,
     };
   }
@@ -237,7 +503,9 @@ export function progressiveCompact(
     compactedChars: stage3Code.length,
     originalTokens,
     compactedTokens: stage3Tokens,
-    reductionPercentage: Number((((originalTokens - stage3Tokens) / originalTokens) * 100).toFixed(2)),
+    reductionPercentage: Number(
+      (((originalTokens - stage3Tokens) / originalTokens) * 100).toFixed(2),
+    ),
     code: stage3Code,
   };
 }

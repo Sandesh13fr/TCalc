@@ -85,7 +85,9 @@ def process_data(items):
   });
 
   it("returns stage 0 when code already fits under maxTargetTokens", () => {
-    const result = progressiveCompact("const x = 1;", { maxTargetTokens: 1000 });
+    const result = progressiveCompact("const x = 1;", {
+      maxTargetTokens: 1000,
+    });
 
     expect(result.stage).toBe(0);
     expect(result.reductionPercentage).toBe(0);
@@ -130,5 +132,108 @@ def process_data(items):
 
     expect(result.stage).toBe(3);
     expect(result.code).toContain("export interface UserDTO");
+  });
+
+  describe("literal preservation (Issue #101)", () => {
+    it("preserves URLs and comment markers inside double-quoted strings", () => {
+      const code = `
+const endpoint = "https://example.test/api"; // fetch data
+const blockInString = "/* not a comment */"; // comment
+`;
+      const stripped = stripComments(code);
+      expect(stripped).toContain(
+        'const endpoint = "https://example.test/api";',
+      );
+      expect(stripped).toContain(
+        'const blockInString = "/* not a comment */";',
+      );
+      expect(stripped).not.toContain("fetch data");
+      expect(stripped).not.toContain("// comment");
+    });
+
+    it("preserves comment markers inside single-quoted strings and handles escaped quotes", () => {
+      const code = `
+const singleUrl = 'https://example.test/api'; // single url
+const escaped = 'He said: \\'// not a comment\\''; /* block comment */
+`;
+      const stripped = stripComments(code);
+      expect(stripped).toContain(
+        "const singleUrl = 'https://example.test/api';",
+      );
+      expect(stripped).toContain(
+        "const escaped = 'He said: \\'// not a comment\\'';",
+      );
+      expect(stripped).not.toContain("single url");
+      expect(stripped).not.toContain("block comment");
+    });
+
+    it("preserves URLs and comment markers inside template literals", () => {
+      const code = `
+const base = "example.com";
+const fullUrl = \`https://\${base}/api/v1\`; // template url
+const docStr = \`Multi-line
+/* not a comment */
+// still not a comment
+template\`;
+`;
+      const stripped = stripComments(code);
+      expect(stripped).toContain("const fullUrl = `https://${base}/api/v1`;");
+      expect(stripped).toContain("/* not a comment */");
+      expect(stripped).toContain("// still not a comment");
+      expect(stripped).not.toContain("template url");
+    });
+
+    it("preserves regular expression literals containing slashes", () => {
+      const code = `
+const protocolRegex = /https:\\/\\//i; // matches https
+const division = 10 / 2 / 1; // division test
+`;
+      const stripped = stripComments(code);
+      expect(stripped).toContain("const protocolRegex = /https:\\/\\//i;");
+      expect(stripped).toContain("const division = 10 / 2 / 1;");
+      expect(stripped).not.toContain("matches https");
+      expect(stripped).not.toContain("division test");
+    });
+
+    it("preserves '#' inside Python strings while stripping genuine Python comments", () => {
+      const pyCode = `
+# Genuine header comment
+color = "#ff0000" # hex color
+url = 'https://example.com#anchor' # url anchor
+"""Genuine docstring"""
+`;
+      const stripped = stripComments(pyCode, "python");
+      expect(stripped).toContain('color = "#ff0000"');
+      expect(stripped).toContain("url = 'https://example.com#anchor'");
+      expect(stripped).toContain('"""..."""');
+      expect(stripped).not.toContain("# Genuine header comment");
+      expect(stripped).not.toContain("# hex color");
+      expect(stripped).not.toContain("# url anchor");
+    });
+
+    it("preserves string literals across progressive compaction direct and budget paths", () => {
+      const codeWithUrl = `
+// Module header comment
+export function fetchClient() {
+  const endpoint = "https://example.test/api";
+  /* Inline block comment */
+  return endpoint;
+}
+`;
+      // Direct stage 1
+      const stage1 = progressiveCompact(codeWithUrl, { targetStage: 1 });
+      expect(stage1.code).toContain(
+        'const endpoint = "https://example.test/api";',
+      );
+      expect(stage1.code).not.toContain("Module header comment");
+      expect(stage1.code).not.toContain("Inline block comment");
+
+      // Progressive budget selection targeting stage 1
+      const budgeted = progressiveCompact(codeWithUrl, { maxTargetTokens: 30 });
+      expect(budgeted.code).toContain(
+        'const endpoint = "https://example.test/api";',
+      );
+      expect(budgeted.code).not.toContain("Module header comment");
+    });
   });
 });
