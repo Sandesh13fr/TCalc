@@ -131,6 +131,14 @@ export function queryModelCatalog(
     limit = 50,
   } = options;
 
+  if (!Number.isFinite(offset) || offset < 0 || !Number.isInteger(offset)) {
+    throw new Error("offset must be a non-negative integer");
+  }
+
+  if (!Number.isFinite(limit) || limit <= 0 || !Number.isInteger(limit)) {
+    throw new Error("limit must be a positive integer");
+  }
+
   const filtered = models.filter((model) => {
     if (filter.searchTerm && !matchesSearchTerm(model, filter.searchTerm)) {
       return false;

@@ -232,4 +232,72 @@ describe("queryModelCatalog", () => {
     expect(page2.models).toHaveLength(2);
     expect(page2.models[0].id).not.toBe(page1.models[0].id);
   });
+
+  it("rejects negative offset", () => {
+    expect(() => {
+      queryModelCatalog(mockModels, { offset: -1 });
+    }).toThrow("offset must be a non-negative integer");
+  });
+
+  it("rejects non-finite offset (NaN)", () => {
+    expect(() => {
+      queryModelCatalog(mockModels, { offset: NaN });
+    }).toThrow("offset must be a non-negative integer");
+  });
+
+  it("rejects non-finite offset (Infinity)", () => {
+    expect(() => {
+      queryModelCatalog(mockModels, { offset: Infinity });
+    }).toThrow("offset must be a non-negative integer");
+  });
+
+  it("rejects fractional offset", () => {
+    expect(() => {
+      queryModelCatalog(mockModels, { offset: 1.5 });
+    }).toThrow("offset must be a non-negative integer");
+  });
+
+  it("rejects zero limit", () => {
+    expect(() => {
+      queryModelCatalog(mockModels, { limit: 0 });
+    }).toThrow("limit must be a positive integer");
+  });
+
+  it("rejects negative limit", () => {
+    expect(() => {
+      queryModelCatalog(mockModels, { limit: -2 });
+    }).toThrow("limit must be a positive integer");
+  });
+
+  it("rejects non-finite limit (NaN)", () => {
+    expect(() => {
+      queryModelCatalog(mockModels, { limit: NaN });
+    }).toThrow("limit must be a positive integer");
+  });
+
+  it("rejects non-finite limit (Infinity)", () => {
+    expect(() => {
+      queryModelCatalog(mockModels, { limit: Infinity });
+    }).toThrow("limit must be a positive integer");
+  });
+
+  it("rejects fractional limit", () => {
+    expect(() => {
+      queryModelCatalog(mockModels, { limit: 2.5 });
+    }).toThrow("limit must be a positive integer");
+  });
+
+  it("accepts valid offset and limit", () => {
+    const result = queryModelCatalog(mockModels, { offset: 0, limit: 2 });
+    expect(result.models).toHaveLength(2);
+    expect(result.offset).toBe(0);
+    expect(result.limit).toBe(2);
+  });
+
+  it("handles offset beyond result length correctly", () => {
+    const result = queryModelCatalog(mockModels, { offset: 100, limit: 10 });
+    expect(result.models).toHaveLength(0);
+    expect(result.hasMore).toBe(false);
+    expect(result.offset).toBe(100);
+  });
 });
