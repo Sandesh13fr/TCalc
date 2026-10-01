@@ -35,7 +35,7 @@ Select **every** affected area in the PR template. A change in `packages/recomme
 ## Prepare a pull request
 
 1. Star the [TCalc repository](https://github.com/Sandesh13fr/TCalc) before starting contribution work. This is a mandatory participation prerequisite for OSCI contributions; confirm it in the PR checklist.
-2. Check for an existing issue and active PR before substantial work, then link the issue in the PR body (for example, `Fixes #123`). Assignment is **not required**: anyone may open a focused PR for any open issue. A short comment describing your approach is encouraged so contributors can avoid duplicating work, but maintainers will review eligible PRs on their technical merit rather than assignment order.
+2. Comment on an open issue with your proposed approach and wait for assignment before substantial work. Link that assigned issue in the PR body with a closing keyword (for example, `Fixes #123`). External contributors may have only one open PR at a time; non-compliant PRs are closed automatically and may be reopened after the policy requirements are met.
 3. Create a focused branch from `Development` and target `Development` in the PR, unless a maintainer asks for another base. Keep unrelated issue fixes in separate PRs.
 4. Add or update regression tests for behavior changes. Include a concise reproduction for bug fixes.
 5. Run the relevant focused checks above. Before requesting review, run `pnpm build`, `pnpm test`, `pnpm lint`, and `pnpm typecheck`. Run `pnpm smoke:all` when changing shared packages, CLI, or MCP behavior. Use `pnpm run ci` for the full local pipeline (`pnpm ci` is pnpm's clean-install command, not this script).
