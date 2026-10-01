@@ -138,13 +138,34 @@ def process_data(items):
       const regex = /https:\\/\\//;
       // This is a real comment
       const template = \`
-        // not a comment
+        // not a comment \${ "nested // string" }
       \`;
+      const escapedQuote = "has \\\" // inside";
+      const div = a/b; // note: c/d
+      const regexTrailing = / hello/; // foo
     `;
     const stripped = stripComments(code);
     expect(stripped).toContain('"https://example.com/api"');
     expect(stripped).toContain('/https:\\/\\//');
     expect(stripped).toContain('// not a comment');
     expect(stripped).not.toContain('This is a real comment');
+    expect(stripped).toContain('has \\" // inside');
+    expect(stripped).toContain('a/b;');
+    expect(stripped).not.toContain('note: c/d');
+    expect(stripped).toContain('/ hello/;');
+    expect(stripped).not.toContain('// foo');
+    
+    // Verify it is preserved through progressiveCompact with targetStage 1
+    const stage1Result = progressiveCompact(code, { targetStage: 1 });
+    expect(stage1Result.code).toContain('has \\" // inside');
+    
+    // Verify it is preserved through budget-driven Stage 1 selection
+    const budgetResult = progressiveCompact(code, { maxTargetTokens: 100000 });
+    // Assuming budget is large enough to stay at Stage 0 or 1, actually if it stays at 0 it didn't strip comments
+    // Let's explicitly force Stage 1 via budget by ensuring it needs slight reduction
+    const codeTokens = Math.max(1, Math.ceil(code.length / 3.8));
+    const budgetResult2 = progressiveCompact(code, { maxTargetTokens: codeTokens - 1 });
+    expect(budgetResult2.stage).toBeGreaterThanOrEqual(1);
+    expect(budgetResult2.code).toContain('has \\" // inside');
   });
 });

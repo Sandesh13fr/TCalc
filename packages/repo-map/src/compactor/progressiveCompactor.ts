@@ -56,7 +56,7 @@ export function stripComments(code: string, language?: string): string {
     }
   } else {
     while (i < code.length) {
-      if (code[i] === '"' || code[i] === "'" || code[i] === '`') {
+      if (code[i] === '"' || code[i] === "'") {
         const quote = code[i];
         result += quote;
         i++;
@@ -71,6 +71,34 @@ export function stripComments(code: string, language?: string): string {
             result += quote;
             i++;
             break;
+          } else if (code[i] === '\n') {
+            result += code[i];
+            i++;
+            break;
+          } else {
+            result += code[i];
+          }
+          i++;
+        }
+      } else if (code[i] === '`') {
+        result += code[i];
+        i++;
+        let interpDepth = 0;
+        while (i < code.length) {
+          if (code[i] === '\\') {
+            result += code[i];
+            if (i + 1 < code.length) { result += code[i + 1]; i++; }
+          } else if (code[i] === '`' && interpDepth === 0) {
+            result += code[i];
+            i++;
+            break;
+          } else if (code[i] === '$' && i + 1 < code.length && code[i + 1] === '{') {
+            interpDepth++;
+            result += '${';
+            i++;
+          } else if (code[i] === '}' && interpDepth > 0) {
+            interpDepth--;
+            result += '}';
           } else {
             result += code[i];
           }
@@ -88,19 +116,31 @@ export function stripComments(code: string, language?: string): string {
           i = code.length;
         }
       } else if (code[i] === '/') {
-        let isRegex = false;
-        let j = i + 1;
-        let validRegex = false;
-        if (j < code.length && code[j] !== ' ' && code[j] !== '*' && code[j] !== '/' && code[j] !== '\n') {
-            while (j < code.length && code[j] !== '\n') {
-                if (code[j] === '\\') { j += 2; continue; }
-                if (code[j] === '/') { validRegex = true; j++; break; }
-                j++;
+        const prefix = code.slice(0, i).trimEnd();
+        const isRegexContext = prefix.length === 0 || /[-=+,!*&|?~%^<>(>[{;:]$/.test(prefix) || /\b(return|yield|await|typeof|throw|case)\s*$/.test(prefix);
+        if (isRegexContext) {
+            result += code[i];
+            i++;
+            let inCharClass = false;
+            while (i < code.length && code[i] !== '\n') {
+                if (code[i] === '\\') {
+                    result += code[i];
+                    if (i + 1 < code.length) { result += code[i + 1]; i++; }
+                } else if (code[i] === '[') {
+                    inCharClass = true;
+                    result += code[i];
+                } else if (code[i] === ']') {
+                    inCharClass = false;
+                    result += code[i];
+                } else if (code[i] === '/' && !inCharClass) {
+                    result += code[i];
+                    i++;
+                    break;
+                } else {
+                    result += code[i];
+                }
+                i++;
             }
-        }
-        if (validRegex) {
-            result += code.slice(i, j);
-            i = j;
         } else {
             result += code[i];
             i++;
