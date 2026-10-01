@@ -19,7 +19,20 @@ export function stripComments(code: string, language?: string): string {
         const quote = code.slice(i, i + 3);
         const end = code.indexOf(quote, i + 3);
         if (end !== -1) {
-          result += quote + "..." + quote;
+          let j = i - 1;
+          let isDocstring = true;
+          while (j >= 0 && code[j] !== '\n') {
+            if (code[j] !== ' ' && code[j] !== '\t') {
+              isDocstring = false;
+              break;
+            }
+            j--;
+          }
+          if (isDocstring) {
+            result += quote + "..." + quote;
+          } else {
+            result += code.slice(i, end + 3);
+          }
           i = end + 3;
         } else {
           result += code.slice(i);
@@ -55,99 +68,112 @@ export function stripComments(code: string, language?: string): string {
       }
     }
   } else {
+    const templateStack: number[] = [];
+    let braceDepth = 0;
+    let inTemplate = false;
+
     while (i < code.length) {
-      if (code[i] === '"' || code[i] === "'") {
-        const quote = code[i];
-        result += quote;
-        i++;
-        while (i < code.length) {
-          if (code[i] === '\\') {
-            result += code[i];
-            if (i + 1 < code.length) {
-              result += code[i + 1];
-              i++;
-            }
-          } else if (code[i] === quote) {
-            result += quote;
-            i++;
-            break;
-          } else if (code[i] === '\n') {
-            result += code[i];
-            i++;
-            break;
-          } else {
-            result += code[i];
+      if (!inTemplate) {
+        if (code[i] === '{') {
+          braceDepth++;
+          result += code[i++];
+        } else if (code[i] === '}') {
+          braceDepth--;
+          result += code[i++];
+          if (templateStack.length > 0 && braceDepth === templateStack[templateStack.length - 1]) {
+            templateStack.pop();
+            inTemplate = true;
           }
+        } else if (code[i] === '"' || code[i] === "'") {
+          const quote = code[i];
+          result += quote;
           i++;
-        }
-      } else if (code[i] === '`') {
-        result += code[i];
-        i++;
-        let interpDepth = 0;
-        while (i < code.length) {
-          if (code[i] === '\\') {
-            result += code[i];
-            if (i + 1 < code.length) { result += code[i + 1]; i++; }
-          } else if (code[i] === '`' && interpDepth === 0) {
-            result += code[i];
-            i++;
-            break;
-          } else if (code[i] === '$' && i + 1 < code.length && code[i + 1] === '{') {
-            interpDepth++;
-            result += '${';
-            i++;
-          } else if (code[i] === '}' && interpDepth > 0) {
-            interpDepth--;
-            result += '}';
-          } else {
-            result += code[i];
-          }
-          i++;
-        }
-      } else if (code.startsWith('//', i)) {
-        while (i < code.length && code[i] !== '\n') {
-          i++;
-        }
-      } else if (code.startsWith('/*', i)) {
-        const end = code.indexOf('*/', i + 2);
-        if (end !== -1) {
-          i = end + 2;
-        } else {
-          i = code.length;
-        }
-      } else if (code[i] === '/') {
-        const prefix = code.slice(0, i).trimEnd();
-        const isRegexContext = prefix.length === 0 || /[-=+,!*&|?~%^<>(>[{;:]$/.test(prefix) || /\b(return|yield|await|typeof|throw|case)\s*$/.test(prefix);
-        if (isRegexContext) {
-            result += code[i];
-            i++;
-            let inCharClass = false;
-            while (i < code.length && code[i] !== '\n') {
-                if (code[i] === '\\') {
-                    result += code[i];
-                    if (i + 1 < code.length) { result += code[i + 1]; i++; }
-                } else if (code[i] === '[') {
-                    inCharClass = true;
-                    result += code[i];
-                } else if (code[i] === ']') {
-                    inCharClass = false;
-                    result += code[i];
-                } else if (code[i] === '/' && !inCharClass) {
-                    result += code[i];
-                    i++;
-                    break;
-                } else {
-                    result += code[i];
-                }
+          while (i < code.length) {
+            if (code[i] === '\\') {
+              result += code[i];
+              if (i + 1 < code.length) {
+                result += code[i + 1];
                 i++;
+              }
+            } else if (code[i] === quote) {
+              result += quote;
+              i++;
+              break;
+            } else if (code[i] === '\n') {
+              result += code[i];
+              i++;
+              break;
+            } else {
+              result += code[i];
             }
-        } else {
-            result += code[i];
             i++;
+          }
+        } else if (code[i] === '`') {
+          inTemplate = true;
+          result += code[i++];
+        } else if (code.startsWith('//', i)) {
+          while (i < code.length && code[i] !== '\n') {
+            i++;
+          }
+        } else if (code.startsWith('/*', i)) {
+          const end = code.indexOf('*/', i + 2);
+          if (end !== -1) {
+            i = end + 2;
+          } else {
+            i = code.length;
+          }
+        } else if (code[i] === '/') {
+          const prefix = code.slice(0, i).trimEnd();
+          const isRegexContext = prefix.length === 0 || /[-=+,!*&|?~%^<>(>[{;:]$/.test(prefix) || /\b(return|yield|await|typeof|throw|case)\s*$/.test(prefix);
+          if (isRegexContext) {
+              result += code[i];
+              i++;
+              let inCharClass = false;
+              while (i < code.length && code[i] !== '\n') {
+                  if (code[i] === '\\') {
+                      result += code[i];
+                      if (i + 1 < code.length) { result += code[i + 1]; i++; }
+                  } else if (code[i] === '[') {
+                      inCharClass = true;
+                      result += code[i];
+                  } else if (code[i] === ']') {
+                      inCharClass = false;
+                      result += code[i];
+                  } else if (code[i] === '/' && !inCharClass) {
+                      result += code[i];
+                      i++;
+                      break;
+                  } else {
+                      result += code[i];
+                  }
+                  i++;
+              }
+          } else {
+              result += code[i];
+              i++;
+          }
+        } else {
+          result += code[i];
+          i++;
         }
       } else {
-        result += code[i];
-        i++;
+        // Inside template literal
+        if (code[i] === '\\') {
+          result += code[i];
+          if (i + 1 < code.length) { result += code[i + 1]; i++; }
+          i++;
+        } else if (code[i] === '`') {
+          inTemplate = false;
+          result += code[i++];
+        } else if (code[i] === '$' && i + 1 < code.length && code[i + 1] === '{') {
+          result += '${';
+          i += 2;
+          templateStack.push(braceDepth);
+          braceDepth++;
+          inTemplate = false;
+        } else {
+          result += code[i++];
+        }
       }
     }
   }

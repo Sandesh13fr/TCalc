@@ -49,12 +49,15 @@ describe("Progressive Compactor", () => {
     expect(stripped).toContain("public async register");
   });
 
-  it("strips Python comments and docstrings", () => {
+  it("strips Python comments and docstrings but preserves assigned multiline strings", () => {
     const pyCode = `
 # Module docstring
 """This is a service module"""
 def process_data(items):
     # Process items in loop
+    query = """
+    SELECT * FROM table
+    """
     result = []
     for item in items:
         result.append(item * 2)
@@ -63,6 +66,8 @@ def process_data(items):
     const stripped = stripComments(pyCode, "python");
 
     expect(stripped).not.toContain("# Module docstring");
+    expect(stripped).toContain('"""..."""'); // The module docstring is truncated
+    expect(stripped).toContain('SELECT * FROM table'); // The assigned multiline is preserved
     expect(stripped).not.toContain("# Process items in loop");
     expect(stripped).toContain("def process_data(items):");
   });
@@ -167,5 +172,27 @@ def process_data(items):
     const budgetResult2 = progressiveCompact(code, { maxTargetTokens: codeTokens - 1 });
     expect(budgetResult2.stage).toBeGreaterThanOrEqual(1);
     expect(budgetResult2.code).toContain('has \\" // inside');
+  });
+
+  it("Issue 101: processes interpolations and preserves nested templates", () => {
+    const code = `
+      const template = \`
+        prefix
+        \${
+           // This comment should be stripped
+           nestedFn(\`inner \${ // another comment to strip
+             1 + 2
+           } \`)
+        }
+        suffix
+      \`;
+    `;
+    const stripped = stripComments(code);
+    expect(stripped).not.toContain('This comment should be stripped');
+    expect(stripped).not.toContain('another comment to strip');
+    expect(stripped).toContain('prefix');
+    expect(stripped).toContain('suffix');
+    expect(stripped).toContain('inner');
+    expect(stripped).toContain('1 + 2');
   });
 });
