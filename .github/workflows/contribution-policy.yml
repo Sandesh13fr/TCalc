@@ -20,6 +20,7 @@ jobs:
         with:
           script: |
             const trusted = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
+            const isExempt = (pull) => pull.draft || trusted.has(pull.author_association) || pull.user.type === 'Bot';
             const parseIssueNumbers = (body) => [...body.matchAll(/\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)\b/gi)]
               .map((match) => Number(match[1]));
             const evaluate = ({ issueNumbers, assigned, otherPull }) => [
@@ -33,9 +34,11 @@ jobs:
             assert.deepEqual(evaluate({ issueNumbers: [1], assigned: true }), []);
             assert.equal(evaluate({ issueNumbers: [1], assigned: false })[0].includes('assigned'), true);
             assert.equal(evaluate({ issueNumbers: [1], assigned: true, otherPull: { number: 2 } })[0].includes('#2'), true);
+            assert.equal(isExempt({ draft: false, author_association: 'MEMBER', user: { type: 'User' } }), true);
+            assert.equal(isExempt({ draft: false, author_association: 'NONE', user: { type: 'Bot' } }), true);
 
             const pull = context.payload.pull_request;
-            if (pull.draft || trusted.has(pull.author_association) || pull.user.type === 'Bot') return;
+            if (isExempt(pull)) return;
 
             const issueNumbers = parseIssueNumbers(pull.body ?? '');
             const { owner, repo } = context.repo;
