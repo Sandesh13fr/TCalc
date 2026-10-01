@@ -22,9 +22,17 @@ jobs:
             const trusted = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
             const parseIssueNumbers = (body) => [...body.matchAll(/\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)\b/gi)]
               .map((match) => Number(match[1]));
+            const evaluate = ({ issueNumbers, assigned, otherPull }) => [
+              ...(issueNumbers.length === 0 ? ['Link an open issue with `Fixes #123`, `Closes #123`, or `Resolves #123`.'] : []),
+              ...(issueNumbers.length > 0 && !assigned ? ['The linked open issue must be assigned to the PR author before the PR is opened.'] : []),
+              ...(otherPull ? [`Only one open PR is allowed per external contributor; #${otherPull.number} is already open.`] : []),
+            ];
             const assert = require('node:assert/strict');
             assert.deepEqual(parseIssueNumbers('Fixes #123\ncloses #9'), [123, 9]);
             assert.deepEqual(parseIssueNumbers('Related to #7'), []);
+            assert.deepEqual(evaluate({ issueNumbers: [1], assigned: true }), []);
+            assert.equal(evaluate({ issueNumbers: [1], assigned: false })[0].includes('assigned'), true);
+            assert.equal(evaluate({ issueNumbers: [1], assigned: true, otherPull: { number: 2 } })[0].includes('#2'), true);
 
             const pull = context.payload.pull_request;
             if (pull.draft || trusted.has(pull.author_association) || pull.user.type === 'Bot') return;
@@ -32,18 +40,17 @@ jobs:
             const issueNumbers = parseIssueNumbers(pull.body ?? '');
             const { owner, repo } = context.repo;
             const author = pull.user.login.toLowerCase();
-            const violations = [];
-
-            if (issueNumbers.length === 0) {
-              violations.push('Link an open issue with `Fixes #123`, `Closes #123`, or `Resolves #123`.');
-            } else {
-              let assigned = false;
+            let assigned = false;
+            if (issueNumbers.length > 0) {
               for (const issue_number of [...new Set(issueNumbers)]) {
-                const { data: issue } = await github.rest.issues.get({ owner, repo, issue_number });
-                assigned ||= issue.state === 'open' && !issue.pull_request &&
-                  issue.assignees.some((assignee) => assignee.login.toLowerCase() === author);
+                try {
+                  const { data: issue } = await github.rest.issues.get({ owner, repo, issue_number });
+                  assigned ||= issue.state === 'open' && !issue.pull_request &&
+                    issue.assignees.some((assignee) => assignee.login.toLowerCase() === author);
+                } catch (error) {
+                  if (error.status !== 404) throw error;
+                }
               }
-              if (!assigned) violations.push('The linked open issue must be assigned to the PR author before the PR is opened.');
             }
 
             const openPulls = await github.paginate(github.rest.pulls.list, {
@@ -51,7 +58,7 @@ jobs:
             });
             const otherPull = openPulls.find((candidate) =>
               candidate.number !== pull.number && candidate.user.login.toLowerCase() === author);
-            if (otherPull) violations.push(`Only one open PR is allowed per external contributor; #${otherPull.number} is already open.`);
+            const violations = evaluate({ issueNumbers, assigned, otherPull });
 
             if (violations.length === 0) return;
 
