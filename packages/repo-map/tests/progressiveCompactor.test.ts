@@ -159,11 +159,11 @@ def process_data(items):
     expect(stripped).not.toContain('note: c/d');
     expect(stripped).toContain('/ hello/;');
     expect(stripped).not.toContain('// foo');
-    
+
     // Verify it is preserved through progressiveCompact with targetStage 1
     const stage1Result = progressiveCompact(code, { targetStage: 1 });
     expect(stage1Result.code).toContain('has \\" // inside');
-    
+
     // Verify it is preserved through budget-driven Stage 1 selection
     const budgetResult = progressiveCompact(code, { maxTargetTokens: 100000 });
     // Assuming budget is large enough to stay at Stage 0 or 1, actually if it stays at 0 it didn't strip comments

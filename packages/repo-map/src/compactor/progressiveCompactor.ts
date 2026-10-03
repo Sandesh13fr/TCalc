@@ -12,7 +12,7 @@ export function stripComments(code: string, language?: string): string {
 
   let result = "";
   let i = 0;
-  
+
   if (isPython) {
     while (i < code.length) {
       if (code.startsWith('"""', i) || code.startsWith("'''", i)) {
