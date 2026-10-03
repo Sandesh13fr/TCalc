@@ -61,6 +61,7 @@ export async function handleRecommendModels(input: Record<string, unknown>) {
     goal,
     privacyMode,
     budget: policy?.maxTokenBudget ? Math.min(parsed.tokenBudget ?? policy.maxTokenBudget, policy.maxTokenBudget) : parsed.tokenBudget,
+    preferredModelIds: profile?.preferredModelIds,
   });
 
   setLatestRecommendation(recommendation);
