@@ -183,6 +183,9 @@ importers:
       '@wma/scanner':
         specifier: workspace:*
         version: link:../scanner
+      '@wma/tokenizers':
+        specifier: workspace:*
+        version: link:../tokenizers
       zod:
         specifier: ^3.23.0
         version: 3.25.76

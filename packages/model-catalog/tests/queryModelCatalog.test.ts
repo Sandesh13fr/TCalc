@@ -232,4 +232,32 @@ describe("queryModelCatalog", () => {
     expect(page2.models).toHaveLength(2);
     expect(page2.models[0].id).not.toBe(page1.models[0].id);
   });
+
+  it.each([-1, 1.5, NaN, Infinity, -Infinity])(
+    "rejects invalid offset %s",
+    (offset) => {
+      expect(() => queryModelCatalog(mockModels, { offset })).toThrow(
+        "offset must be a non-negative integer",
+      );
+    },
+  );
+
+  it.each([0, -1, 1.5, NaN, Infinity, -Infinity])(
+    "rejects invalid limit %s",
+    (limit) => {
+      expect(() => queryModelCatalog(mockModels, { limit })).toThrow(
+        "limit must be a positive integer",
+      );
+    },
+  );
+
+  it("returns consistent metadata when offset is beyond the results", () => {
+    const result = queryModelCatalog(mockModels, { offset: 100, limit: 2 });
+
+    expect(result.models).toEqual([]);
+    expect(result.totalMatched).toBe(6);
+    expect(result.offset).toBe(100);
+    expect(result.limit).toBe(2);
+    expect(result.hasMore).toBe(false);
+  });
 });

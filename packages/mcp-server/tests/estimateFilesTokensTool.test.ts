@@ -6,6 +6,7 @@ import { handleEstimateFilesTokens } from "../src/tools/estimateFilesTokensTool.
 import { createServer } from "../src/server.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { scanWorkspace } from "@wma/scanner";
 
 describe("estimateFilesTokensTool", () => {
   let tempDir: string;
@@ -52,6 +53,23 @@ describe("estimateFilesTokensTool", () => {
     expect(parsed.budgetUtilizationPercent).toBeGreaterThan(0);
     expect(parsed.files[0].relativePath).toBe("src/index.ts");
     expect(parsed.files[0].exists).toBe(true);
+  });
+
+  it("matches scanner token estimates for the same file", async () => {
+    const relativePath = "src/token-estimate.md";
+    const content = "Shared tokenizer estimates should agree across packages.\n";
+    await writeFile(path.join(tempDir, relativePath), content);
+
+    const result = await handleEstimateFilesTokens({
+      workspaceRoot: tempDir,
+      filePaths: [relativePath],
+    });
+    const parsed = JSON.parse(result.content[0].text);
+    const scan = await scanWorkspace({ rootPath: tempDir });
+    const scannedFile = scan.files.find((file) => file.relativePath === relativePath);
+
+    expect(scannedFile).toBeDefined();
+    expect(parsed.files[0].estimatedTokens).toBe(scannedFile!.estimatedTokens);
   });
 
   it("gracefully marks missing files as exists: false without aborting batch", async () => {

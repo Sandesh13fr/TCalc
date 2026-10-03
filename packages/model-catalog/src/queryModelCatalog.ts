@@ -119,6 +119,10 @@ function computeAggregates(models: ModelInfo[]): CatalogQueryAggregate {
   };
 }
 
+/**
+ * Defaults to offset 0 and limit 50. Invalid pagination values throw a
+ * RangeError rather than being normalized.
+ */
 export function queryModelCatalog(
   models: ModelInfo[],
   options: ModelQueryOptions = {},
@@ -130,6 +134,14 @@ export function queryModelCatalog(
     offset = 0,
     limit = 50,
   } = options;
+
+  if (!Number.isFinite(offset) || !Number.isInteger(offset) || offset < 0) {
+    throw new RangeError("offset must be a non-negative integer");
+  }
+
+  if (!Number.isFinite(limit) || !Number.isInteger(limit) || limit <= 0) {
+    throw new RangeError("limit must be a positive integer");
+  }
 
   const filtered = models.filter((model) => {
     if (filter.searchTerm && !matchesSearchTerm(model, filter.searchTerm)) {
