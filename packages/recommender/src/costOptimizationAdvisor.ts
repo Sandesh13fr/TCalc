@@ -67,6 +67,9 @@ function buildTradeoffSummary(baselineCost: number, targetCost: number, model: M
     const percent = Math.round((Math.abs(diff) / baselineCost) * 100);
     return `Delivers ${percent}% cost reduction. Ideal for offloading standard repetitive development prompts.`;
   }
+  if (baselineCost <= 0) {
+    return `Adds $${diff.toFixed(2)}/mo over the zero-cost baseline for superior frontier reasoning capability on complex edge-cases.`;
+  }
   const increasePercent = Math.round((diff / baselineCost) * 100);
   return `Invests ${increasePercent}% higher spend for superior frontier reasoning capability on complex edge-cases.`;
 }

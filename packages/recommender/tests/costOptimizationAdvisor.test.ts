@@ -74,6 +74,24 @@ const localLlama: ModelInfo = {
   updatedAt: "2025-01-01",
 };
 
+const localQwen: ModelInfo = {
+  id: "qwen-2-5-coder-local",
+  displayName: "Qwen2.5 Coder (LM Studio)",
+  provider: "LM Studio",
+  contextWindow: 128_000,
+  maxOutputTokens: 8192,
+  inputPricePerMillion: 0,
+  cachedInputPricePerMillion: 0,
+  outputPricePerMillion: 0,
+  supportsTools: true,
+  supportsImages: false,
+  supportsLocal: true,
+  privacyMode: "local",
+  codingScore: 76,
+  latencyScore: 58,
+  updatedAt: "2025-01-01",
+};
+
 const tinyModel: ModelInfo = {
   id: "tiny-legacy-model",
   displayName: "Tiny Legacy Model",
@@ -204,5 +222,33 @@ describe("analyzeCostOptimization", () => {
     expect(advice.hybridStrategy.blendedMonthlyCost).toBe(advice.baselineMonthlySpend);
     expect(advice.hybridStrategy.rules[0].tier).toBe("balanced_editing");
     expect(advice.hybridStrategy.rules[0].trafficPercentage).toBe(100);
+  });
+
+  it("reports finite absolute added spend when the baseline model is free", () => {
+    const advice = analyzeCostOptimization({
+      baselineModel: localLlama,
+      candidateModels: [sonnetModel],
+    });
+
+    expect(advice.baselineMonthlySpend).toBe(0);
+
+    const plan = advice.alternativePlans.find((p) => p.targetModelId === sonnetModel.id);
+    expect(plan).toBeDefined();
+    // A percentage comparison is undefined against a zero-cost baseline.
+    expect(plan!.tradeoffSummary).not.toContain("Infinity");
+    expect(plan!.tradeoffSummary).toContain("zero-cost baseline");
+    expect(plan!.tradeoffSummary).toMatch(/\$\d+\.\d{2}\/mo/);
+  });
+
+  it("keeps the cost-neutral summary for zero-to-zero comparisons", () => {
+    const advice = analyzeCostOptimization({
+      baselineModel: localLlama,
+      candidateModels: [localQwen],
+    });
+
+    const plan = advice.alternativePlans.find((p) => p.targetModelId === localQwen.id);
+    expect(plan).toBeDefined();
+    expect(plan!.tradeoffSummary).toContain("Cost-neutral alternative");
+    expect(plan!.tradeoffSummary).not.toContain("Infinity");
   });
 });
