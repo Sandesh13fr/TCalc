@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import * as vscode from "vscode";
+import { testGenerateRepoMapCommand } from "./generateRepoMapCommand.test.js";
 
 export async function run(): Promise<void> {
   const extension = vscode.extensions.getExtension("Sandesh13fr.tcalc");
@@ -11,4 +12,6 @@ export async function run(): Promise<void> {
   assert.ok(commands.includes("workspaceModelAdvisor.openDashboard"));
   assert.ok(extension.packageJSON.contributes.viewsContainers.activitybar.some((view: { id: string }) => view.id === "tcalc"));
   assert.ok(extension.packageJSON.contributes.views.tcalc.some((view: { id: string }) => view.id === "tcalc.sidebar"));
+
+  await testGenerateRepoMapCommand();
 }
