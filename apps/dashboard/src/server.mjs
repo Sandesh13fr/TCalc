@@ -1,5 +1,5 @@
 import { createServer } from "node:http";
-import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, readdir, realpath, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -64,13 +64,30 @@ async function serveStatic(response, publicDir, pathname) {
   if (relativePath.split("/").includes("..")) return false;
   const root = path.resolve(publicDir);
   const requested = path.resolve(root, relativePath);
-  if (requested !== root && !requested.startsWith(`${root}${path.sep}`)) return false;
+  if (!isWithinRoot(root, requested)) return false;
+
+  let realRoot;
+  try {
+    realRoot = await realpath(root);
+  } catch (error) {
+    if (["ENOENT", "ENOTDIR", "ELOOP"].includes(error.code)) return false;
+    throw error;
+  }
+
   const candidates = pathname.endsWith("/")
     ? [path.join(requested, "index.html")]
     : [requested, `${requested}.html`, path.join(requested, "index.html")];
   for (const candidate of candidates) {
+    let realCandidate;
     try {
-      const content = await readFile(candidate);
+      realCandidate = await realpath(candidate);
+    } catch (error) {
+      if (["ENOENT", "ENOTDIR", "ELOOP"].includes(error.code)) continue;
+      throw error;
+    }
+    if (!isWithinRoot(realRoot, realCandidate)) continue;
+    try {
+      const content = await readFile(realCandidate);
       const extension = path.extname(candidate).toLowerCase();
       const immutable = pathname.startsWith("/_next/static/");
       response.writeHead(200, {
@@ -86,6 +103,11 @@ async function serveStatic(response, publicDir, pathname) {
     }
   }
   return false;
+}
+
+function isWithinRoot(rootPath, targetPath) {
+  const relative = path.relative(rootPath, targetPath);
+  return relative === "" || (!relative.startsWith(`..${path.sep}`) && relative !== ".." && !path.isAbsolute(relative));
 }
 
 async function listReports(dataDir) {
