@@ -2,116 +2,160 @@ import * as vscode from "vscode";
 import path from "node:path";
 import { createRepoMap, formatRepoMapMarkdown } from "@wma/repo-map";
 import type { WorkspaceScanResult } from "@wma/core";
+import {
+  getWorkspaceState,
+  selectWorkspaceRoot,
+  setActiveWorkspaceRoot,
+  updateWorkspaceState,
+} from "../workspaceContext.js";
 
 const BUDGET_OPTIONS = [
-  { label: "2K", description: "Ultra concise repo map (~2,000 tokens)", value: 2000 },
-  { label: "8K", description: "Standard repo map (~8,000 tokens)", value: 8000 },
-  { label: "16K", description: "Detailed repo map (~16,000 tokens)", value: 16000 },
-  { label: "32K", description: "Comprehensive repo map (~32,000 tokens)", value: 32000 },
+  {
+    label: "2K",
+    description: "Ultra concise repo map (~2,000 tokens)",
+    value: 2000,
+  },
+  {
+    label: "8K",
+    description: "Standard repo map (~8,000 tokens)",
+    value: 8000,
+  },
+  {
+    label: "16K",
+    description: "Detailed repo map (~16,000 tokens)",
+    value: 16000,
+  },
+  {
+    label: "32K",
+    description: "Comprehensive repo map (~32,000 tokens)",
+    value: 32000,
+  },
   { label: "Custom", description: "Enter a custom token budget", value: -1 },
 ];
 
 const MAP_TYPE_OPTIONS = [
-  { label: "Code-aware repo map", description: "Extract symbols, imports, and routes using source analysis", value: true },
-  { label: "Basic repo map", description: "File-tree based repo map without code analysis", value: false },
+  {
+    label: "Code-aware repo map",
+    description: "Extract symbols, imports, and routes using source analysis",
+    value: true,
+  },
+  {
+    label: "Basic repo map",
+    description: "File-tree based repo map without code analysis",
+    value: false,
+  },
 ];
 
-export function registerGenerateRepoMapCommand(context: vscode.ExtensionContext): vscode.Disposable {
-  return vscode.commands.registerCommand("workspaceModelAdvisor.generateRepoMap", async () => {
-    const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    if (!rootPath) {
-      vscode.window.showErrorMessage("Open a workspace folder first.");
-      return;
-    }
-
-    const lastScan = context.workspaceState.get<unknown>("wma.lastScan") as WorkspaceScanResult | undefined;
-
-    if (!lastScan) {
-      const scanNow = await vscode.window.showInformationMessage(
-        "No workspace scan found. Scan now?",
-        { modal: true },
-        "Scan Workspace",
-        "Cancel",
-      );
-      if (scanNow === "Scan Workspace") {
-        await vscode.commands.executeCommand("workspaceModelAdvisor.scanWorkspace");
+export function registerGenerateRepoMapCommand(
+  context: vscode.ExtensionContext,
+): vscode.Disposable {
+  return vscode.commands.registerCommand(
+    "workspaceModelAdvisor.generateRepoMap",
+    async (requestedRootPath?: string) => {
+      const rootPath = await selectWorkspaceRoot(requestedRootPath);
+      if (!rootPath) {
+        return;
       }
-      return;
-    }
+      await setActiveWorkspaceRoot(context, rootPath);
 
-    const mapType = await vscode.window.showQuickPick(MAP_TYPE_OPTIONS, {
-      placeHolder: "Select repo map type",
-    });
-    if (!mapType) return;
+      const lastScan = getWorkspaceState(context, rootPath).scan as
+        | WorkspaceScanResult
+        | undefined;
 
-    const selected = await vscode.window.showQuickPick(BUDGET_OPTIONS, {
-      placeHolder: "Select token budget for repo map",
-    });
-    if (!selected) return;
-
-    let tokenBudget = selected.value;
-    if (tokenBudget === -1) {
-      const input = await vscode.window.showInputBox({
-        prompt: "Enter token budget (number)",
-        validateInput: (value) => {
-          const n = Number(value);
-          if (!Number.isInteger(n) || n < 100) {
-            return "Enter a positive integer of at least 100";
-          }
-          return null;
-        },
-      });
-      if (!input) return;
-      tokenBudget = Number(input);
-    }
-
-    try {
-      const repoMap = createRepoMap(lastScan, {
-        tokenBudget,
-        enableSymbolExtraction: mapType.value,
-      });
-      const markdown = formatRepoMapMarkdown(repoMap);
-
-      const doc = await vscode.workspace.openTextDocument({
-        content: markdown,
-        language: "markdown",
-      });
-      await vscode.window.showTextDocument(doc);
-
-      const saveUri = await vscode.window.showSaveDialog({
-        defaultUri: vscode.Uri.file(path.join(rootPath, "repo-map.md")),
-        filters: { Markdown: ["md"] },
-      });
-
-      if (saveUri) {
-        try {
-          await vscode.workspace.fs.writeFile(
-            saveUri,
-            new TextEncoder().encode(markdown),
-          );
-          await context.workspaceState.update("wma.repoMapPath", saveUri.fsPath);
-          vscode.window.showInformationMessage(`Repo map saved to ${saveUri.fsPath}`);
-        } catch (err) {
-          vscode.window.showErrorMessage(
-            `Failed to save repo map: ${err instanceof Error ? err.message : String(err)}`,
+      if (!lastScan) {
+        const scanNow = await vscode.window.showInformationMessage(
+          "No workspace scan found. Scan now?",
+          { modal: true },
+          "Scan Workspace",
+          "Cancel",
+        );
+        if (scanNow === "Scan Workspace") {
+          await vscode.commands.executeCommand(
+            "workspaceModelAdvisor.scanWorkspace",
+            rootPath,
           );
         }
+        return;
       }
-    } catch (err) {
-      vscode.window.showWarningMessage(
-        `Code-aware repo map failed, generating basic map: ${err instanceof Error ? err.message : String(err)}`,
-      );
-      const repoMap = createRepoMap(lastScan, {
-        tokenBudget,
-        enableSymbolExtraction: false,
-      });
-      const markdown = formatRepoMapMarkdown(repoMap);
 
-      const doc = await vscode.workspace.openTextDocument({
-        content: markdown,
-        language: "markdown",
+      const mapType = await vscode.window.showQuickPick(MAP_TYPE_OPTIONS, {
+        placeHolder: "Select repo map type",
       });
-      await vscode.window.showTextDocument(doc);
-    }
-  });
+      if (!mapType) return;
+
+      const selected = await vscode.window.showQuickPick(BUDGET_OPTIONS, {
+        placeHolder: "Select token budget for repo map",
+      });
+      if (!selected) return;
+
+      let tokenBudget = selected.value;
+      if (tokenBudget === -1) {
+        const input = await vscode.window.showInputBox({
+          prompt: "Enter token budget (number)",
+          validateInput: (value) => {
+            const n = Number(value);
+            if (!Number.isInteger(n) || n < 100) {
+              return "Enter a positive integer of at least 100";
+            }
+            return null;
+          },
+        });
+        if (!input) return;
+        tokenBudget = Number(input);
+      }
+
+      try {
+        const repoMap = createRepoMap(lastScan, {
+          tokenBudget,
+          enableSymbolExtraction: mapType.value,
+        });
+        const markdown = formatRepoMapMarkdown(repoMap);
+
+        const doc = await vscode.workspace.openTextDocument({
+          content: markdown,
+          language: "markdown",
+        });
+        await vscode.window.showTextDocument(doc);
+
+        const saveUri = await vscode.window.showSaveDialog({
+          defaultUri: vscode.Uri.file(path.join(rootPath, "repo-map.md")),
+          filters: { Markdown: ["md"] },
+        });
+
+        if (saveUri) {
+          try {
+            await vscode.workspace.fs.writeFile(
+              saveUri,
+              new TextEncoder().encode(markdown),
+            );
+            await updateWorkspaceState(context, rootPath, {
+              repoMapPath: saveUri.fsPath,
+            });
+            vscode.window.showInformationMessage(
+              `Repo map saved to ${saveUri.fsPath}`,
+            );
+          } catch (err) {
+            vscode.window.showErrorMessage(
+              `Failed to save repo map: ${err instanceof Error ? err.message : String(err)}`,
+            );
+          }
+        }
+      } catch (err) {
+        vscode.window.showWarningMessage(
+          `Code-aware repo map failed, generating basic map: ${err instanceof Error ? err.message : String(err)}`,
+        );
+        const repoMap = createRepoMap(lastScan, {
+          tokenBudget,
+          enableSymbolExtraction: false,
+        });
+        const markdown = formatRepoMapMarkdown(repoMap);
+
+        const doc = await vscode.workspace.openTextDocument({
+          content: markdown,
+          language: "markdown",
+        });
+        await vscode.window.showTextDocument(doc);
+      }
+    },
+  );
 }

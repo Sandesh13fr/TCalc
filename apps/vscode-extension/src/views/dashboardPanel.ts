@@ -44,26 +44,40 @@ export function createDashboardPanel(
   webview.onDidReceiveMessage((message) => {
     switch (message.command) {
       case "exportReport":
-        vscode.commands.executeCommand("workspaceModelAdvisor.exportReport");
+        vscode.commands.executeCommand(
+          "workspaceModelAdvisor.exportReport",
+          scanResult.rootPath,
+        );
         break;
       case "rescan":
-        vscode.commands.executeCommand("workspaceModelAdvisor.scanWorkspace");
+        vscode.commands.executeCommand(
+          "workspaceModelAdvisor.scanWorkspace",
+          scanResult.rootPath,
+        );
         break;
       case "changeGoal":
         vscode.commands.executeCommand(
           "workspaceModelAdvisor.setWorkspaceGoal",
+          scanResult.rootPath,
         );
         break;
       case "compareModels":
-        vscode.commands.executeCommand("workspaceModelAdvisor.compareModels");
+        vscode.commands.executeCommand(
+          "workspaceModelAdvisor.compareModels",
+          scanResult.rootPath,
+        );
         break;
       case "generateAgentRules":
         vscode.commands.executeCommand(
           "workspaceModelAdvisor.generateAgentRules",
+          scanResult.rootPath,
         );
         break;
       case "generateRepoMap":
-        vscode.commands.executeCommand("workspaceModelAdvisor.generateRepoMap");
+        vscode.commands.executeCommand(
+          "workspaceModelAdvisor.generateRepoMap",
+          scanResult.rootPath,
+        );
         break;
       case "openSettings":
         vscode.commands.executeCommand("workspaceModelAdvisor.openSettings");
@@ -104,8 +118,9 @@ function getHtml(
     recommendation?.allScored.filter((model) => model.overflowRisk === 0)
       .length ?? 0;
   const alternativeModels = recommendation
-    ? [...recommendation.allScored]
-        .sort((a, b) => b.score.totalScore - a.score.totalScore)
+    ? [...recommendation.allScored].sort(
+        (a, b) => b.score.totalScore - a.score.totalScore,
+      )
     : [];
 
   return `<!DOCTYPE html>
@@ -465,7 +480,8 @@ function renderRecCard(
 
 function renderModelRow(rec: ModelRecommendation, models: ModelInfo[]): string {
   const model = models.find((candidate) => candidate.id === rec.modelId);
-  const search = `${rec.displayName} ${rec.modelId} ${model?.provider ?? ""}`.toLowerCase();
+  const search =
+    `${rec.displayName} ${rec.modelId} ${model?.provider ?? ""}`.toLowerCase();
   return `<tr data-model="${escapeHtml(search)}">
     <td><strong>${escapeHtml(rec.displayName)}</strong><br><span class="section-note path">${escapeHtml(rec.modelId)}</span></td>
     <td>${escapeHtml(model?.provider ?? "—")}</td>
