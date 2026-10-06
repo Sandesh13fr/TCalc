@@ -41,6 +41,7 @@ export async function executeRecommend(options: RecommendOptions): Promise<strin
     goal,
     privacyMode: privacy,
     budget: options.tokenBudget,
+    preferredModelIds: profile?.preferredModelIds,
   });
 
   const fmt = options.format ?? "table";
