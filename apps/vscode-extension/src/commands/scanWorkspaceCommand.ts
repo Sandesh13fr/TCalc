@@ -90,7 +90,10 @@ export function registerScanWorkspaceCommand(
             }
 
             progress.report({ message: "Generating recommendations..." });
-            const config = vscode.workspace.getConfiguration("wma");
+            const config = vscode.workspace.getConfiguration(
+              "wma",
+              vscode.Uri.file(rootPath),
+            );
             const goal =
               policy?.defaultGoal ??
               config.get<string>("defaultGoal") ??

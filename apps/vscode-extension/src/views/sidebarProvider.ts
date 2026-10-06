@@ -61,12 +61,12 @@ export class TCalcSidebarProvider implements vscode.WebviewViewProvider {
         : folders?.length
           ? "Workspace"
           : undefined);
-    const goal =
-      vscode.workspace.getConfiguration("wma").get<string>("defaultGoal") ??
-      "build-mvp";
-    const privacy =
-      vscode.workspace.getConfiguration("wma").get<string>("privacyMode") ??
-      "local-first";
+    const config = vscode.workspace.getConfiguration(
+      "wma",
+      activeRoot ? vscode.Uri.file(activeRoot) : undefined,
+    );
+    const goal = config.get<string>("defaultGoal") ?? "build-mvp";
+    const privacy = config.get<string>("privacyMode") ?? "local-first";
 
     return `<!doctype html>
 <html lang="en"><head>

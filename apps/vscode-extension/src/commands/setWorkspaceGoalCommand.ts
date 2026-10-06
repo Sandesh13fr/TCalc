@@ -16,9 +16,11 @@ export function registerSetWorkspaceGoalCommand(
       if (!rootPath) return;
       await setActiveWorkspaceRoot(context, rootPath);
 
-      const currentGoal =
-        vscode.workspace.getConfiguration("wma").get<string>("defaultGoal") ??
-        "build-mvp";
+      const config = vscode.workspace.getConfiguration(
+        "wma",
+        vscode.Uri.file(rootPath),
+      );
+      const currentGoal = config.get<string>("defaultGoal") ?? "build-mvp";
 
       const selected = await vscode.window.showQuickPick(
         WORKSPACE_GOALS.map((g) => ({
@@ -30,13 +32,11 @@ export function registerSetWorkspaceGoalCommand(
 
       if (!selected) return;
 
-      await vscode.workspace
-        .getConfiguration("wma")
-        .update(
-          "defaultGoal",
-          selected.label,
-          vscode.ConfigurationTarget.Workspace,
-        );
+      await config.update(
+        "defaultGoal",
+        selected.label,
+        vscode.ConfigurationTarget.WorkspaceFolder,
+      );
 
       const lastScan = getWorkspaceState(context, rootPath).scan;
       if (lastScan) {
