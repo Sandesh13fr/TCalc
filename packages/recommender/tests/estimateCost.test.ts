@@ -59,6 +59,46 @@ describe("estimateCost", () => {
     expect(result.totalCost).toBe(0);
   });
 
+  it.each([
+    ["negative inputTokens", { inputTokens: -1 }],
+    ["negative outputTokens", { outputTokens: -100 }],
+    ["NaN inputTokens", { inputTokens: Number.NaN }],
+    ["NaN outputTokens", { outputTokens: Number.NaN }],
+    ["NaN cachedInputTokens", { cachedInputTokens: Number.NaN }],
+    ["infinite inputTokens", { inputTokens: Number.POSITIVE_INFINITY }],
+    ["infinite outputTokens", { outputTokens: Number.POSITIVE_INFINITY }],
+    ["infinite cachedInputTokens", { cachedInputTokens: Number.POSITIVE_INFINITY }],
+  ])("should reject %s", (_label, overrides) => {
+    expect(() =>
+      estimateCost({
+        model: testModel,
+        inputTokens: 1_000,
+        outputTokens: 100,
+        ...overrides,
+      }),
+    ).toThrow(RangeError);
+  });
+
+  it("should accept zero token counts at the boundary", () => {
+    const result = estimateCost({
+      model: testModel,
+      inputTokens: 0,
+      outputTokens: 0,
+      cachedInputTokens: 0,
+    });
+    expect(result.totalCost).toBe(0);
+  });
+
+  it("should accept valid fractional token counts", () => {
+    const result = estimateCost({
+      model: testModel,
+      inputTokens: 1500.5,
+      outputTokens: 250.25,
+    });
+    expect(Number.isFinite(result.totalCost)).toBe(true);
+    expect(result.totalCost).toBeGreaterThan(0);
+  });
+
   it("should fall back to input price when cached price is null", () => {
     const modelNoCache: ModelInfo = {
       ...testModel,
