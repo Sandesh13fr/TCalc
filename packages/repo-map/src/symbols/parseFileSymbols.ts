@@ -57,11 +57,21 @@ function extractJavaScriptImports(content: string, relativePath: string, ext: st
 function extractPythonImports(content: string, relativePath: string): RepoMapImport[] {
   const imports: RepoMapImport[] = [];
 
-  const importRegex = /^import\s+(\S+)/gm;
-  let m: RegExpExecArray | null;
-  while ((m = importRegex.exec(content)) !== null) {
-    imports.push({ source: m[1], relativePath, kind: "import" });
+const importRegex = /^import\s+(.+)$/gm;
+let m: RegExpExecArray | null;
+
+while ((m = importRegex.exec(content)) !== null) {
+  const modules = m[1].split(",").map((item) => {
+    const moduleName = item.trim().split(/\s+as\s+/)[0];
+    return moduleName;
+  });
+
+  for (const source of modules) {
+    if (source) {
+      imports.push({ source, relativePath, kind: "import" });
+    }
   }
+}
 
   const fromImportRegex = /^from\s+(\S+)\s+import/gm;
   while ((m = fromImportRegex.exec(content)) !== null) {
