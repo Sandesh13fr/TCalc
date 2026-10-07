@@ -158,6 +158,7 @@
       "properties": {
         "wma.defaultGoal": {
           "type": "string",
+          "scope": "resource",
           "default": "build-mvp",
           "enum": [
             "build-mvp",
@@ -175,6 +176,7 @@
         },
         "wma.privacyMode": {
           "type": "string",
+          "scope": "resource",
           "default": "local-first",
           "enum": [
             "local-first",
