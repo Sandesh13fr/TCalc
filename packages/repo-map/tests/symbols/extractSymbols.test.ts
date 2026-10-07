@@ -217,6 +217,28 @@ import beta as b
       "beta",
     ]);
   });
+  it("ignores comments when parsing Python imports", () => {
+    const content = `
+import os # comment
+import os, sys # note, fake
+import alpha as a, beta as b # aliases
+import numpy.linalg as la # dotted module
+`;
+    const f = join(tempDir, "commented-imports.py");
+    writeFileSync(f, content, "utf-8");
+    const file = makeFileInfo("src/commented-imports.py", ".py", "commented-imports.py");
+
+    const result = parseFileSymbols(file, true);
+
+    expect(result.imports.map((i) => i.source)).toEqual([
+      "os",
+      "os",
+      "sys",
+      "alpha",
+      "beta",
+      "numpy.linalg",
+    ]);
+  });
 });
 
 describe("parseFileSymbols - errors", () => {
