@@ -177,6 +177,68 @@ async def fetch():
     expect(result.imports.some((i) => i.source === "os")).toBe(true);
     expect(result.imports.some((i) => i.source === "typing")).toBe(true);
   });
+  it("parses comma-separated Python imports and aliases", () => {
+    const content = `
+import os, sys
+import alpha as a, beta as b
+`;
+    const f = join(tempDir, "imports.py");
+    writeFileSync(f, content, "utf-8");
+    const file = makeFileInfo("src/imports.py", ".py", "imports.py");
+
+    const result = parseFileSymbols(file, true);
+
+    expect(result.imports.map((i) => i.source)).toEqual([
+      "os",
+      "sys",
+      "alpha",
+      "beta",
+    ]);
+  });
+
+  it("parses Python imports across multiple lines", () => {
+    const content = `
+import os
+import sys, json
+import alpha as a
+import beta as b
+`;
+    const f = join(tempDir, "multiline-imports.py");
+    writeFileSync(f, content, "utf-8");
+    const file = makeFileInfo("src/multiline-imports.py", ".py", "multiline-imports.py");
+
+    const result = parseFileSymbols(file, true);
+
+    expect(result.imports.map((i) => i.source)).toEqual([
+      "os",
+      "sys",
+      "json",
+      "alpha",
+      "beta",
+    ]);
+  });
+  it("ignores comments when parsing Python imports", () => {
+    const content = `
+import os # comment
+import os, sys # note, fake
+import alpha as a, beta as b # aliases
+import numpy.linalg as la # dotted module
+`;
+    const f = join(tempDir, "commented-imports.py");
+    writeFileSync(f, content, "utf-8");
+    const file = makeFileInfo("src/commented-imports.py", ".py", "commented-imports.py");
+
+    const result = parseFileSymbols(file, true);
+
+    expect(result.imports.map((i) => i.source)).toEqual([
+      "os",
+      "os",
+      "sys",
+      "alpha",
+      "beta",
+      "numpy.linalg",
+    ]);
+  });
 });
 
 describe("parseFileSymbols - errors", () => {
