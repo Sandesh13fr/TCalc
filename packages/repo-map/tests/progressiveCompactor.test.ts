@@ -74,6 +74,46 @@ def process_data(items):
     expect(collapsed).toContain("export class UserService");
     expect(collapsed).not.toContain("this.db.save({ email, pass })");
   });
+  it("preserves top-level control-flow blocks in Stage 2", () => {
+  const code = `
+if (ready) {
+  runTask();
+}
+
+for (const item of items) {
+  process(item);
+}
+
+while (ready) {
+  wait();
+}
+
+switch (value) {
+  case 1:
+    handleOne();
+    break;
+}
+
+try {
+  risky();
+} catch (error) {
+  handleError(error);
+}
+
+with (context) {
+  useContext();
+}
+`;
+
+  const result = collapseFunctionBodies(code);
+
+  expect(result).toContain("runTask();");
+  expect(result).toContain("process(item);");
+  expect(result).toContain("wait();");
+  expect(result).toContain("handleOne();");
+  expect(result).toContain("handleError(error);");
+  expect(result).toContain("useContext();");
+});
 
   it("extracts export and interface outline in Stage 3", () => {
     const outline = extractExportOutline(SAMPLE_TS);
@@ -131,4 +171,40 @@ def process_data(items):
     expect(result.stage).toBe(3);
     expect(result.code).toContain("export interface UserDTO");
   });
+  it("preserves control-flow blocks when Stage 2 is selected by budget", () => {
+  const code = `
+if (ready) {
+  runTask();
+}
+
+for (const item of items) {
+  process(item);
+}
+
+function largeFunction() {
+  const a = "this is a large function body";
+  const b = "this is another line of content";
+  const c = "more content to make stage 2 necessary";
+  console.log(a, b, c);
+  return a + b + c;
+}
+`;
+
+  const stage1 = stripComments(code);
+  const stage2 = collapseFunctionBodies(stage1);
+
+  const stage1Tokens = Math.ceil(stage1.length / 3.8);
+  const stage2Tokens = Math.ceil(stage2.length / 3.8);
+
+  const result = progressiveCompact(code, {
+    maxTargetTokens: stage2Tokens,
+  });
+
+  expect(stage1Tokens).toBeGreaterThan(stage2Tokens);
+  expect(result.stage).toBe(2);
+
+  expect(result.code).toContain("runTask();");
+  expect(result.code).toContain("process(item);");
+  expect(result.code).toContain("function largeFunction()");
+});
 });
