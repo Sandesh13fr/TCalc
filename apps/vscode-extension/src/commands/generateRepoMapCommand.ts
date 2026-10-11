@@ -59,8 +59,7 @@ export function registerGenerateRepoMapCommand(
       await setActiveWorkspaceRoot(context, rootPath);
 
       const lastScan = getWorkspaceState(context, rootPath).scan as
-        | WorkspaceScanResult
-        | undefined;
+        WorkspaceScanResult | undefined;
 
       if (!lastScan) {
         const scanNow = await vscode.window.showInformationMessage(
@@ -104,42 +103,13 @@ export function registerGenerateRepoMapCommand(
         tokenBudget = Number(input);
       }
 
+      let markdown: string;
       try {
         const repoMap = createRepoMap(lastScan, {
           tokenBudget,
           enableSymbolExtraction: mapType.value,
         });
-        const markdown = formatRepoMapMarkdown(repoMap);
-
-        const doc = await vscode.workspace.openTextDocument({
-          content: markdown,
-          language: "markdown",
-        });
-        await vscode.window.showTextDocument(doc);
-
-        const saveUri = await vscode.window.showSaveDialog({
-          defaultUri: vscode.Uri.file(path.join(rootPath, "repo-map.md")),
-          filters: { Markdown: ["md"] },
-        });
-
-        if (saveUri) {
-          try {
-            await vscode.workspace.fs.writeFile(
-              saveUri,
-              new TextEncoder().encode(markdown),
-            );
-            await updateWorkspaceState(context, rootPath, {
-              repoMapPath: saveUri.fsPath,
-            });
-            vscode.window.showInformationMessage(
-              `Repo map saved to ${saveUri.fsPath}`,
-            );
-          } catch (err) {
-            vscode.window.showErrorMessage(
-              `Failed to save repo map: ${err instanceof Error ? err.message : String(err)}`,
-            );
-          }
-        }
+        markdown = formatRepoMapMarkdown(repoMap);
       } catch (err) {
         vscode.window.showWarningMessage(
           `Code-aware repo map failed, generating basic map: ${err instanceof Error ? err.message : String(err)}`,
@@ -148,13 +118,37 @@ export function registerGenerateRepoMapCommand(
           tokenBudget,
           enableSymbolExtraction: false,
         });
-        const markdown = formatRepoMapMarkdown(repoMap);
+        markdown = formatRepoMapMarkdown(repoMap);
+      }
 
-        const doc = await vscode.workspace.openTextDocument({
-          content: markdown,
-          language: "markdown",
-        });
-        await vscode.window.showTextDocument(doc);
+      const doc = await vscode.workspace.openTextDocument({
+        content: markdown,
+        language: "markdown",
+      });
+      await vscode.window.showTextDocument(doc);
+
+      const saveUri = await vscode.window.showSaveDialog({
+        defaultUri: vscode.Uri.file(path.join(rootPath, "repo-map.md")),
+        filters: { Markdown: ["md"] },
+      });
+
+      if (saveUri) {
+        try {
+          await vscode.workspace.fs.writeFile(
+            saveUri,
+            new TextEncoder().encode(markdown),
+          );
+          await updateWorkspaceState(context, rootPath, {
+            repoMapPath: saveUri.fsPath,
+          });
+          vscode.window.showInformationMessage(
+            `Repo map saved to ${saveUri.fsPath}`,
+          );
+        } catch (err) {
+          vscode.window.showErrorMessage(
+            `Failed to save repo map: ${err instanceof Error ? err.message : String(err)}`,
+          );
+        }
       }
     },
   );

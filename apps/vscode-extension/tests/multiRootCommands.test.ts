@@ -20,6 +20,8 @@ const vscodeMock = {
     file: (fsPath: string) => ({ fsPath }),
   },
   workspace: {
+    openTextDocument: vi.fn(async () => ({})),
+    fs: { writeFile: vi.fn(async () => undefined) },
     workspaceFolders: [
       { name: "alpha", uri: { fsPath: roots.alpha } },
       { name: "beta", uri: { fsPath: roots.beta } },
@@ -49,6 +51,9 @@ const vscodeMock = {
     executeCommand: vi.fn(),
   },
   window: {
+    showTextDocument: vi.fn(),
+    showSaveDialog: vi.fn(),
+    showErrorMessage: vi.fn(),
     showQuickPick: vi.fn(),
     showInformationMessage: vi.fn(),
     showWarningMessage: vi.fn(),
@@ -95,6 +100,10 @@ vi.mock("@wma/core", () => ({
   loadTeamPolicy: async () => undefined,
   WORKSPACE_GOALS: ["Goal A", "Goal B", "Goal B Updated"],
 }));
+vi.mock("@wma/repo-map", () => ({
+  createRepoMap: vi.fn(),
+  formatRepoMapMarkdown: vi.fn(() => "# Basic map"),
+}));
 
 const { registerScanWorkspaceCommand } =
   await import("../src/commands/scanWorkspaceCommand.js");
@@ -103,6 +112,10 @@ const { registerSetWorkspaceGoalCommand } =
 const { TCalcSidebarProvider } =
   await import("../src/views/sidebarProvider.js");
 const { getWorkspaceState } = await import("../src/workspaceContext.js");
+const { updateWorkspaceState } = await import("../src/workspaceContext.js");
+const { createRepoMap } = await import("@wma/repo-map");
+const { registerGenerateRepoMapCommand } =
+  await import("../src/commands/generateRepoMapCommand.js");
 
 function createContext() {
   return {
@@ -188,4 +201,70 @@ describe("VS Code multi-root commands", () => {
     expect(sidebarHtml).toContain("Goal B Updated");
     expect(sidebarHtml).not.toContain("Goal A");
   });
+
+  it.each(["save", "cancel", "write failure"])(
+    "preserves fallback document and root state on %s",
+    async (outcome) => {
+      const context = createContext();
+      const scan = { rootPath: roots.beta } as never;
+      await updateWorkspaceState(context, roots.beta, { scan });
+      registerGenerateRepoMapCommand(context);
+      vscodeMock.window.showQuickPick
+        .mockResolvedValueOnce({ value: true })
+        .mockResolvedValueOnce({ value: 8000 });
+      vi.mocked(createRepoMap)
+        .mockImplementationOnce(() => {
+          throw new Error("analysis failed");
+        })
+        .mockReturnValueOnce({} as never);
+      const saveUri = { fsPath: "C:/saved/map.md" };
+      vscodeMock.window.showSaveDialog.mockResolvedValueOnce(
+        outcome === "cancel" ? undefined : saveUri,
+      );
+      if (outcome === "write failure") {
+        vscodeMock.workspace.fs.writeFile.mockRejectedValueOnce(
+          new Error("disk full"),
+        );
+      }
+
+      await runCommand("workspaceModelAdvisor.generateRepoMap", roots.beta);
+
+      expect(createRepoMap).toHaveBeenNthCalledWith(2, scan, {
+        tokenBudget: 8000,
+        enableSymbolExtraction: false,
+      });
+      expect(vscodeMock.workspace.openTextDocument).toHaveBeenCalledWith({
+        content: "# Basic map",
+        language: "markdown",
+      });
+      expect(vscodeMock.window.showSaveDialog).toHaveBeenCalledWith(
+        expect.objectContaining({
+          defaultUri: {
+            fsPath: expect.stringMatching(/beta[\\/]repo-map\.md$/),
+          },
+        }),
+      );
+      expect(
+        getWorkspaceState(context, roots.alpha).repoMapPath,
+      ).toBeUndefined();
+      expect(getWorkspaceState(context, roots.beta).repoMapPath).toBe(
+        outcome === "save" ? saveUri.fsPath : undefined,
+      );
+      expect(vscodeMock.workspace.fs.writeFile).toHaveBeenCalledTimes(
+        outcome === "cancel" ? 0 : 1,
+      );
+      if (outcome !== "cancel") {
+        expect(vscodeMock.workspace.fs.writeFile).toHaveBeenCalledWith(
+          saveUri,
+          new TextEncoder().encode("# Basic map"),
+        );
+      }
+      if (outcome === "write failure") {
+        expect(vscodeMock.window.showErrorMessage).toHaveBeenCalledWith(
+          "Failed to save repo map: disk full",
+        );
+        expect(vscodeMock.window.showInformationMessage).not.toHaveBeenCalled();
+      }
+    },
+  );
 });
