@@ -4,6 +4,15 @@ import type {
   CompactorOptions,
 } from "./compactionLevels.js";
 
+const CONTROL_FLOW_KEYWORDS = new Set([
+  "if",
+  "for",
+  "while",
+  "switch",
+  "catch",
+  "with",
+]);
+
 /**
  * Stage 1: Strip single-line, multi-line comments and docstrings.
  */
@@ -48,6 +57,12 @@ export function collapseFunctionBodies(code: string): string {
 
     // Check if line looks like a function, method, constructor, or arrow function
     const isClassHeader = /^(export\s+)?(abstract\s+)?class\s+/.test(trimmed);
+    const firstWord = trimmed.match(/^(?:}\s*)?(?:else\s+)?([A-Za-z_$][A-Za-z0-9_$]*)/)?.[1];
+
+    const isGenericSignature =
+      !CONTROL_FLOW_KEYWORDS.has(firstWord ?? "") &&
+      /\b[A-Za-z0-9_$]+\s*\([^)]*\)\s*(?::\s*[^;{]+)?\s*\{?$/.test(trimmed);
+
     const isSignature =
       !isClassHeader &&
       (trimmed.startsWith("function ") ||
@@ -55,7 +70,7 @@ export function collapseFunctionBodies(code: string): string {
         trimmed.startsWith("async function ") ||
         trimmed.startsWith("export async function ") ||
         trimmed.startsWith("constructor") ||
-        /\b[A-Za-z0-9_$]+\s*\([^)]*\)\s*(?::\s*[^;{]+)?\s*\{?$/.test(trimmed) ||
+        isGenericSignature ||
         /^(const|let|var)\s+[A-Za-z0-9_$]+\s*=\s*(async\s*)?\([^)]*\)\s*(=>)?\s*\{?$/.test(trimmed));
 
     if (isSignature && !inBlock) {
