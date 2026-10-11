@@ -21,12 +21,12 @@ export function parseFileSymbols(file: WorkspaceFileInfo, includeImports: boolea
     let error: string | null = null;
 
     try {
-      if (ext === ".ts" || ext === ".tsx") {
+      if ([".ts", ".tsx", ".mts", ".cts"].includes(ext)) {
         symbols = extractTypeScriptSymbols(content, file.relativePath, ext);
         if (includeImports) {
           imports = extractTypeScriptImports(content, file.relativePath, ext);
         }
-      } else if (ext === ".js" || ext === ".jsx") {
+      } else if ([".js", ".jsx", ".mjs", ".cjs"].includes(ext)) {
         symbols = extractJavaScriptSymbols(content, file.relativePath, ext);
         if (includeImports) {
           imports = extractJavaScriptImports(content, file.relativePath, ext);
