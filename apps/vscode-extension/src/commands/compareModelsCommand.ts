@@ -1,37 +1,65 @@
 import * as vscode from "vscode";
 import { randomUUID } from "node:crypto";
-import type { RecommendationResult, ModelRecommendation, ModelInfo } from "@wma/core";
+import type {
+  RecommendationResult,
+  ModelRecommendation,
+  ModelInfo,
+} from "@wma/core";
+import {
+  getWorkspaceState,
+  selectWorkspaceRoot,
+  setActiveWorkspaceRoot,
+} from "../workspaceContext.js";
 
-export function registerCompareModelsCommand(context: vscode.ExtensionContext): vscode.Disposable {
-  return vscode.commands.registerCommand("workspaceModelAdvisor.compareModels", () => {
-    const lastScan = context.workspaceState.get<unknown>("wma.lastScan");
-    const lastRecommendation = context.workspaceState.get<unknown>("wma.lastRecommendation") as RecommendationResult | null;
-    const lastModels = context.workspaceState.get<unknown>("wma.lastModels") as ModelInfo[] | null;
+export function registerCompareModelsCommand(
+  context: vscode.ExtensionContext,
+): vscode.Disposable {
+  return vscode.commands.registerCommand(
+    "workspaceModelAdvisor.compareModels",
+    async (requestedRootPath?: string) => {
+      const rootPath = await selectWorkspaceRoot(requestedRootPath);
+      if (!rootPath) return;
+      await setActiveWorkspaceRoot(context, rootPath);
 
-    if (!lastScan || !lastRecommendation) {
-      vscode.window.showInformationMessage("Run a workspace scan first.");
-      return;
-    }
+      const state = getWorkspaceState(context, rootPath);
+      const lastScan = state.scan;
+      const lastRecommendation = state.recommendation as
+        | RecommendationResult
+        | null
+        | undefined;
+      const lastModels = state.models as ModelInfo[] | undefined;
 
-    const panel = vscode.window.createWebviewPanel(
-      "wmaCompareModels",
-      "Model Comparison",
-      vscode.ViewColumn.One,
-      { enableScripts: false, localResourceRoots: [] },
-    );
+      if (!lastScan || !lastRecommendation) {
+        vscode.window.showInformationMessage("Run a workspace scan first.");
+        return;
+      }
 
-    const tiers = [
-      lastRecommendation.cheapestSufficient,
-      lastRecommendation.balanced,
-      lastRecommendation.highConfidence,
-    ];
+      const panel = vscode.window.createWebviewPanel(
+        "wmaCompareModels",
+        "Model Comparison",
+        vscode.ViewColumn.One,
+        { enableScripts: false, localResourceRoots: [] },
+      );
 
-    const otherModels = lastRecommendation.allScored.filter(
-      m => !tiers.some(t => t.modelId === m.modelId),
-    );
+      const tiers = [
+        lastRecommendation.cheapestSufficient,
+        lastRecommendation.balanced,
+        lastRecommendation.highConfidence,
+      ];
 
-    panel.webview.html = getComparisonHtml(panel.webview, randomUUID(), tiers, otherModels, lastModels ?? []);
-  });
+      const otherModels = lastRecommendation.allScored.filter(
+        (m) => !tiers.some((t) => t.modelId === m.modelId),
+      );
+
+      panel.webview.html = getComparisonHtml(
+        panel.webview,
+        randomUUID(),
+        tiers,
+        otherModels,
+        lastModels ?? [],
+      );
+    },
+  );
 }
 
 function fmtCost(cost: number): string {
@@ -39,11 +67,18 @@ function fmtCost(cost: number): string {
 }
 
 function escapeHtml(text: string): string {
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
-function getModelInfo(modelId: string, models: ModelInfo[]): ModelInfo | undefined {
-  return models.find(m => m.id === modelId);
+function getModelInfo(
+  modelId: string,
+  models: ModelInfo[],
+): ModelInfo | undefined {
+  return models.find((m) => m.id === modelId);
 }
 
 function getComparisonHtml(
@@ -55,11 +90,12 @@ function getComparisonHtml(
 ): string {
   const allModels = [...tiers, ...otherModels];
 
-  const fitRows = allModels.map(m => {
-    const e = m.costEstimate;
-    const oneTurnCost = e.totalCost;
-    const tenTurnCost = oneTurnCost * 10;
-    return `
+  const fitRows = allModels
+    .map((m) => {
+      const e = m.costEstimate;
+      const oneTurnCost = e.totalCost;
+      const tenTurnCost = oneTurnCost * 10;
+      return `
     <tr>
       <td><strong>${escapeHtml(m.displayName)}</strong><br><span class="muted">${escapeHtml(m.modelId)}</span></td>
       <td>${escapeHtml(m.tier)}</td>
@@ -67,17 +103,28 @@ function getComparisonHtml(
       <td class="num">${escapeHtml(m.expectedQuality)}</td>
       <td class="num">${fmtCost(oneTurnCost)}</td>
       <td class="num">${fmtCost(tenTurnCost)}</td>
-      <td class="reason">${m.reasons.slice(0, 2).map(r => escapeHtml(r)).join("<br>")}</td>
+      <td class="reason">${m.reasons
+        .slice(0, 2)
+        .map((r) => escapeHtml(r))
+        .join("<br>")}</td>
     </tr>`;
-  }).join("");
+    })
+    .join("");
 
-  const modelRows = allModels.map(m => {
-    const mi = getModelInfo(m.modelId, models);
-    const contextWindow = mi?.contextWindow?.toLocaleString() ?? "—";
-    const provider = mi?.provider ?? "—";
-    const inputPrice = mi?.inputPricePerMillion != null ? `$${mi.inputPricePerMillion.toFixed(4)}/M` : "—";
-    const outputPrice = mi?.outputPricePerMillion != null ? `$${mi.outputPricePerMillion.toFixed(4)}/M` : "—";
-    return `
+  const modelRows = allModels
+    .map((m) => {
+      const mi = getModelInfo(m.modelId, models);
+      const contextWindow = mi?.contextWindow?.toLocaleString() ?? "—";
+      const provider = mi?.provider ?? "—";
+      const inputPrice =
+        mi?.inputPricePerMillion != null
+          ? `$${mi.inputPricePerMillion.toFixed(4)}/M`
+          : "—";
+      const outputPrice =
+        mi?.outputPricePerMillion != null
+          ? `$${mi.outputPricePerMillion.toFixed(4)}/M`
+          : "—";
+      return `
     <tr>
       <td><strong>${escapeHtml(m.displayName)}</strong></td>
       <td class="num">${contextWindow}</td>
@@ -86,7 +133,8 @@ function getComparisonHtml(
       <td class="num">${outputPrice}</td>
       <td class="num">${fmtCost(m.costEstimate.totalCost)}</td>
     </tr>`;
-  }).join("");
+    })
+    .join("");
 
   return `<!DOCTYPE html>
 <html lang="en">
