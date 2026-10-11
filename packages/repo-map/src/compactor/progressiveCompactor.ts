@@ -10,18 +10,172 @@ import type {
 export function stripComments(code: string, language?: string): string {
   const isPython = language?.toLowerCase().includes("python") || language?.toLowerCase() === "py";
 
-  let result = code;
-  if (!isPython) {
-    // Strip multi-line comments /* ... */
-    result = result.replace(/\/\*[\s\S]*?\*\//g, "");
-    // Strip single-line comments // ...
-    result = result.replace(/(^|[^\\])\/\/.*$/gm, "$1");
+  let result = "";
+  let i = 0;
+
+  if (isPython) {
+    while (i < code.length) {
+      if (code.startsWith('"""', i) || code.startsWith("'''", i)) {
+        const quote = code.slice(i, i + 3);
+        const end = code.indexOf(quote, i + 3);
+        if (end !== -1) {
+          let j = i - 1;
+          let isDocstring = true;
+          while (j >= 0 && code[j] !== '\n') {
+            if (code[j] !== ' ' && code[j] !== '\t') {
+              isDocstring = false;
+              break;
+            }
+            j--;
+          }
+          if (isDocstring) {
+            result += quote + "..." + quote;
+          } else {
+            result += code.slice(i, end + 3);
+          }
+          i = end + 3;
+        } else {
+          result += code.slice(i);
+          break;
+        }
+      } else if (code[i] === '"' || code[i] === "'") {
+        const quote = code[i];
+        result += quote;
+        i++;
+        while (i < code.length) {
+          if (code[i] === '\\') {
+            result += code[i];
+            if (i + 1 < code.length) {
+              result += code[i + 1];
+              i++;
+            }
+          } else if (code[i] === quote) {
+            result += quote;
+            i++;
+            break;
+          } else {
+            result += code[i];
+          }
+          i++;
+        }
+      } else if (code[i] === '#') {
+        while (i < code.length && code[i] !== '\n') {
+          i++;
+        }
+      } else {
+        result += code[i];
+        i++;
+      }
+    }
   } else {
-    // Python comments # ...
-    result = result.replace(/(^|[^\\])#.*$/gm, "$1");
-    // Python triple-quoted docstrings """ ... """
-    result = result.replace(/"""[\s\S]*?"""/g, '"""..."""');
-    result = result.replace(/'''[\s\S]*?'''/g, "'''...'''");
+    const templateStack: number[] = [];
+    let braceDepth = 0;
+    let inTemplate = false;
+
+    while (i < code.length) {
+      if (!inTemplate) {
+        if (code[i] === '{') {
+          braceDepth++;
+          result += code[i++];
+        } else if (code[i] === '}') {
+          braceDepth--;
+          result += code[i++];
+          if (templateStack.length > 0 && braceDepth === templateStack[templateStack.length - 1]) {
+            templateStack.pop();
+            inTemplate = true;
+          }
+        } else if (code[i] === '"' || code[i] === "'") {
+          const quote = code[i];
+          result += quote;
+          i++;
+          while (i < code.length) {
+            if (code[i] === '\\') {
+              result += code[i];
+              if (i + 1 < code.length) {
+                result += code[i + 1];
+                i++;
+              }
+            } else if (code[i] === quote) {
+              result += quote;
+              i++;
+              break;
+            } else if (code[i] === '\n') {
+              result += code[i];
+              i++;
+              break;
+            } else {
+              result += code[i];
+            }
+            i++;
+          }
+        } else if (code[i] === '`') {
+          inTemplate = true;
+          result += code[i++];
+        } else if (code.startsWith('//', i)) {
+          while (i < code.length && code[i] !== '\n') {
+            i++;
+          }
+        } else if (code.startsWith('/*', i)) {
+          const end = code.indexOf('*/', i + 2);
+          if (end !== -1) {
+            i = end + 2;
+          } else {
+            i = code.length;
+          }
+        } else if (code[i] === '/') {
+          const prefix = code.slice(0, i).trimEnd();
+          const isRegexContext = prefix.length === 0 || /[-=+,!*&|?~%^<>(>[{;:]$/.test(prefix) || /\b(return|yield|await|typeof|throw|case)\s*$/.test(prefix);
+          if (isRegexContext) {
+              result += code[i];
+              i++;
+              let inCharClass = false;
+              while (i < code.length && code[i] !== '\n') {
+                  if (code[i] === '\\') {
+                      result += code[i];
+                      if (i + 1 < code.length) { result += code[i + 1]; i++; }
+                  } else if (code[i] === '[') {
+                      inCharClass = true;
+                      result += code[i];
+                  } else if (code[i] === ']') {
+                      inCharClass = false;
+                      result += code[i];
+                  } else if (code[i] === '/' && !inCharClass) {
+                      result += code[i];
+                      i++;
+                      break;
+                  } else {
+                      result += code[i];
+                  }
+                  i++;
+              }
+          } else {
+              result += code[i];
+              i++;
+          }
+        } else {
+          result += code[i];
+          i++;
+        }
+      } else {
+        // Inside template literal
+        if (code[i] === '\\') {
+          result += code[i];
+          if (i + 1 < code.length) { result += code[i + 1]; i++; }
+          i++;
+        } else if (code[i] === '`') {
+          inTemplate = false;
+          result += code[i++];
+        } else if (code[i] === '$' && i + 1 < code.length && code[i + 1] === '{') {
+          result += '${';
+          i += 2;
+          templateStack.push(braceDepth);
+          braceDepth++;
+          inTemplate = false;
+        } else {
+          result += code[i++];
+        }
+      }
+    }
   }
 
   // Remove empty comment lines and excessive consecutive blank lines

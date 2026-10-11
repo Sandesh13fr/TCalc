@@ -49,12 +49,15 @@ describe("Progressive Compactor", () => {
     expect(stripped).toContain("public async register");
   });
 
-  it("strips Python comments and docstrings", () => {
+  it("strips Python comments and docstrings but preserves assigned multiline strings", () => {
     const pyCode = `
 # Module docstring
 """This is a service module"""
 def process_data(items):
     # Process items in loop
+    query = """
+    SELECT * FROM table
+    """
     result = []
     for item in items:
         result.append(item * 2)
@@ -63,6 +66,8 @@ def process_data(items):
     const stripped = stripComments(pyCode, "python");
 
     expect(stripped).not.toContain("# Module docstring");
+    expect(stripped).toContain('"""..."""'); // The module docstring is truncated
+    expect(stripped).toContain('SELECT * FROM table'); // The assigned multiline is preserved
     expect(stripped).not.toContain("# Process items in loop");
     expect(stripped).toContain("def process_data(items):");
   });
@@ -130,5 +135,64 @@ def process_data(items):
 
     expect(result.stage).toBe(3);
     expect(result.code).toContain("export interface UserDTO");
+  });
+
+  it("Issue 101: preserves string and regex literals", () => {
+    const code = `
+      const url = "https://example.com/api";
+      const regex = /https:\\/\\//;
+      // This is a real comment
+      const template = \`
+        // not a comment \${ "nested // string" }
+      \`;
+      const escapedQuote = "has \\\" // inside";
+      const div = a/b; // note: c/d
+      const regexTrailing = / hello/; // foo
+    `;
+    const stripped = stripComments(code);
+    expect(stripped).toContain('"https://example.com/api"');
+    expect(stripped).toContain('/https:\\/\\//');
+    expect(stripped).toContain('// not a comment');
+    expect(stripped).not.toContain('This is a real comment');
+    expect(stripped).toContain('has \\" // inside');
+    expect(stripped).toContain('a/b;');
+    expect(stripped).not.toContain('note: c/d');
+    expect(stripped).toContain('/ hello/;');
+    expect(stripped).not.toContain('// foo');
+
+    // Verify it is preserved through progressiveCompact with targetStage 1
+    const stage1Result = progressiveCompact(code, { targetStage: 1 });
+    expect(stage1Result.code).toContain('has \\" // inside');
+
+    // Verify it is preserved through budget-driven Stage 1 selection
+    const budgetResult = progressiveCompact(code, { maxTargetTokens: 100000 });
+    // Assuming budget is large enough to stay at Stage 0 or 1, actually if it stays at 0 it didn't strip comments
+    // Let's explicitly force Stage 1 via budget by ensuring it needs slight reduction
+    const codeTokens = Math.max(1, Math.ceil(code.length / 3.8));
+    const budgetResult2 = progressiveCompact(code, { maxTargetTokens: codeTokens - 1 });
+    expect(budgetResult2.stage).toBeGreaterThanOrEqual(1);
+    expect(budgetResult2.code).toContain('has \\" // inside');
+  });
+
+  it("Issue 101: processes interpolations and preserves nested templates", () => {
+    const code = `
+      const template = \`
+        prefix
+        \${
+           // This comment should be stripped
+           nestedFn(\`inner \${ // another comment to strip
+             1 + 2
+           } \`)
+        }
+        suffix
+      \`;
+    `;
+    const stripped = stripComments(code);
+    expect(stripped).not.toContain('This comment should be stripped');
+    expect(stripped).not.toContain('another comment to strip');
+    expect(stripped).toContain('prefix');
+    expect(stripped).toContain('suffix');
+    expect(stripped).toContain('inner');
+    expect(stripped).toContain('1 + 2');
   });
 });
