@@ -40,7 +40,7 @@ export function countWorkspaceTokens(files: WorkspaceFileInfo[]): WorkspaceToken
       fileCount: data.count,
       totalBytes: data.bytes,
       totalTokens: data.tokens,
-      percentage: includedTokens > 0 ? Math.round((data.tokens / includedTokens) * 10000) / 100 : 0,
+      percentage: includedTokens > 0 ? percentage: includedTokens > 0 ? data.tokens / includedTokens : 0,
     });
   }
   perLanguage.sort((a, b) => b.totalTokens - a.totalTokens);
