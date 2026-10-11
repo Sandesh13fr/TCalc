@@ -49,6 +49,7 @@ export async function handleGenerateReport(input: Record<string, unknown>) {
       goal,
       privacyMode,
       budget: policy?.maxTokenBudget,
+      preferredModelIds: profile?.preferredModelIds,
     });
     setLatestRecommendation(recommendation);
   }

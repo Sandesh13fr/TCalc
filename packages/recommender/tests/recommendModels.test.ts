@@ -454,4 +454,147 @@ describe("recommendModels", () => {
     expect(new Set(tierIds).size).toBe(3);
     expect(tierIds).not.toContain("weak");
   });
+
+  // --- preferredModelIds ---
+
+  it("preferred tied model wins cheapest-sufficient when cost and score are equal", () => {
+    // Two identical clones — same price, same scores — only id differs.
+    // clone-b is preferred; alphabetically it would lose the localeCompare
+    // tiebreaker ('b' > 'a'), so without the fix clone-a would always win.
+    // With the fix, clone-b wins cheapest-sufficient (all substantive criteria tied).
+    // The dedup mechanism forces balanced to the unused alternative (clone-a),
+    // and high-confidence falls back to clone-b (ranked[0]) once both are used.
+    // At minimum, the preferred model must appear as cheapest-sufficient.
+    const cloneA: ModelInfo = {
+      ...midModel,
+      id: "clone-a",
+      displayName: "Clone A",
+    };
+    const cloneB: ModelInfo = {
+      ...midModel,
+      id: "clone-b",
+      displayName: "Clone B",
+    };
+    const result = recommendModels({
+      models: [cloneA, cloneB],
+      workspaceTokens: 5000,
+      goal: "add-feature",
+      privacyMode: "cloud-ok",
+      preferredModelIds: ["clone-b"],
+    });
+    // cheapest-sufficient must be clone-b (preferred wins the tie).
+    expect(result.cheapestSufficient.modelId).toBe("clone-b");
+    // At least one of the three tiers must contain the preferred model.
+    const tierIds = [result.cheapestSufficient.modelId, result.balanced.modelId, result.highConfidence.modelId];
+    expect(tierIds).toContain("clone-b");
+    // Without preferredModelIds the alphabetical fallback would give clone-a;
+    // confirm the preferred model is NOT locked out entirely.
+    expect(tierIds.filter((id) => id === "clone-b").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("preferred tied model wins balanced when totalScore is equal", () => {
+    // Three models: cheapModel is cheapest → consumed by cheapestSufficient.
+    // tied-a and tied-z are identical midModel clones: same totalCost, same totalScore.
+    // After cheapModel is consumed, balanced must choose between tied-a and tied-z
+    // using only byPreference.  tied-z is preferred but alphabetically second;
+    // without the fix localeCompare puts tied-a first, so the assertion would fail.
+    //
+    // Numeric proof (workspaceTokens=5000, goal="add-feature", contextNeeded=6000):
+    //   cheapModel:   totalCost≈0.0034, totalScore≈0.733  → first in balancedRanked
+    //   tied clones:  totalCost≈0.0228, totalScore≈0.677  → equal; byPreference decides
+    //   cheapestSufficient picks cheapModel; balanced skips it and reaches the tied pair.
+    const tiedA: ModelInfo = { ...midModel, id: "tied-a", displayName: "Tied A" };
+    const tiedZ: ModelInfo = { ...midModel, id: "tied-z", displayName: "Tied Z" };
+    const result = recommendModels({
+      models: [cheapModel, tiedA, tiedZ],
+      workspaceTokens: 5000,
+      goal: "add-feature",
+      privacyMode: "cloud-ok",
+      preferredModelIds: ["tied-z"],
+    });
+    // Pre-condition: cheapModel must absorb cheapestSufficient.
+    expect(result.cheapestSufficient.modelId).toBe("cheap");
+    // Core assertion: preferred tied-z beats tied-a in the balanced ranking.
+    // Without the fix, localeCompare("tied-a","tied-z") < 0 puts tied-a first → fails.
+    expect(result.balanced.modelId).toBe("tied-z");
+  });
+
+  it("preferred tied model wins highConfidence when confidence score is equal", () => {
+    // Four models:
+    //   cheapModel  → consumed by cheapestSufficient (lowest cost)
+    //   superB      → consumed by balanced (highest totalScore AND confidenceScore)
+    //   tied-x / tied-z (identical midModel clones) → compete for highConfidence
+    // tied-z is preferred but alphabetically after tied-x;
+    // without the fix localeCompare puts tied-x first, so the assertion would fail.
+    //
+    // Numeric proof (workspaceTokens=5000, goal="add-feature", contextNeeded=6000):
+    //   cheapModel: totalCost≈0.0034, totalScore≈0.733, confidenceScore≈0.49
+    //   superB:     totalCost≈0.0118, totalScore≈0.810, confidenceScore≈0.915
+    //   tied clones: totalCost≈0.0228, totalScore≈0.677, confidenceScore≈0.745
+    //   cheapestSufficient→cheapModel; balanced→superB; highConfidence→tied pair.
+    const superB: ModelInfo = {
+      ...midModel,
+      id: "super-b",
+      displayName: "Super B",
+      codingScore: 90,
+      inputPricePerMillion: 0.5,
+      outputPricePerMillion: 2.0,
+    };
+    const tiedX: ModelInfo = { ...midModel, id: "tied-x", displayName: "Tied X" };
+    const tiedZ: ModelInfo = { ...midModel, id: "tied-z", displayName: "Tied Z" };
+    const result = recommendModels({
+      models: [cheapModel, superB, tiedX, tiedZ],
+      workspaceTokens: 5000,
+      goal: "add-feature",
+      privacyMode: "cloud-ok",
+      preferredModelIds: ["tied-z"],
+    });
+    // Pre-conditions: verify the two earlier tiers are consumed before the tied pair.
+    expect(result.cheapestSufficient.modelId).toBe("cheap");
+    expect(result.balanced.modelId).toBe("super-b");
+    // Core assertion: preferred tied-z beats tied-x in the highConfidence ranking.
+    // Without the fix, localeCompare("tied-x","tied-z") < 0 puts tied-x first → fails.
+    expect(result.highConfidence.modelId).toBe("tied-z");
+  });
+
+  it("preferred model does NOT beat a model with a better substantive score", () => {
+    // Use three models: mid (high score), weak (low score, preferred), cheap (lowest cost).
+    // cheapest-sufficient picks cheap; balanced should then pick mid (higher totalScore than weak)
+    // even though weak is preferred — preference only breaks ties.
+    const result = recommendModels({
+      models: [cheapModel, midModel, weakModel],
+      workspaceTokens: 5000,
+      goal: "add-feature",
+      privacyMode: "cloud-ok",
+      preferredModelIds: ["weak"], // prefer the worse model
+    });
+    // balanced tier ranks by totalScore first — midModel must beat weakModel.
+    expect(result.balanced.modelId).toBe("mid");
+  });
+
+  it("preferred model does NOT beat a cheaper model in the cheapest-sufficient tier", () => {
+    // cheapModel costs less than midModel; we prefer midModel.
+    const result = recommendModels({
+      models: [cheapModel, midModel],
+      workspaceTokens: 5000,
+      goal: "debug",
+      preferredModelIds: ["mid"], // prefer the more expensive model
+    });
+    // cheapest tier sorts by cost first — cheapModel must still win.
+    expect(result.cheapestSufficient.modelId).toBe("cheap");
+  });
+
+  it("preferred model cannot become eligible merely because it is preferred", () => {
+    // bigModel has privacyMode 'cloud' and is excluded by local-first.
+    // Marking it preferred must not override the eligibility filter.
+    expect(() =>
+      recommendModels({
+        models: [bigModel],
+        workspaceTokens: 5000,
+        goal: "debug",
+        privacyMode: "local-first",
+        preferredModelIds: ["big"],
+      }),
+    ).toThrow('No models are eligible for privacy mode "local-first"');
+  });
 });
