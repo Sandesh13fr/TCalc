@@ -241,4 +241,291 @@ describe("analyzeCostOptimization", () => {
     expect(plan!.tradeoffSummary).toContain("Cost-neutral");
     expect(plan!.tradeoffSummary).not.toContain("Infinity");
   });
+  describe("positive-savings-only recommendations (#105)", () => {
+    function expectAllNumbersFinite(value: unknown, path = "advice"): void {
+      if (typeof value === "number") {
+        expect(Number.isFinite(value), `${path} must be finite`).toBe(true);
+      } else if (Array.isArray(value)) {
+        value.forEach((item, i) => expectAllNumbersFinite(item, `${path}[${i}]`));
+      } else if (value !== null && typeof value === "object") {
+        for (const [key, child] of Object.entries(value)) {
+          expectAllNumbersFinite(child, `${path}.${key}`);
+        }
+      }
+    }
+
+    function expectNoInvalidNumberText(advice: ReturnType<typeof analyzeCostOptimization>): void {
+      const texts = [
+        advice.hybridStrategy.summary,
+        ...advice.alternativePlans.map((p) => p.tradeoffSummary),
+      ];
+      for (const text of texts) {
+        expect(text).not.toMatch(/Infinity|NaN/);
+      }
+    }
+
+    it("keeps every candidate in alternativePlans but recommends none when all cost more than the baseline", () => {
+      const advice = analyzeCostOptimization({
+        baselineModel: gpt4oMini,
+        candidateModels: [sonnetModel, haikuModel],
+        developerCount: 5,
+        workingDaysPerMonth: 22,
+      });
+
+      expect(advice.alternativePlans.map((p) => p.targetModelId).sort()).toEqual([
+        "claude-3-5-haiku",
+        "claude-3-5-sonnet",
+      ]);
+      for (const plan of advice.alternativePlans) {
+        expect(plan.monthlySavings).toBeLessThan(0);
+        expect(plan.costMultiplier).toBeGreaterThan(1);
+        expect(plan.tradeoffSummary).toContain("higher spend");
+      }
+
+      expect(advice.recommendedPlan).toBeUndefined();
+
+      // Baseline fallback for the hybrid strategy: all traffic stays on the baseline.
+      expect(advice.hybridStrategy.rules).toHaveLength(1);
+      expect(advice.hybridStrategy.rules[0]).toMatchObject({
+        tier: "balanced_editing",
+        trafficPercentage: 100,
+        modelId: gpt4oMini.id,
+        allocatedMonthlyCost: advice.baselineMonthlySpend,
+      });
+      expect(advice.hybridStrategy.blendedMonthlyCost).toBe(advice.baselineMonthlySpend);
+      expect(advice.hybridStrategy.monthlySavings).toBe(0);
+      expect(advice.hybridStrategy.savingsPercent).toBe(0);
+      expect(advice.hybridStrategy.summary).not.toContain("Tiered dispatching delivers");
+      expect(advice.hybridStrategy.summary).toContain(gpt4oMini.displayName);
+      expectAllNumbersFinite(advice);
+    });
+
+    it("does not recommend a candidate that costs exactly the same as the baseline", () => {
+      const sameCostClone: ModelInfo = { ...sonnetModel, id: "sonnet-clone", displayName: "Sonnet Clone" };
+      const advice = analyzeCostOptimization({
+        baselineModel: sonnetModel,
+        candidateModels: [sameCostClone],
+      });
+
+      expect(advice.alternativePlans).toHaveLength(1);
+      expect(advice.alternativePlans[0].monthlySavings).toBe(0);
+      expect(advice.recommendedPlan).toBeUndefined();
+      expect(advice.hybridStrategy.rules).toHaveLength(1);
+      expect(advice.hybridStrategy.rules[0].modelId).toBe(sonnetModel.id);
+    });
+
+    it("handles a truly free baseline without dividing by zero or claiming savings", () => {
+      const advice = analyzeCostOptimization({
+        baselineModel: localLlama,
+        candidateModels: [haikuModel, gpt4oMini],
+        developerCount: 5,
+        workingDaysPerMonth: 22,
+      });
+
+      expect(advice.baselineMonthlySpend).toBe(0);
+      expect(advice.alternativePlans).toHaveLength(2);
+      for (const plan of advice.alternativePlans) {
+        expect(plan.tradeoffSummary).toMatch(/^Adds \$\d+\.\d{2}\/mo over the zero-cost baseline/);
+        expect(plan.tradeoffSummary).toContain("percentage uplift undefined");
+        expect(plan.tradeoffSummary).not.toMatch(/Infinity|NaN|%\s+(cost reduction|higher spend)/);
+        expect(plan.savingsPercent).toBe(0);
+        expect(plan.costMultiplier).toBe(1);
+        expect(plan.monthlySavings).toBeLessThan(0);
+      }
+
+      expect(advice.recommendedPlan).toBeUndefined();
+      expect(advice.hybridStrategy.rules).toHaveLength(1);
+      expect(advice.hybridStrategy.rules[0].modelId).toBe(localLlama.id);
+      expect(advice.hybridStrategy.blendedMonthlyCost).toBe(0);
+      expect(advice.hybridStrategy.savingsPercent).toBe(0);
+      expectNoInvalidNumberText(advice);
+      expectAllNumbersFinite(advice);
+    });
+
+    it("describes a sub-cent addition over a free baseline in absolute terms", () => {
+      const microPriced: ModelInfo = {
+        ...haikuModel,
+        id: "micro-priced",
+        displayName: "Micro Priced",
+        inputPricePerMillion: 0.0001,
+        cachedInputPricePerMillion: 0.0001,
+        outputPricePerMillion: 0.0001,
+      };
+      const advice = analyzeCostOptimization({
+        baselineModel: localLlama,
+        candidateModels: [microPriced],
+        developerCount: 1,
+        workingDaysPerMonth: 1,
+        workload: { name: "Tiny", dailyRunsPerDev: 1, avgInputTokens: 1000, avgOutputTokens: 100, cacheHitRatio: 0 },
+      });
+
+      const plan = advice.alternativePlans[0];
+      expect(plan.totalMonthlySpend).toBe(0);
+      expect(plan.tradeoffSummary).toContain("Adds less than $0.01/mo over the zero-cost baseline");
+      expect(advice.recommendedPlan).toBeUndefined();
+    });
+
+    it("stays valid with zero runs: no NaN or infinities, candidates kept, baseline fallback", () => {
+      for (const zeroRuns of [
+        { developerCount: 0, workingDaysPerMonth: 22 },
+        { developerCount: 5, workingDaysPerMonth: 0 },
+      ]) {
+        const advice = analyzeCostOptimization({
+          baselineModel: sonnetModel,
+          candidateModels: [haikuModel, gpt4oMini],
+          ...zeroRuns,
+        });
+
+        expect(advice.baselineMonthlySpend).toBe(0);
+        expect(advice.alternativePlans).toHaveLength(2);
+        for (const plan of advice.alternativePlans) {
+          expect(plan.totalMonthlySpend).toBe(0);
+          expect(plan.monthlySavings).toBe(0);
+          expect(plan.tradeoffSummary).toContain("No runs are projected");
+          // A paid model with no usage is not described as a free baseline.
+          expect(plan.tradeoffSummary).not.toContain("zero-cost baseline");
+        }
+        expect(advice.recommendedPlan).toBeUndefined();
+        expect(advice.hybridStrategy.rules).toHaveLength(1);
+        expect(advice.hybridStrategy.rules[0].modelId).toBe(sonnetModel.id);
+        expect(advice.hybridStrategy.blendedMonthlyCost).toBe(0);
+        expect(advice.hybridStrategy.monthlySavings).toBe(0);
+        expectNoInvalidNumberText(advice);
+        expectAllNumbersFinite(advice);
+      }
+    });
+
+    describe("sub-cent paid baseline", () => {
+      // 10 runs/month at 1,100 tokens: baseline costs ~$0.00011/mo, which rounds to $0.00.
+      const subCentWorkload = {
+        name: "Sub-cent",
+        dailyRunsPerDev: 10,
+        avgInputTokens: 1000,
+        avgOutputTokens: 100,
+        cacheHitRatio: 0,
+      };
+      const subCentBaseline: ModelInfo = {
+        ...haikuModel,
+        id: "sub-cent-baseline",
+        displayName: "Sub-Cent Baseline",
+        inputPricePerMillion: 0.01,
+        cachedInputPricePerMillion: 0.01,
+        outputPricePerMillion: 0.01,
+      };
+      const run = (candidateModels: ModelInfo[]) =>
+        analyzeCostOptimization({
+          baselineModel: subCentBaseline,
+          candidateModels,
+          developerCount: 1,
+          workingDaysPerMonth: 1,
+          workload: subCentWorkload,
+        });
+
+      it("is not treated as free when a pricier candidate rounds to a visible cent amount", () => {
+        const pricier: ModelInfo = {
+          ...haikuModel,
+          id: "pricier",
+          displayName: "Pricier",
+          inputPricePerMillion: 10,
+          cachedInputPricePerMillion: 10,
+          outputPricePerMillion: 10,
+        };
+        const advice = run([pricier]);
+
+        expect(advice.baselineMonthlySpend).toBe(0); // displayed value rounds to $0.00
+        const plan = advice.alternativePlans[0];
+        expect(plan.tradeoffSummary).not.toContain("zero-cost");
+        expect(plan.tradeoffSummary).not.toContain("undefined");
+        expect(plan.tradeoffSummary).toMatch(/^Invests \d+% higher spend/);
+        expect(plan.costMultiplier).toBeGreaterThan(1);
+        expect(advice.recommendedPlan).toBeUndefined();
+        expect(advice.hybridStrategy.rules[0].modelId).toBe(subCentBaseline.id);
+        expectAllNumbersFinite(advice);
+      });
+
+      it("still recognises real unrounded savings against the paid baseline", () => {
+        const cheaper: ModelInfo = {
+          ...haikuModel,
+          id: "cheaper",
+          displayName: "Cheaper",
+          inputPricePerMillion: 0.0025,
+          cachedInputPricePerMillion: 0.0025,
+          outputPricePerMillion: 0.0025,
+        };
+        const advice = run([cheaper]);
+
+        expect(advice.baselineMonthlySpend).toBe(0);
+        const plan = advice.alternativePlans[0];
+        expect(plan.totalMonthlySpend).toBe(0); // rounded display only
+        expect(plan.savingsPercent).toBe(75);
+        expect(plan.costMultiplier).toBe(0.25);
+        expect(plan.tradeoffSummary).toContain("Delivers 75% cost reduction");
+        expect(plan.tradeoffSummary).not.toContain("zero-cost");
+        expect(advice.recommendedPlan?.targetModelId).toBe("cheaper");
+        expect(advice.hybridStrategy.savingsPercent).toBe(67.5);
+        expect(advice.hybridStrategy.summary).toContain("less than $0.01/mo (67.5%) savings");
+        expectAllNumbersFinite(advice);
+      });
+    });
+
+    it("assigns no hybrid offload traffic and uses the baseline when only pricier candidates exist", () => {
+      const advice = analyzeCostOptimization({
+        baselineModel: haikuModel,
+        candidateModels: [sonnetModel],
+      });
+
+      expect(advice.alternativePlans).toHaveLength(1);
+      expect(advice.alternativePlans[0].monthlySavings).toBeLessThan(0);
+
+      const { rules } = advice.hybridStrategy;
+      expect(rules).toHaveLength(1);
+      expect(rules[0].modelId).toBe(haikuModel.id);
+      expect(rules[0].trafficPercentage).toBe(100);
+      expect(rules.some((r) => r.modelId === sonnetModel.id)).toBe(false);
+      expect(rules.some((r) => r.tier === "fast_triage")).toBe(false);
+      expect(advice.hybridStrategy.blendedMonthlyCost).toBe(advice.baselineMonthlySpend);
+      expect(advice.hybridStrategy.monthlySavings).toBe(0);
+      expect(advice.recommendedPlan).toBeUndefined();
+    });
+
+    it("leaves pricier candidates out of the hybrid tiers when a cheaper one exists", () => {
+      // Baseline is Haiku: Sonnet is pricier, GPT-4o mini is cheaper.
+      const advice = analyzeCostOptimization({
+        baselineModel: haikuModel,
+        candidateModels: [sonnetModel, gpt4oMini],
+      });
+
+      expect(advice.alternativePlans.map((p) => p.targetModelId).sort()).toEqual([
+        "claude-3-5-sonnet",
+        "gpt-4o-mini",
+      ]);
+      expect(advice.hybridStrategy.rules.map((r) => r.modelId)).not.toContain(sonnetModel.id);
+
+      const triage = advice.hybridStrategy.rules.find((r) => r.tier === "fast_triage");
+      const editing = advice.hybridStrategy.rules.find((r) => r.tier === "balanced_editing");
+      const reasoning = advice.hybridStrategy.rules.find((r) => r.tier === "complex_reasoning");
+      expect(triage?.modelId).toBe("gpt-4o-mini");
+      expect(editing?.modelId).toBe("gpt-4o-mini");
+      expect(reasoning?.modelId).toBe(haikuModel.id);
+      expect(advice.hybridStrategy.blendedMonthlyCost).toBeLessThan(advice.baselineMonthlySpend);
+      expect(advice.hybridStrategy.monthlySavings).toBeGreaterThan(0);
+      expect(advice.recommendedPlan?.targetModelId).toBe("gpt-4o-mini");
+    });
+
+    it("keeps recommending a cheaper alternative (positive-savings control)", () => {
+      const advice = analyzeCostOptimization({
+        baselineModel: sonnetModel,
+        candidateModels: [haikuModel, gpt4oMini, localLlama],
+      });
+
+      expect(advice.recommendedPlan).toBeDefined();
+      expect(advice.recommendedPlan!.monthlySavings).toBeGreaterThan(0);
+      expect(advice.alternativePlans).toContain(advice.recommendedPlan);
+      expect(advice.recommendedPlan!.savingsPercent).toBeGreaterThanOrEqual(20);
+      expect(advice.hybridStrategy.rules).toHaveLength(3);
+      expect(advice.hybridStrategy.monthlySavings).toBeGreaterThan(0);
+      expect(advice.hybridStrategy.summary).toContain("Tiered dispatching delivers");
+      expectAllNumbersFinite(advice);
+    });
+  });
 });

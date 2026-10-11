@@ -58,21 +58,72 @@ function determineRecommendedRoles(model: ModelInfo): string[] {
   return roles;
 }
 
-function buildTradeoffSummary(baselineCost: number, targetCost: number, model: ModelInfo): string {
+/**
+ * A model is genuinely free when every price that can contribute to a run is zero.
+ * This is decided from pricing, never from a rounded monthly spend, so a paid model whose
+ * monthly total rounds to $0.00 is not mistaken for a free one.
+ */
+function isFreeModel(model: ModelInfo): boolean {
+  return (
+    model.inputPricePerMillion === 0 &&
+    (model.cachedInputPricePerMillion ?? model.inputPricePerMillion) === 0 &&
+    model.outputPricePerMillion === 0
+  );
+}
+
+function formatMonthlyUsd(amount: number): string {
+  return Number(amount.toFixed(2)) === 0 ? "less than $0.01" : `$${amount.toFixed(2)}`;
+}
+
+interface TradeoffContext {
+  /** Unrounded baseline monthly cost. */
+  baselineCost: number;
+  /** Unrounded candidate monthly cost. */
+  targetCost: number;
+  baselineIsFree: boolean;
+  hasRuns: boolean;
+}
+
+function buildTradeoffSummary(model: ModelInfo, context: TradeoffContext): string {
+  const { baselineCost, targetCost, baselineIsFree, hasRuns } = context;
   const diff = targetCost - baselineCost;
-  if (Math.abs(diff) < 0.01) {
+
+  if (diff === 0) {
+    if (!hasRuns) {
+      return `No runs are projected for this workload, so switching to ${model.displayName} has no cost impact.`;
+    }
     return `Cost-neutral alternative to ${model.displayName} with identical economic footprint.`;
   }
   // A percentage change is undefined when the baseline spends nothing, so report finite absolute added cost instead.
   if (baselineCost <= 0) {
-    return `Adds $${diff.toFixed(2)}/mo over the zero-cost baseline to adopt ${model.displayName} (percentage uplift undefined).`;
+    const baselineLabel = baselineIsFree ? "zero-cost baseline" : "baseline's zero projected spend";
+    return `Adds ${formatMonthlyUsd(diff)}/mo over the ${baselineLabel} to adopt ${model.displayName} (percentage uplift undefined).`;
   }
+
+  const percent = Math.round((Math.abs(diff) / baselineCost) * 100);
+
+  if (percent === 0) {
+    return diff < 0
+      ? `Costs less than 1% less than the baseline for ${model.displayName}.`
+      : `Costs less than 1% more than the baseline for ${model.displayName}.`;
+  }
+
   if (diff < 0) {
-    const percent = Math.round((Math.abs(diff) / baselineCost) * 100);
     return `Delivers ${percent}% cost reduction. Ideal for offloading standard repetitive development prompts.`;
   }
-  const increasePercent = Math.round((diff / baselineCost) * 100);
-  return `Invests ${increasePercent}% higher spend for superior frontier reasoning capability on complex edge-cases.`;
+  return `Invests ${percent}% higher spend for superior frontier reasoning capability on complex edge-cases.`;
+}
+
+/**
+ * Internal view of a candidate that keeps the unrounded numbers. The public `ModelSwitchPlan`
+ * carries cent-rounded values, which must not drive savings decisions.
+ */
+interface PlanEvaluation {
+  plan: ModelSwitchPlan;
+  runCost: number;
+  monthlySpend: number;
+  /** Positive when the candidate is cheaper than the baseline. */
+  monthlySavings: number;
 }
 
 export function analyzeCostOptimization(options: CostOptimizationOptions): CostOptimizationAdvice {
@@ -87,75 +138,111 @@ export function analyzeCostOptimization(options: CostOptimizationOptions): CostO
 
   const totalRunsPerDev = workload.dailyRunsPerDev * workingDaysPerMonth;
   const totalTeamRuns = totalRunsPerDev * developerCount;
+  const hasRuns = totalTeamRuns > 0;
 
   const baselineRunCost = calculateSingleRunCost(baselineModel, workload);
-  const baselineMonthlySpend = Number((baselineRunCost * totalTeamRuns).toFixed(2));
+  const baselineMonthlyCost = baselineRunCost * totalTeamRuns;
+  const baselineMonthlySpend = Number(baselineMonthlyCost.toFixed(2));
+  const baselineIsFree = isFreeModel(baselineModel);
 
   const validCandidates = candidateModels.filter(
     (c) => c.id !== baselineModel.id && c.contextWindow >= Math.round(minContextWindowRequired * 0.75),
   );
 
-  const alternativePlans: ModelSwitchPlan[] = validCandidates.map((candidate) => {
-    const candidateRunCost = calculateSingleRunCost(candidate, workload);
-    const candidateMonthlySpend = Number((candidateRunCost * totalTeamRuns).toFixed(2));
-    const monthlyCostPerDev = Number((candidateRunCost * totalRunsPerDev).toFixed(2));
-    const monthlySavings = Number((baselineMonthlySpend - candidateMonthlySpend).toFixed(2));
+  const evaluations: PlanEvaluation[] = validCandidates.map((candidate) => {
+    const runCost = calculateSingleRunCost(candidate, workload);
+    const monthlySpend = runCost * totalTeamRuns;
+    const savings = baselineMonthlyCost - monthlySpend;
+    const candidateMonthlySpend = Number(monthlySpend.toFixed(2));
+    const monthlyCostPerDev = Number((runCost * totalRunsPerDev).toFixed(2));
+    const monthlySavings = Number(savings.toFixed(2));
     const savingsPercent =
-      baselineMonthlySpend > 0
-        ? Number(((monthlySavings / baselineMonthlySpend) * 100).toFixed(1))
-        : 0;
+      baselineMonthlyCost > 0 ? Number(((savings / baselineMonthlyCost) * 100).toFixed(1)) : 0;
     const costMultiplier =
-      baselineMonthlySpend > 0 ? Number((candidateMonthlySpend / baselineMonthlySpend).toFixed(2)) : 1;
+      baselineMonthlyCost > 0 ? Number((monthlySpend / baselineMonthlyCost).toFixed(2)) : 1;
     const contextFitScore = evaluateContextFit(candidate, minContextWindowRequired);
 
     return {
-      targetModelId: candidate.id,
-      targetModelName: candidate.displayName,
-      targetProvider: candidate.provider,
-      monthlyCostPerDev,
-      totalMonthlySpend: candidateMonthlySpend,
-      monthlySavings,
-      savingsPercent,
-      costMultiplier,
-      contextFitScore,
-      recommendedRoles: determineRecommendedRoles(candidate),
-      tradeoffSummary: buildTradeoffSummary(baselineMonthlySpend, candidateMonthlySpend, candidate),
+      runCost,
+      monthlySpend,
+      monthlySavings: savings,
+      plan: {
+        targetModelId: candidate.id,
+        targetModelName: candidate.displayName,
+        targetProvider: candidate.provider,
+        monthlyCostPerDev,
+        totalMonthlySpend: candidateMonthlySpend,
+        monthlySavings,
+        savingsPercent,
+        costMultiplier,
+        contextFitScore,
+        recommendedRoles: determineRecommendedRoles(candidate),
+        tradeoffSummary: buildTradeoffSummary(candidate, {
+          baselineCost: baselineMonthlyCost,
+          targetCost: monthlySpend,
+          baselineIsFree,
+          hasRuns,
+        }),
+      },
     };
   });
 
-  // Sort by highest monthly savings
-  alternativePlans.sort((a, b) => b.monthlySavings - a.monthlySavings);
+  // Sort by highest monthly savings (unrounded, so sub-cent differences still order correctly).
+  evaluations.sort((a, b) => b.monthlySavings - a.monthlySavings);
 
+  // Every generated candidate stays visible, including ones that cost more than the baseline.
+  const alternativePlans = evaluations.map((e) => e.plan);
+
+  // Overall cheapest candidate. It may not save money; it is not the recommendation.
   const cheapestViablePlan =
-    alternativePlans.length > 0
-      ? [...alternativePlans].sort((a, b) => a.totalMonthlySpend - b.totalMonthlySpend)[0]
+    evaluations.length > 0
+      ? [...evaluations].sort((a, b) => a.monthlySpend - b.monthlySpend)[0].plan
       : undefined;
 
-  // Recommended plan balances savings (savingsPercent > 20%) while maintaining high contextFitScore >= 0.9
+  // Only candidates that strictly cost less than the baseline may be recommended or offloaded to.
+  // Shared by the single-plan recommendation and the hybrid tiers (already sorted by savings).
+  const savingEvaluations = evaluations.filter((e) => e.monthlySavings > 0);
+  const savingPlans = savingEvaluations.map((e) => e.plan);
+  const cheapestSavingEvaluation =
+    savingEvaluations.length > 0
+      ? [...savingEvaluations].sort((a, b) => a.monthlySpend - b.monthlySpend)[0]
+      : undefined;
+  const cheapestSavingPlan = cheapestSavingEvaluation?.plan;
+
+  // Recommended plan balances savings (savingsPercent > 20%) while maintaining high contextFitScore >= 0.9.
+  // With no saving candidate there is no recommendation and the baseline stays in place.
   const recommendedPlan =
-    alternativePlans.find((p) => p.savingsPercent >= 20 && p.contextFitScore >= 0.9) ??
-    cheapestViablePlan;
+    savingPlans.find((p) => p.savingsPercent >= 20 && p.contextFitScore >= 0.9) ?? cheapestSavingPlan;
 
   // Compute Hybrid Tiered Strategy (60% fast/triage, 30% balanced editing, 10% complex frontier)
-  const fastCandidate =
-    alternativePlans.find((p) => p.savingsPercent > 40) ?? cheapestViablePlan;
-  const balancedCandidate =
-    alternativePlans.find((p) => p.savingsPercent >= 10 && p.savingsPercent <= 40) ?? alternativePlans[0];
+  const fastEvaluation =
+    savingEvaluations.find((e) => e.plan.savingsPercent > 40) ?? cheapestSavingEvaluation;
+  const balancedEvaluation =
+    savingEvaluations.find((e) => e.plan.savingsPercent >= 10 && e.plan.savingsPercent <= 40) ??
+    savingEvaluations[0];
   const frontierModel = baselineModel;
 
   const hybridRules: HybridTieredDispatchRule[] = [];
   let blendedMonthlyCost = 0;
+  let hybridSavings = 0;
+  let unroundedHybridSavings = 0;
+  let hybridSummary: string;
 
-  if (fastCandidate && balancedCandidate) {
+  if (fastEvaluation && balancedEvaluation) {
+    const fastCandidate = fastEvaluation.plan;
+    const balancedCandidate = balancedEvaluation.plan;
     const triageRuns = Math.round(totalTeamRuns * 0.6);
     const editingRuns = Math.round(totalTeamRuns * 0.3);
     const reasoningRuns = totalTeamRuns - triageRuns - editingRuns;
 
-    const triageCost = (fastCandidate.totalMonthlySpend / totalTeamRuns) * triageRuns;
-    const editingCost = (balancedCandidate.totalMonthlySpend / totalTeamRuns) * editingRuns;
-    const reasoningCost = (baselineMonthlySpend / totalTeamRuns) * reasoningRuns;
+    const triageCost = fastEvaluation.runCost * triageRuns;
+    const editingCost = balancedEvaluation.runCost * editingRuns;
+    const reasoningCost = baselineRunCost * reasoningRuns;
+    const blendedCost = triageCost + editingCost + reasoningCost;
 
-    blendedMonthlyCost = Number((triageCost + editingCost + reasoningCost).toFixed(2));
+    blendedMonthlyCost = Number(blendedCost.toFixed(2));
+    unroundedHybridSavings = baselineMonthlyCost - blendedCost;
+    hybridSavings = Number(unroundedHybridSavings.toFixed(2));
 
     hybridRules.push({
       tier: "fast_triage",
@@ -186,6 +273,10 @@ export function analyzeCostOptimization(options: CostOptimizationOptions): CostO
       allocatedMonthlyCost: Number(reasoningCost.toFixed(2)),
       rationale: "Reserve top-tier model for large architectural redesigns, debugging elusive race conditions.",
     });
+
+    const hybridSavingsPercent =
+      baselineMonthlyCost > 0 ? Number((((baselineMonthlyCost - blendedCost) / baselineMonthlyCost) * 100).toFixed(1)) : 0;
+    hybridSummary = `Tiered dispatching delivers ${formatMonthlyUsd(baselineMonthlyCost - blendedCost)}/mo (${hybridSavingsPercent}%) savings while preserving top-tier model precision for high-complexity prompts.`;
   } else {
     blendedMonthlyCost = baselineMonthlySpend;
     hybridRules.push({
@@ -195,22 +286,26 @@ export function analyzeCostOptimization(options: CostOptimizationOptions): CostO
       modelName: baselineModel.displayName,
       provider: baselineModel.provider,
       allocatedMonthlyCost: baselineMonthlySpend,
-      rationale: "All traffic routed to baseline model (no suitable multi-tier alternatives provided).",
+      rationale:
+        evaluations.length === 0
+          ? "All traffic routed to baseline model (no suitable multi-tier alternatives provided)."
+          : "All traffic routed to baseline model (no candidate model costs less than the baseline).",
     });
+    hybridSummary =
+      evaluations.length === 0
+        ? `No alternative models were available, so all traffic stays on ${baselineModel.displayName} and tiered dispatching adds no savings.`
+        : `No candidate model costs less than ${baselineModel.displayName}, so all traffic stays on the baseline and tiered dispatching adds no savings.`;
   }
 
-  const hybridSavings = Number((baselineMonthlySpend - blendedMonthlyCost).toFixed(2));
   const hybridSavingsPercent =
-    baselineMonthlySpend > 0
-      ? Number(((hybridSavings / baselineMonthlySpend) * 100).toFixed(1))
-      : 0;
+    baselineMonthlyCost > 0 ? Number(((unroundedHybridSavings / baselineMonthlyCost) * 100).toFixed(1)) : 0;
 
   const hybridStrategy: HybridDispatchStrategy = {
     rules: hybridRules,
     blendedMonthlyCost,
     monthlySavings: hybridSavings,
     savingsPercent: hybridSavingsPercent,
-    summary: `Tiered dispatching delivers ~$${hybridSavings.toFixed(2)}/mo (${hybridSavingsPercent}%) savings while preserving top-tier model precision for high-complexity prompts.`,
+    summary: hybridSummary,
   };
 
   return {
