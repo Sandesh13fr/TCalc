@@ -38,19 +38,25 @@ function makeRepoMapFile(relativePath: string): RepoMapFile {
 }
 
 describe("detectFrameworkRoutes", () => {
-  it("detects Next.js app routes", () => {
-    const files = [makeFileInfo("app/page.jsx", ".jsx"), makeFileInfo("app/api/hello/route.js", ".js")];
+  it("detects Next.js app routes (including src/ directory convention)", () => {
+    const files = [
+      makeFileInfo("app/page.jsx", ".jsx"),
+      makeFileInfo("app/api/hello/route.js", ".js"),
+      makeFileInfo("src/app/dashboard/page.tsx", ".tsx"),
+      makeFileInfo("src/app/layout.tsx", ".tsx"),
+      makeFileInfo("src/app/api/user/route.ts", ".ts"),
+    ];
     const important = files.map((f) => makeRepoMapFile(f.relativePath));
     const scanResult: WorkspaceScanResult = {
       rootPath: tempDir,
       scannedAt: new Date().toISOString(),
-      totalFiles: 2,
-      includedFiles: 2,
+      totalFiles: files.length,
+      includedFiles: files.length,
       excludedFiles: 0,
-      totalBytes: 200,
-      includedBytes: 200,
-      totalEstimatedTokens: 50,
-      includedTokens: 50,
+      totalBytes: 500,
+      includedBytes: 500,
+      totalEstimatedTokens: 125,
+      includedTokens: 125,
       files,
       folders: [],
       languages: [],
@@ -58,24 +64,48 @@ describe("detectFrameworkRoutes", () => {
       riskFiles: [],
     };
     const routes = detectFrameworkRoutes(scanResult, important);
-    expect(routes.length).toBeGreaterThanOrEqual(2);
-    expect(routes.some((r) => r.relativePath === "app/page.jsx")).toBe(true);
-    expect(routes.some((r) => r.relativePath === "app/api/hello/route.js")).toBe(true);
+    expect(routes.length).toBe(5);
+
+    const rootPage = routes.find((r) => r.relativePath === "app/page.jsx");
+    expect(rootPage).toBeDefined();
+    expect(rootPage?.routePattern).toBe("/");
+
+    const apiRoute = routes.find((r) => r.relativePath === "app/api/hello/route.js");
+    expect(apiRoute).toBeDefined();
+    expect(apiRoute?.routePattern).toBe("/api/hello");
+
+    const srcDashboard = routes.find((r) => r.relativePath === "src/app/dashboard/page.tsx");
+    expect(srcDashboard).toBeDefined();
+    expect(srcDashboard?.routePattern).toBe("/dashboard");
+
+    const srcLayout = routes.find((r) => r.relativePath === "src/app/layout.tsx");
+    expect(srcLayout).toBeDefined();
+    expect(srcLayout?.routePattern).toBe("/");
+
+    const srcApi = routes.find((r) => r.relativePath === "src/app/api/user/route.ts");
+    expect(srcApi).toBeDefined();
+    expect(srcApi?.routePattern).toBe("/api/user");
   });
 
-  it("detects Next.js pages routes", () => {
-    const files = [makeFileInfo("pages/index.tsx", ".tsx")];
+  it("detects Next.js pages routes (including src/ directory convention and root index)", () => {
+    const files = [
+      makeFileInfo("pages/index.tsx", ".tsx"),
+      makeFileInfo("src/pages/index.tsx", ".tsx"),
+      makeFileInfo("pages/about.tsx", ".tsx"),
+      makeFileInfo("src/pages/blog/[slug].tsx", ".tsx"),
+      makeFileInfo("pages/docs/[...slug].tsx", ".tsx"),
+    ];
     const important = files.map((f) => makeRepoMapFile(f.relativePath));
     const scanResult: WorkspaceScanResult = {
       rootPath: tempDir,
       scannedAt: new Date().toISOString(),
-      totalFiles: 1,
-      includedFiles: 1,
+      totalFiles: files.length,
+      includedFiles: files.length,
       excludedFiles: 0,
-      totalBytes: 100,
-      includedBytes: 100,
-      totalEstimatedTokens: 25,
-      includedTokens: 25,
+      totalBytes: 500,
+      includedBytes: 500,
+      totalEstimatedTokens: 125,
+      includedTokens: 125,
       files,
       folders: [],
       languages: [],
@@ -83,7 +113,27 @@ describe("detectFrameworkRoutes", () => {
       riskFiles: [],
     };
     const routes = detectFrameworkRoutes(scanResult, important);
-    expect(routes.some((r) => r.framework === "nextjs")).toBe(true);
+    expect(routes.length).toBe(5);
+
+    const rootIndex = routes.find((r) => r.relativePath === "pages/index.tsx");
+    expect(rootIndex).toBeDefined();
+    expect(rootIndex?.routePattern).toBe("/");
+
+    const srcIndex = routes.find((r) => r.relativePath === "src/pages/index.tsx");
+    expect(srcIndex).toBeDefined();
+    expect(srcIndex?.routePattern).toBe("/");
+
+    const aboutPage = routes.find((r) => r.relativePath === "pages/about.tsx");
+    expect(aboutPage).toBeDefined();
+    expect(aboutPage?.routePattern).toBe("/about");
+
+    const dynamicSlug = routes.find((r) => r.relativePath === "src/pages/blog/[slug].tsx");
+    expect(dynamicSlug).toBeDefined();
+    expect(dynamicSlug?.routePattern).toBe("/blog/:slug");
+
+    const catchAll = routes.find((r) => r.relativePath === "pages/docs/[...slug].tsx");
+    expect(catchAll).toBeDefined();
+    expect(catchAll?.routePattern).toBe("/docs/:slug*");
   });
 
   it("detects Express-style routes from file content", () => {
