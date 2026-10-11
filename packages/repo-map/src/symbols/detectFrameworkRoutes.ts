@@ -12,8 +12,8 @@ export function detectFrameworkRoutes(
     if (!pathSet.has(file.relativePath)) continue;
     const rp = file.relativePath.replace(/\\/g, "/");
 
-    // Next.js App Router (matches both root app/page.tsx and nested app/some/page.tsx)
-    const appPageMatch = rp.match(/^app\/(?:(.*)\/)?page\.(?:js|jsx|ts|tsx)$/);
+    // Next.js App Router (matches both root app/page.tsx and nested app/some/page.tsx, with optional src/ prefix)
+    const appPageMatch = rp.match(/^(?:src\/)?app\/(?:(.*)\/)?page\.(?:js|jsx|ts|tsx)$/);
     if (appPageMatch) {
       const route = appPageMatch[1] ?? "";
       routes.push({
@@ -25,7 +25,7 @@ export function detectFrameworkRoutes(
       continue;
     }
 
-    const appLayoutMatch = rp.match(/^app\/(?:(.*)\/)?layout\.(?:js|jsx|ts|tsx)$/);
+    const appLayoutMatch = rp.match(/^(?:src\/)?app\/(?:(.*)\/)?layout\.(?:js|jsx|ts|tsx)$/);
     if (appLayoutMatch) {
       const route = appLayoutMatch[1] ?? "";
       routes.push({
@@ -37,7 +37,7 @@ export function detectFrameworkRoutes(
       continue;
     }
 
-    const appRouteMatch = rp.match(/^app\/(?:(.*)\/)?route\.(?:js|ts)$/);
+    const appRouteMatch = rp.match(/^(?:src\/)?app\/(?:(.*)\/)?route\.(?:js|ts)$/);
     if (appRouteMatch) {
       const route = appRouteMatch[1] ?? "";
       routes.push({
@@ -49,13 +49,14 @@ export function detectFrameworkRoutes(
       continue;
     }
 
-    // Next.js Pages Router
-    const pagesMatch = rp.match(/^pages\/(.*)(?:\.js|\.jsx|\.ts|\.tsx)$/);
+    // Next.js Pages Router (supports optional src/ prefix and normalizes root index to "/")
+    const pagesMatch = rp.match(/^(?:src\/)?pages\/(.*)(?:\.js|\.jsx|\.ts|\.tsx)$/);
     if (pagesMatch) {
-      const route = pagesMatch[1].replace(/\/index$/, "").replace(/\[\.\.\.(\w+)\]/g, ":$1*").replace(/\[(\w+)\]/g, ":$1");
+      let route = pagesMatch[1] === "index" ? "" : pagesMatch[1].replace(/\/index$/, "");
+      route = route.replace(/\[\.\.\.(\w+)\]/g, ":$1*").replace(/\[(\w+)\]/g, ":$1");
       routes.push({
         relativePath: rp,
-        routePattern: `/${route}`,
+        routePattern: route ? `/${route}` : "/",
         framework: "nextjs",
         reason: `Next.js Pages Router: ${rp}`,
       });
