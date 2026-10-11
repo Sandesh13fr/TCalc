@@ -14,6 +14,96 @@ describe("team policies", () => {
   });
 
   it("rejects an unknown active profile", () => {
-    expect(() => parseTeamPolicy({ schemaVersion: "1.0", activeProfile: "missing", modelProfiles: [] })).toThrow(/not found/);
+    expect(() =>
+      parseTeamPolicy({
+        schemaVersion: "1.0",
+        activeProfile: "missing",
+        modelProfiles: [],
+      }),
+    ).toThrow(/not found/);
+  });
+
+  it("allows an omitted active profile", () => {
+    const policy = parseTeamPolicy({
+      schemaVersion: "1.0",
+      modelProfiles: [{ id: "local", allowedProviders: ["local"] }],
+    });
+    expect(policy.activeProfile).toBeUndefined();
+    expect(getActiveModelProfile(policy)).toBeUndefined();
+  });
+
+  it("rejects an empty active profile string", () => {
+    expect(() =>
+      parseTeamPolicy({
+        schemaVersion: "1.0",
+        modelProfiles: [{ id: "local", allowedProviders: ["local"] }],
+        activeProfile: "",
+      }),
+    ).toThrow(/Team policy activeProfile must not be blank/);
+  });
+
+  it("rejects a whitespace-only active profile string", () => {
+    expect(() =>
+      parseTeamPolicy({
+        schemaVersion: "1.0",
+        modelProfiles: [{ id: "local", allowedProviders: ["local"] }],
+        activeProfile: "   ",
+      }),
+    ).toThrow(/Team policy activeProfile must not be blank/);
+  });
+
+  it("rejects an active profile when modelProfiles is omitted", () => {
+    expect(() =>
+      parseTeamPolicy({
+        schemaVersion: "1.0",
+        activeProfile: "local",
+      }),
+    ).toThrow(/not found/);
+  });
+
+  it("rejects a non-string active profile", () => {
+    expect(() =>
+      parseTeamPolicy({
+        schemaVersion: "1.0",
+        modelProfiles: [{ id: "local" }],
+        activeProfile: 123,
+      }),
+    ).toThrow(/must be a string/);
+  });
+
+  it("rejects an empty model profile id", () => {
+    expect(() =>
+      parseTeamPolicy({
+        schemaVersion: "1.0",
+        modelProfiles: [{ id: "" }],
+      }),
+    ).toThrow(/needs an id/i);
+  });
+
+  it("rejects a whitespace-only model profile id", () => {
+    expect(() =>
+      parseTeamPolicy({
+        schemaVersion: "1.0",
+        modelProfiles: [{ id: "   " }],
+      }),
+    ).toThrow(/needs an id/i);
+  });
+
+  it("rejects a model profile missing an id", () => {
+    expect(() =>
+      parseTeamPolicy({
+        schemaVersion: "1.0",
+        modelProfiles: [{}],
+      }),
+    ).toThrow(/needs an id/i);
+  });
+
+  it("rejects duplicate model profile ids", () => {
+    expect(() =>
+      parseTeamPolicy({
+        schemaVersion: "1.0",
+        modelProfiles: [{ id: "local" }, { id: "local" }],
+      }),
+    ).toThrow(/duplicate model profile id/i);
   });
 });
