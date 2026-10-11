@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { parseFileSymbols } from "../../src/symbols/parseFileSymbols.js";
-import type { WorkspaceFileInfo } from "@wma/core";
+import { extractSymbols } from "../../src/symbols/extractSymbols.js";
+import type { RepoMapFile, WorkspaceFileInfo, WorkspaceScanResult } from "@wma/core";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -142,6 +143,48 @@ class MyService {
     expect(names).toContain("greet");
     expect(names).toContain("MyService");
     expect(result.imports.some((i) => i.source === "fs")).toBe(true);
+  });
+
+  it.each([".mjs", ".cjs", ".mts", ".cts"])("extracts exported symbols and imports from %s files", (ext) => {
+    const name = `module${ext}`;
+    const content = `import { helper } from "./helper";\nexport function moduleEntry() { return helper(); }`;
+    writeFileSync(join(tempDir, name), content, "utf-8");
+
+    const result = parseFileSymbols(makeFileInfo(`src/${name}`, ext, name), true);
+
+    expect(result.error).toBeNull();
+    expect(result.symbols.find((symbol) => symbol.name === "moduleEntry")?.exported).toBe(true);
+    expect(result.imports).toContainEqual({ source: "./helper", relativePath: `src/${name}`, kind: "import" });
+  });
+
+  it.each([".mjs", ".cjs", ".mts", ".cts"])("includes %s files in workspace symbol extraction", (ext) => {
+    const name = `eligible${ext}`;
+    const relativePath = `src/${name}`;
+    const content = `import { helper } from "./helper";\nexport function eligibleEntry() { return helper(); }`;
+    writeFileSync(join(tempDir, name), content, "utf-8");
+    const file = makeFileInfo(relativePath, ext, name, Buffer.byteLength(content));
+    const selectedFile: RepoMapFile = { relativePath, estimatedTokens: 20, reason: "entrypoint", priority: 1 };
+    const scan: WorkspaceScanResult = {
+      rootPath: tempDir,
+      scannedAt: new Date().toISOString(),
+      totalFiles: 1,
+      includedFiles: 1,
+      excludedFiles: 0,
+      totalBytes: file.bytes,
+      includedBytes: file.bytes,
+      totalEstimatedTokens: 5,
+      includedTokens: 5,
+      files: [file],
+      folders: [],
+      languages: [],
+      warnings: [],
+      riskFiles: [],
+    };
+
+    const result = extractSymbols(scan, [selectedFile], { tokenBudget: 100 });
+
+    expect(result.symbols.find((symbol) => symbol.name === "eligibleEntry")?.exported).toBe(true);
+    expect(result.imports).toContainEqual(expect.objectContaining({ source: "./helper", relativePath }));
   });
 });
 
