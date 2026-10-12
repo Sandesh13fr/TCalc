@@ -18,8 +18,27 @@ const DEFAULT_WORKLOAD: WorkloadProfile = {
   cacheHitRatio: 0.5,
 };
 
+function requireFiniteResult(name: string, value: number): number {
+  if (!Number.isFinite(value)) {
+    throw new RangeError(`${name} must be finite after calculation (got ${value})`);
+  }
+  return value;
+}
+
+/** @internal Allocate validated run totals without overallocating fractional workloads. */
+function allocateHybridRuns(totalTeamRuns: number) {
+  const triageRuns = Math.min(Math.round(totalTeamRuns * 0.6), totalTeamRuns);
+  const editingRuns = Math.min(Math.round(totalTeamRuns * 0.3), totalTeamRuns - triageRuns);
+  const reasoningRuns = totalTeamRuns - triageRuns - editingRuns;
+  return { triageRuns, editingRuns, reasoningRuns };
+}
+
 function calculateSingleRunCost(model: ModelInfo, workload: WorkloadProfile): number {
-  const cachedTokens = Math.round(workload.avgInputTokens * Math.max(0, Math.min(1, workload.cacheHitRatio ?? 0)));
+  // Rounding must not exceed the input total when token averages are fractional.
+  const cachedTokens = Math.min(
+    workload.avgInputTokens,
+    Math.round(workload.avgInputTokens * (workload.cacheHitRatio ?? 0)),
+  );
   const estimate = estimateCost({
     model,
     inputTokens: workload.avgInputTokens,
@@ -30,6 +49,7 @@ function calculateSingleRunCost(model: ModelInfo, workload: WorkloadProfile): nu
 }
 
 function evaluateContextFit(model: ModelInfo, requiredContext: number): number {
+  if (requiredContext === 0) return 1.0;
   if (model.contextWindow < requiredContext) {
     return Math.max(0.1, Number((model.contextWindow / requiredContext).toFixed(2)));
   }
@@ -136,12 +156,34 @@ export function analyzeCostOptimization(options: CostOptimizationOptions): CostO
     minContextWindowRequired = workload.avgInputTokens + workload.avgOutputTokens,
   } = options;
 
-  const totalRunsPerDev = workload.dailyRunsPerDev * workingDaysPerMonth;
-  const totalTeamRuns = totalRunsPerDev * developerCount;
+  for (const [name, value] of [
+    ["developerCount", developerCount],
+    ["workingDaysPerMonth", workingDaysPerMonth],
+    ["workload.dailyRunsPerDev", workload.dailyRunsPerDev],
+    ["workload.avgInputTokens", workload.avgInputTokens],
+    ["workload.avgOutputTokens", workload.avgOutputTokens],
+    ["minContextWindowRequired", minContextWindowRequired],
+  ] as const) {
+    if (!Number.isFinite(value) || value < 0) {
+      throw new RangeError(`${name} must be a finite, non-negative number (got ${value})`);
+    }
+  }
+  const { cacheHitRatio } = workload;
+  if (
+    cacheHitRatio !== undefined &&
+    (!Number.isFinite(cacheHitRatio) || cacheHitRatio < 0 || cacheHitRatio > 1)
+  ) {
+    throw new RangeError(
+      `workload.cacheHitRatio must be a finite number between 0 and 1 inclusive (got ${cacheHitRatio})`,
+    );
+  }
+
+  const totalRunsPerDev = requireFiniteResult("totalRunsPerDev", workload.dailyRunsPerDev * workingDaysPerMonth);
+  const totalTeamRuns = requireFiniteResult("totalTeamRuns", totalRunsPerDev * developerCount);
   const hasRuns = totalTeamRuns > 0;
 
-  const baselineRunCost = calculateSingleRunCost(baselineModel, workload);
-  const baselineMonthlyCost = baselineRunCost * totalTeamRuns;
+  const baselineRunCost = requireFiniteResult("baselineRunCost", calculateSingleRunCost(baselineModel, workload));
+  const baselineMonthlyCost = requireFiniteResult("baselineMonthlyCost", baselineRunCost * totalTeamRuns);
   const baselineMonthlySpend = Number(baselineMonthlyCost.toFixed(2));
   const baselineIsFree = isFreeModel(baselineModel);
 
@@ -150,16 +192,24 @@ export function analyzeCostOptimization(options: CostOptimizationOptions): CostO
   );
 
   const evaluations: PlanEvaluation[] = validCandidates.map((candidate) => {
-    const runCost = calculateSingleRunCost(candidate, workload);
-    const monthlySpend = runCost * totalTeamRuns;
-    const savings = baselineMonthlyCost - monthlySpend;
+    const requireFiniteCandidateResult = (field: string, value: number) =>
+      requireFiniteResult(`candidate ${candidate.id} ${field}`, value);
+    const runCost = requireFiniteCandidateResult("runCost", calculateSingleRunCost(candidate, workload));
+    const monthlySpend = requireFiniteCandidateResult("monthlySpend", runCost * totalTeamRuns);
+    const savings = requireFiniteCandidateResult("monthlySavings", baselineMonthlyCost - monthlySpend);
     const candidateMonthlySpend = Number(monthlySpend.toFixed(2));
-    const monthlyCostPerDev = Number((runCost * totalRunsPerDev).toFixed(2));
+    const monthlyCostPerDev = Number(
+      requireFiniteCandidateResult("monthlyCostPerDev", runCost * totalRunsPerDev).toFixed(2),
+    );
     const monthlySavings = Number(savings.toFixed(2));
     const savingsPercent =
-      baselineMonthlyCost > 0 ? Number(((savings / baselineMonthlyCost) * 100).toFixed(1)) : 0;
+      baselineMonthlyCost > 0
+        ? Number(requireFiniteCandidateResult("savingsPercent", (savings / baselineMonthlyCost) * 100).toFixed(1))
+        : 0;
     const costMultiplier =
-      baselineMonthlyCost > 0 ? Number((monthlySpend / baselineMonthlyCost).toFixed(2)) : 1;
+      baselineMonthlyCost > 0
+        ? Number(requireFiniteCandidateResult("costMultiplier", monthlySpend / baselineMonthlyCost).toFixed(2))
+        : 1;
     const contextFitScore = evaluateContextFit(candidate, minContextWindowRequired);
 
     return {
@@ -231,17 +281,15 @@ export function analyzeCostOptimization(options: CostOptimizationOptions): CostO
   if (fastEvaluation && balancedEvaluation) {
     const fastCandidate = fastEvaluation.plan;
     const balancedCandidate = balancedEvaluation.plan;
-    const triageRuns = Math.round(totalTeamRuns * 0.6);
-    const editingRuns = Math.round(totalTeamRuns * 0.3);
-    const reasoningRuns = totalTeamRuns - triageRuns - editingRuns;
+    const { triageRuns, editingRuns, reasoningRuns } = allocateHybridRuns(totalTeamRuns);
 
-    const triageCost = fastEvaluation.runCost * triageRuns;
-    const editingCost = balancedEvaluation.runCost * editingRuns;
-    const reasoningCost = baselineRunCost * reasoningRuns;
-    const blendedCost = triageCost + editingCost + reasoningCost;
+    const triageCost = requireFiniteResult("hybrid triageCost", fastEvaluation.runCost * triageRuns);
+    const editingCost = requireFiniteResult("hybrid editingCost", balancedEvaluation.runCost * editingRuns);
+    const reasoningCost = requireFiniteResult("hybrid reasoningCost", baselineRunCost * reasoningRuns);
+    const blendedCost = requireFiniteResult("hybrid blendedCost", triageCost + editingCost + reasoningCost);
 
     blendedMonthlyCost = Number(blendedCost.toFixed(2));
-    unroundedHybridSavings = baselineMonthlyCost - blendedCost;
+    unroundedHybridSavings = requireFiniteResult("hybrid monthlySavings", baselineMonthlyCost - blendedCost);
     hybridSavings = Number(unroundedHybridSavings.toFixed(2));
 
     hybridRules.push({
@@ -275,8 +323,10 @@ export function analyzeCostOptimization(options: CostOptimizationOptions): CostO
     });
 
     const hybridSavingsPercent =
-      baselineMonthlyCost > 0 ? Number((((baselineMonthlyCost - blendedCost) / baselineMonthlyCost) * 100).toFixed(1)) : 0;
-    hybridSummary = `Tiered dispatching delivers ${formatMonthlyUsd(baselineMonthlyCost - blendedCost)}/mo (${hybridSavingsPercent}%) savings while preserving top-tier model precision for high-complexity prompts.`;
+      baselineMonthlyCost > 0
+        ? Number(requireFiniteResult("hybrid savingsPercent", (unroundedHybridSavings / baselineMonthlyCost) * 100).toFixed(1))
+        : 0;
+    hybridSummary = `Tiered dispatching delivers ${formatMonthlyUsd(unroundedHybridSavings)}/mo (${hybridSavingsPercent}%) savings while preserving top-tier model precision for high-complexity prompts.`;
   } else {
     blendedMonthlyCost = baselineMonthlySpend;
     hybridRules.push({
@@ -298,7 +348,9 @@ export function analyzeCostOptimization(options: CostOptimizationOptions): CostO
   }
 
   const hybridSavingsPercent =
-    baselineMonthlyCost > 0 ? Number(((unroundedHybridSavings / baselineMonthlyCost) * 100).toFixed(1)) : 0;
+    baselineMonthlyCost > 0
+      ? Number(requireFiniteResult("hybrid savingsPercent", (unroundedHybridSavings / baselineMonthlyCost) * 100).toFixed(1))
+      : 0;
 
   const hybridStrategy: HybridDispatchStrategy = {
     rules: hybridRules,
