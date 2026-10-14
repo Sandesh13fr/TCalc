@@ -110,6 +110,26 @@ describe("parseFileSymbols - additional languages", () => {
     expect(result.symbols.map((symbol) => symbol.name)).not.toContain("helper");
   });
 
+  it("ignores Java declarations inside comments and text blocks", () => {
+    const content = [
+      "/*",
+      "public class FakeComment {}",
+      "*/",
+      'String example = """',
+      "public class FakeString {}",
+      '""";',
+      "public class RealClass {}",
+    ].join("\n");
+    const name = "commented-declarations.java";
+    writeFileSync(join(tempDir, name), content, "utf-8");
+    const result = parseFileSymbols(makeFileInfo(name, ".java", name), true);
+    const names = result.symbols.map((symbol) => symbol.name);
+
+    expect(names).not.toContain("FakeComment");
+    expect(names).not.toContain("FakeString");
+    expect(names).toContain("RealClass");
+  });
+
   it("recognizes Go and Kotlin export rules", () => {
     writeFileSync(join(tempDir, "service.go"), "type Service struct {}\nfunc Run() {}\nfunc hidden() {}", "utf-8");
     const go = parseFileSymbols(makeFileInfo("service.go", ".go", "service.go"), true);
@@ -219,6 +239,30 @@ async def fetch():
     expect(fetchSym.async).toBe(true);
     expect(result.imports.some((i) => i.source === "os")).toBe(true);
     expect(result.imports.some((i) => i.source === "typing")).toBe(true);
+  });
+
+  it("ignores declarations inside Python multiline strings", () => {
+    const content = [
+      'message = """',
+      "def fake_function():",
+      "    pass",
+      "class FakeClass:",
+      '"""',
+      "def real_function():",
+      "    pass",
+      "class RealClass:",
+      "    pass",
+    ].join("\n");
+
+    const name = "string-declarations.py";
+    writeFileSync(join(tempDir, name), content, "utf-8");
+    const result = parseFileSymbols(makeFileInfo(name, ".py", name), true);
+    const names = result.symbols.map((symbol) => symbol.name);
+
+    expect(names).not.toContain("fake_function");
+    expect(names).not.toContain("FakeClass");
+    expect(names).toContain("real_function");
+    expect(names).toContain("RealClass");
   });
   it("parses comma-separated Python imports and aliases", () => {
     const content = `
