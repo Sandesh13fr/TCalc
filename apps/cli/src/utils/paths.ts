@@ -20,6 +20,28 @@ export function findCatalogInWorkspace(rootPath: string): string[] {
   return candidates;
 }
 
+export const CANONICAL_CONFIG_FILENAME = ".tcalc.json";
+export const LEGACY_CONFIG_FILENAME = ".workspace-model-advisor.json";
+
 export function findWorkspaceConfigPath(rootPath: string): string {
-  return path.join(rootPath, ".tcalc.json");
+  const canonicalPath = path.join(rootPath, CANONICAL_CONFIG_FILENAME);
+  const legacyPath = path.join(rootPath, LEGACY_CONFIG_FILENAME);
+
+  try {
+    if (statSync(canonicalPath).isFile()) {
+      return canonicalPath;
+    }
+  } catch {
+    // Canonical configuration not present
+  }
+
+  try {
+    if (statSync(legacyPath).isFile()) {
+      return legacyPath;
+    }
+  } catch {
+    // Legacy configuration not present
+  }
+
+  return canonicalPath;
 }

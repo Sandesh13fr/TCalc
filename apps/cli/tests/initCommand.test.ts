@@ -3,6 +3,8 @@ import { mkdtemp, rm, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { detectProjectStack, executeInit } from "../src/commands/init.js";
+import { loadWorkspaceConfig } from "../src/utils/loadWorkspaceConfig.js";
+import { findWorkspaceConfigPath, CANONICAL_CONFIG_FILENAME, LEGACY_CONFIG_FILENAME } from "../src/utils/paths.js";
 import { CliError } from "../src/utils/errors.js";
 import { DEFAULT_CONFIG } from "@wma/core";
 
@@ -84,7 +86,7 @@ describe("initCommand wizard", () => {
       expect(output).toContain("[DRY RUN]");
       expect(output).toContain('"defaultGoal"');
 
-      const configFile = path.join(tempDir, ".workspace-model-advisor.json");
+      const configFile = path.join(tempDir, CANONICAL_CONFIG_FILENAME);
       let exists = false;
       try {
         await readFile(configFile);
@@ -107,7 +109,7 @@ describe("initCommand wizard", () => {
       expect(output).toContain("Initialized TCalc workspace configuration!");
       expect(output).toContain("File written:");
 
-      const configFile = path.join(tempDir, ".workspace-model-advisor.json");
+      const configFile = path.join(tempDir, CANONICAL_CONFIG_FILENAME);
       const content = await readFile(configFile, "utf8");
       const parsed = JSON.parse(content);
 
@@ -119,7 +121,7 @@ describe("initCommand wizard", () => {
     it("writes only known configuration keys", async () => {
       await executeInit({ target: tempDir });
 
-      const configFile = path.join(tempDir, ".workspace-model-advisor.json");
+      const configFile = path.join(tempDir, CANONICAL_CONFIG_FILENAME);
       const parsed = JSON.parse(await readFile(configFile, "utf8"));
 
       // The repository does not publish a schema.json, so a $schema URL would 404 in editors.
@@ -130,7 +132,7 @@ describe("initCommand wizard", () => {
     });
 
     it("fails when configuration file already exists and force flag is absent", async () => {
-      const configFile = path.join(tempDir, ".workspace-model-advisor.json");
+      const configFile = path.join(tempDir, CANONICAL_CONFIG_FILENAME);
       await writeFile(configFile, '{"existing": true}', "utf8");
 
       await expect(
@@ -140,8 +142,19 @@ describe("initCommand wizard", () => {
       ).rejects.toThrow(CliError);
     });
 
+    it("fails when legacy configuration file already exists and force flag is absent", async () => {
+      const legacyFile = path.join(tempDir, LEGACY_CONFIG_FILENAME);
+      await writeFile(legacyFile, '{"existing": true}', "utf8");
+
+      await expect(
+        executeInit({
+          target: tempDir,
+        }),
+      ).rejects.toThrow(CliError);
+    });
+
     it("overwrites configuration when force flag is set", async () => {
-      const configFile = path.join(tempDir, ".workspace-model-advisor.json");
+      const configFile = path.join(tempDir, CANONICAL_CONFIG_FILENAME);
       await writeFile(configFile, '{"existing": true}', "utf8");
 
       const output = await executeInit({
@@ -154,6 +167,53 @@ describe("initCommand wizard", () => {
       const parsed = JSON.parse(content);
       expect(parsed.existing).toBeUndefined();
       expect(parsed.defaultGoal).toBeDefined();
+    });
+
+    it("initializes workspace and allows loadWorkspaceConfig to reload selected settings", async () => {
+      await executeInit({
+        target: tempDir,
+        goal: "refactor",
+        privacy: "local-first",
+      });
+
+      const loaded = await loadWorkspaceConfig(tempDir);
+      expect(loaded.defaultGoal).toBe("refactor");
+      expect(loaded.privacyMode).toBe("local-first");
+    });
+
+    it("loads legacy .workspace-model-advisor.json if canonical .tcalc.json does not exist", async () => {
+      const legacyFile = path.join(tempDir, LEGACY_CONFIG_FILENAME);
+      await writeFile(
+        legacyFile,
+        JSON.stringify({ defaultGoal: "debug", privacyMode: "local-first" }),
+        "utf8",
+      );
+
+      expect(findWorkspaceConfigPath(tempDir)).toBe(legacyFile);
+      const loaded = await loadWorkspaceConfig(tempDir);
+      expect(loaded.defaultGoal).toBe("debug");
+      expect(loaded.privacyMode).toBe("local-first");
+    });
+
+    it("prefers canonical .tcalc.json over legacy file when both exist", async () => {
+      const canonicalFile = path.join(tempDir, CANONICAL_CONFIG_FILENAME);
+      const legacyFile = path.join(tempDir, LEGACY_CONFIG_FILENAME);
+
+      await writeFile(
+        legacyFile,
+        JSON.stringify({ defaultGoal: "debug", privacyMode: "cloud-ok" }),
+        "utf8",
+      );
+      await writeFile(
+        canonicalFile,
+        JSON.stringify({ defaultGoal: "refactor", privacyMode: "local-first" }),
+        "utf8",
+      );
+
+      expect(findWorkspaceConfigPath(tempDir)).toBe(canonicalFile);
+      const loaded = await loadWorkspaceConfig(tempDir);
+      expect(loaded.defaultGoal).toBe("refactor");
+      expect(loaded.privacyMode).toBe("local-first");
     });
   });
 });
