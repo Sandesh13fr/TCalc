@@ -33,7 +33,7 @@ export interface CompactRecommendationSummary {
 }
 
 export function createCompactWorkspaceSummary(scan: WorkspaceScanResult): CompactWorkspaceSummary {
-  const topFiles = scan.files
+  const topFiles = [...scan.files]
     .filter((f) => f.included)
     .sort((a, b) => b.estimatedTokens - a.estimatedTokens)
     .slice(0, 10)
@@ -43,7 +43,7 @@ export function createCompactWorkspaceSummary(scan: WorkspaceScanResult): Compac
       language: f.language,
     }));
 
-  const topFolders = scan.folders
+  const topFolders = [...scan.folders]
     .sort((a, b) => b.totalTokens - a.totalTokens)
     .slice(0, 10)
     .map((f) => ({
