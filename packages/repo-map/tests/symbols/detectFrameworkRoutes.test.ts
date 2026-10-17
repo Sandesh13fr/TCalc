@@ -73,4 +73,31 @@ describe("detectFrameworkRoutes", () => {
     const patterns = detectFrameworkRoutes(scan(files), files.map((f) => makeRepoMapFile(f.relativePath))).map((r) => r.routePattern);
     expect(patterns).toContain("/api/health"); expect(patterns).toContain("/api/data"); expect(patterns).toContain("/users");
   });
+
+  it("omits layout files and emits only unique routable endpoints when layout and page coexist", () => {
+    const files = [
+      makeFileInfo("app/layout.tsx", ".tsx"),
+      makeFileInfo("app/page.tsx", ".tsx"),
+      makeFileInfo("app/dashboard/layout.tsx", ".tsx"),
+      makeFileInfo("app/dashboard/page.tsx", ".tsx"),
+      makeFileInfo("next.config.js", ".js"),
+    ];
+    const routes = detectFrameworkRoutes(scan(files), files.map((f) => makeRepoMapFile(f.relativePath)));
+    expect(routes).toHaveLength(2);
+    expect(routes.map((r) => r.routePattern)).toEqual(["/", "/dashboard"]);
+    expect(routes.every((r) => !r.relativePath.includes("layout"))).toBe(true);
+  });
+
+  it("excludes TypeScript declaration files from pages router detection", () => {
+    const files = [
+      makeFileInfo("pages/index.tsx", ".tsx"),
+      makeFileInfo("pages/types.d.ts", ".ts"),
+      makeFileInfo("pages/schema.d.tsx", ".tsx"),
+      makeFileInfo("next.config.js", ".js"),
+    ];
+    const routes = detectFrameworkRoutes(scan(files), files.map((f) => makeRepoMapFile(f.relativePath)));
+    expect(routes).toHaveLength(1);
+    expect(routes[0].routePattern).toBe("/");
+    expect(routes[0].relativePath).toBe("pages/index.tsx");
+  });
 });
