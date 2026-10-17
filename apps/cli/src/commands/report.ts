@@ -31,6 +31,11 @@ export async function executeReport(options: ReportOptions): Promise<string> {
   const privacy = options.privacy ?? config.privacyMode;
   const goal = options.goal ?? config.defaultGoal;
 
+  let tokenBudget = config.tokenBudget.defaultContextBudget;
+  if (config.teamPolicy?.maxTokenBudget !== undefined) {
+    tokenBudget = Math.min(tokenBudget, config.teamPolicy.maxTokenBudget);
+  }
+
   let recommendation = null;
   if (models.length > 0) {
     try {
@@ -40,6 +45,7 @@ export async function executeReport(options: ReportOptions): Promise<string> {
         workspaceTokens: scanResult.includedTokens,
         goal,
         privacyMode: privacy,
+        budget: tokenBudget,
       });
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
@@ -63,7 +69,7 @@ export async function executeReport(options: ReportOptions): Promise<string> {
   if (options.includeRepoMap) {
     if (fmt === "json") {
       const repoMap = createRepoMap(scanResult, {
-        tokenBudget: config.tokenBudget.defaultContextBudget,
+        tokenBudget,
         goal,
       });
       const parsed = JSON.parse(report) as Record<string, unknown>;
@@ -71,7 +77,7 @@ export async function executeReport(options: ReportOptions): Promise<string> {
       report = JSON.stringify(parsed, null, 2);
     } else {
       const repoMap = createRepoMap(scanResult, {
-        tokenBudget: config.tokenBudget.defaultContextBudget,
+        tokenBudget,
         goal,
       });
       const repoMapMd = formatRepoMapMarkdown(repoMap);

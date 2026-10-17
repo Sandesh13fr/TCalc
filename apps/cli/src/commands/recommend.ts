@@ -34,13 +34,18 @@ export async function executeRecommend(options: RecommendOptions): Promise<strin
   const privacy = options.privacy ?? config.privacyMode;
   const goal = options.goal ?? config.defaultGoal;
 
+  let tokenBudget = options.tokenBudget ?? config.tokenBudget.defaultContextBudget;
+  if (config.teamPolicy?.maxTokenBudget !== undefined) {
+    tokenBudget = Math.min(tokenBudget, config.teamPolicy.maxTokenBudget);
+  }
+
   const result = recommendModels({
     models,
     preferredModelIds: profile?.preferredModelIds,
     workspaceTokens: scanResult.includedTokens,
     goal,
     privacyMode: privacy,
-    budget: options.tokenBudget,
+    budget: tokenBudget,
   });
 
   const fmt = options.format ?? "table";

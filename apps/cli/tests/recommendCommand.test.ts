@@ -117,4 +117,33 @@ describe("recommend command", () => {
     expect(output).toContain("Balanced");
     expect(output).toContain("High Confidence");
   });
+
+  describe("team maxTokenBudget enforcement", () => {
+    it("clamps explicit token budget below, equal to, and above team maximum, and respects default", async () => {
+      const root = makeWorkspace();
+      writeFileSync(
+        path.join(root, ".tcalc", "team.json"),
+        JSON.stringify({
+          schemaVersion: "1.0",
+          maxTokenBudget: 500,
+        }),
+      );
+
+      // Below maximum (300)
+      const below = JSON.parse(await executeRecommend({ target: root, tokenBudget: 300, format: "json" }));
+      expect(below.assumptions).toContain("Context limited to user-specified budget of 300 tokens");
+
+      // Equal to maximum (500)
+      const equal = JSON.parse(await executeRecommend({ target: root, tokenBudget: 500, format: "json" }));
+      expect(equal.assumptions).toContain("Context limited to user-specified budget of 500 tokens");
+
+      // Above maximum (1200) -> clamped to 500
+      const above = JSON.parse(await executeRecommend({ target: root, tokenBudget: 1200, format: "json" }));
+      expect(above.assumptions).toContain("Context limited to user-specified budget of 500 tokens");
+
+      // Omitted budget -> defaults to capped defaultContextBudget (min(64000, 500) = 500)
+      const omitted = JSON.parse(await executeRecommend({ target: root, format: "json" }));
+      expect(omitted.assumptions).toContain("Context limited to user-specified budget of 500 tokens");
+    });
+  });
 });
