@@ -104,4 +104,71 @@ describe("estimateTokenDensity", () => {
     expect(profile.metrics.lineCount).toBe(3);
     expect(profile.metrics.avgWordLength).toBeGreaterThan(4);
   });
+
+  describe("options validation", () => {
+    it("throws RangeError on zero baseCharRatio", () => {
+      expect(() => estimateTokenDensity("hello", { baseCharRatio: 0 })).toThrow(
+        RangeError,
+      );
+      expect(() => estimateTokenDensity("", { baseCharRatio: 0 })).toThrow(
+        RangeError,
+      );
+    });
+
+    it("throws RangeError on negative baseCharRatio", () => {
+      expect(() => estimateTokenDensity("hello", { baseCharRatio: -1 })).toThrow(
+        RangeError,
+      );
+      expect(() => estimateTokenDensity("hello", { baseCharRatio: -0.001 })).toThrow(
+        RangeError,
+      );
+    });
+
+    it("throws RangeError on NaN options", () => {
+      expect(() => estimateTokenDensity("hello", { baseCharRatio: Number.NaN })).toThrow(
+        RangeError,
+      );
+      expect(() => estimateTokenDensity("hello", { minMultiplier: Number.NaN })).toThrow(
+        RangeError,
+      );
+      expect(() => estimateTokenDensity("hello", { maxMultiplier: Number.NaN })).toThrow(
+        RangeError,
+      );
+    });
+
+    it("throws RangeError on Infinity options", () => {
+      expect(() => estimateTokenDensity("hello", { baseCharRatio: Number.POSITIVE_INFINITY })).toThrow(
+        RangeError,
+      );
+      expect(() => estimateTokenDensity("hello", { minMultiplier: Number.NEGATIVE_INFINITY })).toThrow(
+        RangeError,
+      );
+      expect(() => estimateTokenDensity("hello", { maxMultiplier: Number.POSITIVE_INFINITY })).toThrow(
+        RangeError,
+      );
+    });
+
+    it("throws RangeError on reversed multiplier bounds", () => {
+      expect(() =>
+        estimateTokenDensity("hello", { minMultiplier: 1.5, maxMultiplier: 1.0 }),
+      ).toThrow(RangeError);
+      expect(() =>
+        estimateTokenDensity("hello", { minMultiplier: 3.0 }),
+      ).toThrow(RangeError);
+      expect(() =>
+        estimateTokenDensity("hello", { maxMultiplier: 0.5 }),
+      ).toThrow(RangeError);
+    });
+
+    it("succeeds with valid custom settings", () => {
+      const profile = estimateTokenDensity("hello world, testing density options", {
+        baseCharRatio: 4.0,
+        minMultiplier: 0.5,
+        maxMultiplier: 1.5,
+      });
+      expect(profile.densityMultiplier).toBeGreaterThanOrEqual(0.5);
+      expect(profile.densityMultiplier).toBeLessThanOrEqual(1.5);
+      expect(profile.rawEstimate).toBe(Math.ceil("hello world, testing density options".length / 4.0));
+    });
+  });
 });

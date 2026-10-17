@@ -13,6 +13,33 @@ export function estimateTokenDensity(
   text: string,
   options: DensityAdjustmentOptions = {},
 ): TokenDensityProfile {
+  if (
+    options.baseCharRatio !== undefined &&
+    (!Number.isFinite(options.baseCharRatio) || options.baseCharRatio <= 0)
+  ) {
+    throw new RangeError("baseCharRatio must be a finite positive number");
+  }
+
+  if (
+    options.minMultiplier !== undefined &&
+    !Number.isFinite(options.minMultiplier)
+  ) {
+    throw new RangeError("minMultiplier must be a finite number");
+  }
+
+  if (
+    options.maxMultiplier !== undefined &&
+    !Number.isFinite(options.maxMultiplier)
+  ) {
+    throw new RangeError("maxMultiplier must be a finite number");
+  }
+
+  const minMult = options.minMultiplier ?? 0.65;
+  const maxMult = options.maxMultiplier ?? 2.2;
+  if (minMult > maxMult) {
+    throw new RangeError("minMultiplier cannot be greater than maxMultiplier");
+  }
+
   const charCount = text.length;
   if (charCount === 0) {
     const emptyMetrics: TokenDensityMetrics = {
@@ -102,8 +129,6 @@ export function estimateTokenDensity(
     multiplier -= 0.08;
   }
 
-  const minMult = options.minMultiplier ?? 0.65;
-  const maxMult = options.maxMultiplier ?? 2.2;
   const clampedMultiplier = Number(Math.min(maxMult, Math.max(minMult, multiplier)).toFixed(3));
 
   const adjustedTokens = Math.max(1, Math.round(rawEstimate * clampedMultiplier));
