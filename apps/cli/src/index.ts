@@ -27,7 +27,7 @@ program
 
 program
   .command("init [path]")
-  .description("Initialize a tailored .workspace-model-advisor.json config file")
+  .description("Initialize a tailored .tcalc.json config file")
   .option("--goal <goal>", "Workspace goal", parseGoal)
   .option("--privacy <mode>", "Privacy mode (local-first|cloud-ok)", parsePrivacyMode)
   .option("--force", "Overwrite an existing configuration file")

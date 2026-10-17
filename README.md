@@ -70,13 +70,14 @@ Building from source needs **Node.js 22** and **pnpm 11.5.2**. For the fork, clo
 pnpm install
 pnpm build
 
+pnpm cli init ./my-project
 pnpm cli scan ./my-project
 pnpm cli recommend ./my-project --goal build-mvp
 pnpm cli repo-map ./my-project --budget 8000
 pnpm cli rules ./my-project --target codex --mode repo-map-first
 ```
 
-Other commands generate Markdown/JSON reports, validate model catalogs, create MCP configs, and start the local MCP server. Run `pnpm cli --help` for the complete command list.
+The `init` command writes a tailored `.tcalc.json` canonical workspace configuration file (with backwards-compatible fallback to `.workspace-model-advisor.json`). Other commands generate Markdown/JSON reports, validate model catalogs, create MCP configs, and start the local MCP server. Run `pnpm cli --help` for the complete command list.
 
 ### Ignore sources and precedence
 

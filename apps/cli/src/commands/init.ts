@@ -1,7 +1,7 @@
 import { access, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import { DEFAULT_CONFIG, type PrivacySetting, type WorkspaceGoal, type WmaConfig } from "@wma/core";
-import { resolveTargetPath } from "../utils/paths.js";
+import { resolveTargetPath, CANONICAL_CONFIG_FILENAME, LEGACY_CONFIG_FILENAME } from "../utils/paths.js";
 import { CliError } from "../utils/errors.js";
 
 export interface InitOptions {
@@ -91,7 +91,8 @@ export async function detectProjectStack(rootPath: string): Promise<DetectedStac
 
 export async function executeInit(options: InitOptions): Promise<string> {
   const rootPath = resolveTargetPath(options.target);
-  const configPath = path.join(rootPath, ".workspace-model-advisor.json");
+  const configPath = path.join(rootPath, CANONICAL_CONFIG_FILENAME);
+  const legacyConfigPath = path.join(rootPath, LEGACY_CONFIG_FILENAME);
 
   const stack = await detectProjectStack(rootPath);
 
@@ -118,7 +119,7 @@ export async function executeInit(options: InitOptions): Promise<string> {
     ].join("\n");
   }
 
-  const alreadyExists = await fileExists(configPath);
+  const alreadyExists = (await fileExists(configPath)) || (await fileExists(legacyConfigPath));
   if (alreadyExists && !options.force) {
     throw new CliError(
       `Configuration file already exists at ${configPath}. Use --force to overwrite it.`,
