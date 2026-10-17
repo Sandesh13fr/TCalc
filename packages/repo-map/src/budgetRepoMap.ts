@@ -80,7 +80,7 @@ function removeEverywhere(repoMap: RepoMapResult, relativePath: string): void {
   repoMap.recommendedInclude = withoutPath(repoMap.recommendedInclude, relativePath);
   repoMap.recommendedExclude = withoutPath(repoMap.recommendedExclude, relativePath);
   repoMap.symbols = repoMap.symbols.filter((symbol) => symbol.relativePath !== relativePath);
-  repoMap.imports = repoMap.imports.filter((entry) => entry.relativePath !== relativePath);
+  repoMap.imports = repoMap.imports.filter((entry) => entry.relativePath !== relativePath && entry.resolvedPath !== relativePath);
   repoMap.routes = repoMap.routes.filter((route) => route.relativePath !== relativePath);
 }
 

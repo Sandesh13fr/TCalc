@@ -177,4 +177,29 @@ describe("budgetRepoMap", () => {
     expect(budgeted.routes).toHaveLength(0);
     expect(budgeted.symbolSummary).toHaveLength(0);
   });
+
+  it("removes import edges pointing to trimmed targets while preserving external imports (Issue #138)", () => {
+    const preservedImporter = makeFile("src/index.ts", 100, 50);
+    const trimmedTarget = makeFile("src/trimmed.ts", 10, 50_000);
+
+    const result = makeResult({
+      entryPoints: [preservedImporter],
+      importantFiles: [trimmedTarget],
+      largeFiles: [trimmedTarget],
+      estimatedTokens: 60_000,
+      imports: [
+        { source: "./trimmed", relativePath: preservedImporter.relativePath, resolvedPath: trimmedTarget.relativePath, kind: "import" },
+        { source: "react", relativePath: preservedImporter.relativePath, resolvedPath: undefined, kind: "import" },
+      ],
+    });
+
+    const budgeted = budgetRepoMap(result, 200);
+
+    // trimmedTarget should be trimmed out
+    expect(budgeted.importantFiles).toHaveLength(0);
+    // The import edge from preservedImporter pointing to trimmedTarget must be removed
+    expect(budgeted.imports.find((i) => i.resolvedPath === trimmedTarget.relativePath)).toBeUndefined();
+    // Unresolved external import ("react") must be preserved
+    expect(budgeted.imports.find((i) => i.source === "react")).toBeDefined();
+  });
 });
