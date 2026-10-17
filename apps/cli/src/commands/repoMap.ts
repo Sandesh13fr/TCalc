@@ -22,8 +22,13 @@ export async function executeRepoMap(options: RepoMapOptions): Promise<string> {
 
   const scanResult = await scanWorkspace({ rootPath, userExcludePatterns: config.exclude });
 
+  let budget = options.budget ?? config.tokenBudget.defaultContextBudget;
+  if (config.teamPolicy?.maxTokenBudget !== undefined) {
+    budget = Math.min(budget, config.teamPolicy.maxTokenBudget);
+  }
+
   const repoMap = createRepoMap(scanResult, {
-    tokenBudget: options.budget ?? config.tokenBudget.defaultContextBudget,
+    tokenBudget: budget,
     goal: (options.goal ?? config.defaultGoal) as any,
     enableSymbolExtraction: !options.noSymbols,
     maxSymbols: options.maxSymbols,

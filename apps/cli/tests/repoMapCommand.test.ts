@@ -153,4 +153,39 @@ describe("repo-map command", () => {
     }
   });
 
+  describe("team maxTokenBudget enforcement", () => {
+    it("clamps explicit budget below, equal to, and above team maximum, and respects default", async () => {
+      const root = await mkdtemp(path.join(tmpdir(), "tcalc-cli-teambudget-"));
+      try {
+        await mkdir(path.join(root, ".tcalc"));
+        await mkdir(path.join(root, "src"));
+        await writeFile(path.join(root, "src", "index.ts"), "export const a = 1;");
+        await writeFile(
+          path.join(root, ".tcalc", "team.json"),
+          JSON.stringify({
+            schemaVersion: "1.0",
+            maxTokenBudget: 500,
+          }),
+        );
+
+        // Explicit budget below max (300)
+        const below = JSON.parse(await executeRepoMap({ target: root, budget: 300, format: "json" }));
+        expect(below.tokenBudget).toBe(300);
+
+        // Explicit budget equal to max (500)
+        const equal = JSON.parse(await executeRepoMap({ target: root, budget: 500, format: "json" }));
+        expect(equal.tokenBudget).toBe(500);
+
+        // Explicit budget above max (1500) -> clamped to 500
+        const above = JSON.parse(await executeRepoMap({ target: root, budget: 1500, format: "json" }));
+        expect(above.tokenBudget).toBe(500);
+
+        // Omitted budget -> defaults to capped defaultContextBudget (min(64000, 500) = 500)
+        const omitted = JSON.parse(await executeRepoMap({ target: root, format: "json" }));
+        expect(omitted.tokenBudget).toBe(500);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+  });
 });
