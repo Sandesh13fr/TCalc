@@ -82,17 +82,24 @@ export function detectFrameworkRoutes(
   for (const file of scanResult.files) {
     if (!pathSet.has(file.relativePath)) continue;
     const rp = file.relativePath.replace(/\\/g, "/");
+    if (rp.endsWith(".d.ts") || rp.endsWith(".d.tsx") || rp.endsWith(".d.cts") || rp.endsWith(".d.mts")) {
+      continue;
+    }
     const routerPath = nextRouterRelativePath(rp, pathSet, fileByRelativePath);
     if (!routerPath) continue;
 
     if (routerPath.router === "app") {
-      const match = routerPath.path.match(/^(?:(.*)\/)?(page|layout|route)\.(?:js|jsx|ts|tsx)$/);
+      const match = routerPath.path.match(/^(?:(.*)\/)?(page|route)\.(?:js|jsx|ts|tsx)$/);
       if (!match) continue;
       const route = normalizeAppRoute(match[1] ?? "");
       if (route === null) continue;
+      const routePattern = `/${route}`;
+      if (routes.some((r) => r.framework === "nextjs" && r.routePattern === routePattern)) {
+        continue;
+      }
       routes.push({
         relativePath: rp,
-        routePattern: `/${route}`,
+        routePattern,
         framework: "nextjs",
         reason: `Next.js App Router ${match[2]}: ${rp}`,
       });
@@ -103,9 +110,13 @@ export function detectFrameworkRoutes(
     if (pagesMatch) {
       const route = normalizePagesRoute(pagesMatch[1]);
       if (route === null) continue;
+      const routePattern = `/${route}`;
+      if (routes.some((r) => r.framework === "nextjs" && r.routePattern === routePattern)) {
+        continue;
+      }
       routes.push({
         relativePath: rp,
-        routePattern: `/${route}`,
+        routePattern,
         framework: "nextjs",
         reason: `Next.js Pages Router: ${rp}`,
       });
