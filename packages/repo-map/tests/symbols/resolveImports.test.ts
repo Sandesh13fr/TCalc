@@ -21,4 +21,31 @@ describe("resolveImports", () => {
     ], scan);
     expect(resolved.map((entry) => entry.resolvedPath)).toEqual(["pkg/shared.py", "pkg/sub/helpers/__init__.py"]);
   });
+
+  it("resolves direct and index imports for .mts and .cts files (Issue #137)", () => {
+    const scan = {
+      files: [
+        { relativePath: "src/esm/helper.mts" },
+        { relativePath: "src/esm/config/index.mts" },
+        { relativePath: "src/cjs/util.cts" },
+        { relativePath: "src/cjs/models/index.cts" },
+      ],
+    } as WorkspaceScanResult;
+
+    const resolved = resolveImports([
+      { source: "./helper", relativePath: "src/esm/main.mts", kind: "import" },
+      { source: "./config", relativePath: "src/esm/main.mts", kind: "import" },
+      { source: "./util", relativePath: "src/cjs/app.cts", kind: "import" },
+      { source: "./models", relativePath: "src/cjs/app.cts", kind: "import" },
+      { source: "external-package", relativePath: "src/esm/main.mts", kind: "import" },
+    ], scan);
+
+    expect(resolved.map((entry) => entry.resolvedPath)).toEqual([
+      "src/esm/helper.mts",
+      "src/esm/config/index.mts",
+      "src/cjs/util.cts",
+      "src/cjs/models/index.cts",
+      undefined,
+    ]);
+  });
 });
