@@ -69,7 +69,7 @@ pnpm scan:fixtures    # Smoke-test CLI on fixtures
 ## Packaging
 
 ```bash
-pnpm package:vscode:preflight   # Typecheck, lint, check for telemetry
+pnpm package:vscode:preflight   # No-telemetry check, extension typecheck, and extension tests
 pnpm package:vscode              # Build VSIX
 pnpm package:vscode:inspect      # Verify VSIX contents
 ```
