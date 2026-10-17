@@ -1,7 +1,7 @@
 import path from "node:path";
 import type { RepoMapImport, WorkspaceScanResult } from "@wma/core";
 
-const EXTENSIONS = ["", ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".java", ".kt", ".go", ".rs"];
+const EXTENSIONS = ["", ".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs", ".py", ".java", ".kt", ".go", ".rs"];
 
 export function resolveImports(imports: RepoMapImport[], scanResult: WorkspaceScanResult): RepoMapImport[] {
   const files = new Set(scanResult.files.map((file) => file.relativePath.replace(/\\/g, "/")));
