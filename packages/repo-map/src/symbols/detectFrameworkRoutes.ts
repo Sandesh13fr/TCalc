@@ -1,6 +1,119 @@
 import type { WorkspaceScanResult, RepoMapRoute, RepoMapFile } from "@wma/core";
 import { readFileSync } from "node:fs";
 
+function maskCommentsAndStrings(content: string, extension: string): string {
+  const masked = content.split("");
+  const isPython = extension === ".py";
+
+  let state: "code" | "line" | "block" | "string" = "code";
+  let quote = "";
+  let triple = false;
+
+  for (let i = 0; i < content.length; i++) {
+    const char = content[i];
+    const next = content[i + 1];
+    const nextTwo = content[i + 2];
+
+    if (state === "line") {
+      if (char === "\n" || char === "\r") {
+        state = "code";
+      } else {
+        masked[i] = " ";
+      }
+      continue;
+    }
+
+    if (state === "block") {
+      if (char === "*" && next === "/") {
+        masked[i] = " ";
+        masked[i + 1] = " ";
+        i++;
+        state = "code";
+      } else if (char !== "\n" && char !== "\r") {
+        masked[i] = " ";
+      }
+      continue;
+    }
+
+    if (state === "string") {
+      if (char === "\\") {
+        masked[i] = " ";
+        if (i + 1 < content.length) {
+          if (next !== "\n" && next !== "\r") {
+            masked[i + 1] = " ";
+          }
+          i++;
+        }
+        continue;
+      }
+
+      if (
+        triple &&
+        char === quote &&
+        next === quote &&
+        nextTwo === quote
+      ) {
+        masked[i] = " ";
+        masked[i + 1] = " ";
+        masked[i + 2] = " ";
+        i += 2;
+        state = "code";
+        continue;
+      }
+
+      if (!triple && char === quote) {
+        masked[i] = " ";
+        state = "code";
+        continue;
+      }
+
+      if (char !== "\n" && char !== "\r") {
+        masked[i] = " ";
+      }
+      continue;
+    }
+
+    if (isPython && char === "#") {
+      masked[i] = " ";
+      state = "line";
+      continue;
+    }
+
+    if (!isPython && char === "/" && next === "/") {
+      masked[i] = " ";
+      masked[i + 1] = " ";
+      i++;
+      state = "line";
+      continue;
+    }
+
+    if (!isPython && char === "/" && next === "*") {
+      masked[i] = " ";
+      masked[i + 1] = " ";
+      i++;
+      state = "block";
+      continue;
+    }
+
+    if (char === "'" || char === '"' || (!isPython && char === "`")) {
+      quote = char;
+      triple = char !== "`" && next === char && nextTwo === char;
+
+      masked[i] = " ";
+
+      if (triple) {
+        masked[i + 1] = " ";
+        masked[i + 2] = " ";
+        i += 2;
+      }
+
+      state = "string";
+    }
+  }
+
+  return masked.join("");
+}
+
 function hasNextProjectSignal(
   root: string,
   pathSet: Set<string>,
@@ -117,21 +230,34 @@ export function detectFrameworkRoutes(
     if (!pathSet.has(file.relativePath)) continue;
     if (![".ts", ".tsx", ".js", ".jsx"].includes(file.extension)) continue;
     try {
-      const content = readFileSync(file.path, "utf-8");
-      const routeRegex = /(?:app|router)\.(get|post|put|delete|patch|use)\s*\(\s*['"`]([^'"`]+)['"`]/g;
-      let m: RegExpExecArray | null;
-      while ((m = routeRegex.exec(content)) !== null) {
-        routes.push({ relativePath: file.relativePath, routePattern: m[2], framework: "express", reason: `${m[1].toUpperCase()} ${m[2]}` });
-      }
-    } catch {
-      // Skip files that can't be read
-    }
+  const content = readFileSync(file.path, "utf-8");
+  const codeMask = maskCommentsAndStrings(content, file.extension);
+
+  const routeRegex =
+    /(?:app|router)\.(get|post|put|delete|patch|use)\s*\(\s*['"`]([^'"`]+)['"`]/g;
+
+  let m: RegExpExecArray | null;
+
+  while ((m = routeRegex.exec(content)) !== null) {
+    if (codeMask[m.index] === " ") continue;
+
+    routes.push({
+      relativePath: file.relativePath,
+      routePattern: m[2],
+      framework: "express",
+      reason: `${m[1].toUpperCase()} ${m[2]}`,
+    });
+  }
+} catch {
+  // Skip files that can't be read.
+}
   }
 
   for (const file of scanResult.files) {
     if (!pathSet.has(file.relativePath) || ![".py", ".java", ".kt"].includes(file.extension)) continue;
     try {
       const content = readFileSync(file.path, "utf-8");
+      const codeMask = maskCommentsAndStrings(content, file.extension);
       const patterns = file.extension === ".py"
         ? [
             { regex: /@(app|router)\.(get|post|put|delete|patch)\s*\(\s*['"]([^'"]+)['"]/g, framework: "fastapi" as const },
@@ -141,6 +267,8 @@ export function detectFrameworkRoutes(
       for (const { regex, framework } of patterns) {
         let match: RegExpExecArray | null;
         while ((match = regex.exec(content)) !== null) {
+          if (codeMask[match.index] === " ") continue;
+
           const route = match[3] ?? match[2] ?? match[1];
           routes.push({ relativePath: file.relativePath, routePattern: route, framework, reason: `${framework} route: ${route}` });
         }
