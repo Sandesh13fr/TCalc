@@ -7,6 +7,7 @@ import {
   symlink,
   writeFile,
   readFile,
+  utimes,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -143,6 +144,75 @@ describe("scanWorkspace traversal", () => {
     expect(third.cacheMisses).toBeGreaterThan(0);
   });
 
+  it("does not reuse a persistent cache across different canonical workspace roots", async () => {
+    const parent = await tempDirectory("tcalc-shared-cache-");
+    const rootA = path.join(parent, "root-a");
+    const rootB = path.join(parent, "root-b");
+    const cacheFile = path.join(parent, "scan.json");
+    const contentA = "const value = 'AAAA';";
+    const contentB = "const value = 'BBBB';";
+
+    await mkdir(rootA);
+    await mkdir(rootB);
+
+    const fileA = path.join(rootA, "index.ts");
+    const fileB = path.join(rootB, "index.ts");
+
+    await writeFile(fileA, contentA);
+    await writeFile(fileB, contentB);
+
+    const fixedTime = new Date("2024-01-01T00:00:00.000Z");
+    await utimes(fileA, fixedTime, fixedTime);
+    await utimes(fileB, fixedTime, fixedTime);
+
+    const tokenizer = {
+      id: "workspace-cache-test",
+      provider: "openai" as const,
+      estimate: (text: string) => (text.includes("AAAA") ? 11 : 29),
+    };
+
+    const first = await scanWorkspace({
+      rootPath: rootA,
+      cacheFile,
+      tokenizer,
+    });
+    const second = await scanWorkspace({
+      rootPath: rootB,
+      cacheFile,
+      tokenizer,
+    });
+
+    expect(first.cacheHits).toBe(0);
+    expect(first.files.find((file) => file.relativePath === "index.ts")?.estimatedTokens).toBe(11);
+    expect(second.cacheHits).toBe(0);
+    expect(second.files.find((file) => file.relativePath === "index.ts")?.estimatedTokens).toBe(29);
+
+    const persistedCache = JSON.parse(await readFile(cacheFile, "utf8"));
+    expect(persistedCache.version).toBe(SCAN_CACHE_VERSION);
+    expect(persistedCache.workspaceRoot).toBeDefined();
+  });
+
+  it("reuses the cache when scanning the same canonical workspace through a symlink alias", async () => {
+    const parent = await tempDirectory("tcalc-cache-alias-");
+    const root = path.join(parent, "workspace");
+    const alias = path.join(parent, "workspace-alias");
+    const cacheFile = path.join(parent, "scan.json");
+
+    await mkdir(root);
+    await writeFile(path.join(root, "index.ts"), "export const value = 1;");
+    await symlink(
+      root,
+      alias,
+      process.platform === "win32" ? "junction" : "dir",
+    );
+
+    const first = await scanWorkspace({ rootPath: root, cacheFile });
+    const second = await scanWorkspace({ rootPath: alias, cacheFile });
+
+    expect(first.cacheHits).toBe(0);
+    expect(second.cacheHits).toBe(1);
+  });
+
   it("rebuilds version 2 caches so stale SQL dump flags do not survive upgrades", async () => {
     const root = await tempDirectory("tcalc-cache-sql-upgrade-");
     const cacheFile = path.join(root, ".cache", "scan.json");
@@ -182,7 +252,7 @@ describe("scanWorkspace traversal", () => {
     expect(result.cacheHits).toBe(0);
     expect(query?.riskFlags).not.toContain("database-dump");
     expect(query?.included).toBe(true);
-    expect(rebuiltCache.version).toBe(3);
+    expect(rebuiltCache.version).toBe(4);
   });
 
   it("uses an optional provider tokenizer in the scan path", async () => {

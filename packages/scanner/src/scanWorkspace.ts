@@ -46,12 +46,17 @@ export async function scanWorkspace(options: ScanOptions): Promise<WorkspaceScan
 
   const allFiles: WorkspaceFileInfo[] = [];
   const tokenizerKey = options.tokenizer ? `${options.tokenizer.provider}:${options.tokenizer.id}:${options.tokenizerModel ?? ""}` : "heuristic-v1";
-  const cache = await loadScanCache(options.cacheFile, tokenizerKey);
+  const rootRealPath = await realpath(rootPath);
+  const cache = await loadScanCache(
+    options.cacheFile,
+    tokenizerKey,
+    rootRealPath,
+  );
   const nextCache = new Map<string, ScanCacheEntry>();
   let cacheHits = 0;
   let cacheMisses = 0;
   const filePaths = await walkFiles(rootPath, rootPath, resolver, {
-    rootRealPath: await realpath(rootPath),
+    rootRealPath,
     visited: new Set(),
     skipRelativePaths: new Set(cacheExclude),
     warnings,
@@ -71,7 +76,12 @@ export async function scanWorkspace(options: ScanOptions): Promise<WorkspaceScan
   }
 
   try {
-    await saveScanCache(options.cacheFile, tokenizerKey, nextCache);
+    await saveScanCache(
+      options.cacheFile,
+      tokenizerKey,
+      rootRealPath,
+      nextCache,
+    );
   } catch (error) {
     warnings.push(`Failed to write scan cache: ${errorMessage(error)}`);
   }
@@ -241,8 +251,6 @@ async function scanSingleFile(
           ? estimateProviderTokens(text, options.tokenizer, options.tokenizerModel, (value) => estimateFileTokens(value, relativePath)).tokens
           : estimateFileTokens(text, relativePath);
         contentPreview = text.slice(0, fileSizeConfig.maxContentPreviewBytes);
-        // Scan the full text for secrets: preview-only scans miss
-        // credentials past 4KB and would incorrectly mark the file included.
         const contentFlags = detectSecretRisk(relativePath, text);
         for (const flag of contentFlags) {
           if (!riskFlags.includes(flag)) riskFlags.push(flag);
