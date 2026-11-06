@@ -97,7 +97,24 @@ describe("MultiFormat Agent Rules", () => {
     expect(bundle.copilot.fileName).toBe(".github/copilot-instructions.md");
     expect(bundle.gemini.fileName).toBe("GEMINI.md");
   });
+  it("preserves model recommendations when all rule formats are generated", () => {
+    const recommendations = ["Claude 3.7 Sonnet", "GPT-4o"];
 
+    const bundle = generateMultiFormatRules("all", {
+      workspaceTokens: 50000,
+      mode: "concise",
+      modelRecommendations: recommendations,
+    }) as Record<string, AgentRulesOutput>;
+
+    expect(bundle.cursor.content).toContain("Claude 3.7 Sonnet");
+    expect(bundle.cursor.content).toContain("GPT-4o");
+
+    expect(bundle.claude.content).toContain("Claude 3.7 Sonnet");
+    expect(bundle.claude.content).toContain("GPT-4o");
+
+    expect(bundle.generic.content).toContain("Claude 3.7 Sonnet");
+    expect(bundle.generic.content).toContain("GPT-4o");
+  });
   it("defaults every format to a valid optimization mode and token budget", () => {
     const bundle = generateMultiFormatRules("all", { workspaceTokens: 1000 }) as Record<string, AgentRulesOutput>;
 
