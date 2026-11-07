@@ -118,6 +118,7 @@ export interface CompactRepoMap {
   riskyFileCount: number;
   largeFileCount: number;
   symbolCount: number;
+  warnings: string[];
 }
 
 export function createCompactRepoMap(map: RepoMapResult): CompactRepoMap {
@@ -142,6 +143,7 @@ export function createCompactRepoMap(map: RepoMapResult): CompactRepoMap {
     riskyFileCount: map.riskyFiles.length,
     largeFileCount: map.largeFiles.length,
     symbolCount: map.symbols.length,
+    warnings: map.warnings,
   };
 }
 

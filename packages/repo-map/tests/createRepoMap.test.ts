@@ -1,6 +1,10 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import type { WorkspaceScanResult, WorkspaceFileInfo, FolderStats, LanguageBreakdown } from "@wma/core";
 import { createRepoMap } from "../src/createRepoMap.js";
+import * as typeScriptSymbols from "../src/symbols/parsers/typescriptSymbols.js";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
 
 function makeFile(overrides: Partial<WorkspaceFileInfo> & { relativePath: string }): WorkspaceFileInfo {
   return {
@@ -125,6 +129,60 @@ describe("createRepoMap", () => {
     expect(result.languageBreakdown.length).toBeGreaterThan(0);
     const ts = result.languageBreakdown.find((l) => l.language === "TypeScript");
     expect(ts).toBeDefined();
+  });
+
+  it("includes failed-read warnings and preserves symbols from successful files", () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "repo-map-warnings-"));
+    try {
+      const scan = makeFixtureScanResult();
+      const goodPath = join(tempDir, "index.ts");
+      writeFileSync(goodPath, "export function availableSymbol() {}", "utf-8");
+      scan.files = [
+        makeFile({ relativePath: "src/index.ts", path: goodPath }),
+        makeFile({ relativePath: "src/main.ts", path: join(tempDir, "missing.ts") }),
+      ];
+
+      const result = createRepoMap(scan, { tokenBudget: 8000 });
+
+      expect(result.warnings).toHaveLength(1);
+      expect(result.warnings[0]).toContain("Failed to parse src/main.ts:");
+      expect(result.symbols.some((symbol) => symbol.name === "availableSymbol")).toBe(true);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  it("includes parser-failure warnings and preserves symbols from other files", () => {
+    const tempDir = mkdtempSync(join(tmpdir(), "repo-map-parser-warnings-"));
+    const originalParser = typeScriptSymbols.extractTypeScriptSymbols;
+    const parserSpy = vi.spyOn(typeScriptSymbols, "extractTypeScriptSymbols")
+      .mockImplementation((content, relativePath, ext) => {
+        if (relativePath === "src/broken.ts") throw new Error("simulated parser failure");
+        return originalParser(content, relativePath, ext);
+      });
+
+    try {
+      const scan = makeFixtureScanResult();
+      const goodPath = join(tempDir, "index.ts");
+      const brokenPath = join(tempDir, "broken.ts");
+      writeFileSync(goodPath, "export function availableSymbol() {}", "utf-8");
+      writeFileSync(brokenPath, "export function brokenSymbol() {}", "utf-8");
+      scan.files = [
+        makeFile({ relativePath: "src/index.ts", path: goodPath }),
+        makeFile({ relativePath: "src/broken.ts", path: brokenPath }),
+      ];
+
+      const result = createRepoMap(scan, { tokenBudget: 8000 });
+
+      expect(result.warnings).toEqual([
+        "Failed to parse src/broken.ts: simulated parser failure",
+      ]);
+      expect(result.symbols.some((symbol) => symbol.name === "availableSymbol")).toBe(true);
+      expect(result.symbols.some((symbol) => symbol.name === "brokenSymbol")).toBe(false);
+    } finally {
+      parserSpy.mockRestore();
+      rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   it("handles empty scan result gracefully", () => {

@@ -86,4 +86,5 @@ export interface RepoMapResult {
   imports: RepoMapImport[];
   routes: RepoMapRoute[];
   symbolSummary: string[];
+  warnings: string[];
 }

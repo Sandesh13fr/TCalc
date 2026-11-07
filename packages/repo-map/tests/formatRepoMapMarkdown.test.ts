@@ -92,6 +92,7 @@ function makeFixtureRepoMap(): RepoMapResult {
       "Exports: 2",
       "Functions/Components: 2",
     ],
+    warnings: [],
   };
 }
 
@@ -117,6 +118,16 @@ describe("formatRepoMapMarkdown", () => {
     expect(sectionCount(md, "Recommended Agent Context")).toBe(1);
     expect(sectionCount(md, "Suggested Prompt Prefix")).toBe(1);
     expect(sectionCount(md, "Overflow Notes")).toBe(1);
+  });
+
+  it("includes symbol extraction warnings when present", () => {
+    const repoMap = makeFixtureRepoMap();
+    repoMap.warnings = ["Failed to parse src/broken.ts: parser failure"];
+
+    const md = formatRepoMapMarkdown(repoMap);
+
+    expect(sectionCount(md, "Warnings")).toBe(1);
+    expect(md).toContain("- Failed to parse src/broken.ts: parser failure");
   });
 
   it("does not include full source contents", () => {
@@ -162,6 +173,7 @@ describe("formatRepoMapMarkdown", () => {
       recommendedExclude: [],
       agentInstructions: [],
       overflowNotes: [],
+      warnings: [],
     };
     const md = formatRepoMapMarkdown(repoMap);
 

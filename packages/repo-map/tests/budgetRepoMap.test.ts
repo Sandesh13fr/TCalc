@@ -43,6 +43,7 @@ function makeResult(overrides: Partial<RepoMapResult>): RepoMapResult {
     imports: [],
     routes: [],
     symbolSummary: [],
+    warnings: [],
     ...overrides,
   };
 }

@@ -79,6 +79,7 @@ export function createRepoMap(
     imports: symbolResult.imports,
     routes: symbolResult.routes,
     symbolSummary,
+    warnings: symbolResult.warnings,
   };
 
   result = budgetRepoMap(result, options.tokenBudget);

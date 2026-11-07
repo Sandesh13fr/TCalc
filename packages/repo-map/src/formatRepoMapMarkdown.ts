@@ -21,6 +21,7 @@ export function formatRepoMapMarkdown(repoMap: RepoMapResult): string {
   appendRecommendedAgentContext(lines, repoMap);
   appendSuggestedPromptPrefix(lines, repoMap);
   appendOverflowNotes(lines, repoMap);
+  appendWarnings(lines, repoMap);
 
   return lines.join("\n");
 }
@@ -245,6 +246,17 @@ function appendOverflowNotes(lines: string[], repoMap: RepoMapResult): void {
 
   for (const note of repoMap.overflowNotes) {
     lines.push(`- ${escapeMarkdownText(note)}`);
+  }
+  lines.push("");
+}
+
+function appendWarnings(lines: string[], repoMap: RepoMapResult): void {
+  if (repoMap.warnings.length === 0) return;
+
+  lines.push("## Warnings");
+  lines.push("");
+  for (const warning of repoMap.warnings) {
+    lines.push(`- ${escapeMarkdownText(warning)}`);
   }
   lines.push("");
 }
