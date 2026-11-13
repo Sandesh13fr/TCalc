@@ -229,28 +229,29 @@ export function detectFrameworkRoutes(
   for (const file of scanResult.files) {
     if (!pathSet.has(file.relativePath)) continue;
     if (![".ts", ".tsx", ".js", ".jsx"].includes(file.extension)) continue;
+
     try {
-  const content = readFileSync(file.path, "utf-8");
-  const codeMask = maskCommentsAndStrings(content, file.extension);
+      const content = readFileSync(file.path, "utf-8");
+      const codeMask = maskCommentsAndStrings(content, file.extension);
 
-  const routeRegex =
-    /(?:app|router)\.(get|post|put|delete|patch|use)\s*\(\s*['"`]([^'"`]+)['"`]/g;
+      const routeRegex =
+        /(?:app|router)\.(get|post|put|delete|patch|use)\s*\(\s*['"`]([^'"`]+)['"`]/g;
 
-  let m: RegExpExecArray | null;
+      let m: RegExpExecArray | null;
 
-  while ((m = routeRegex.exec(content)) !== null) {
-    if (codeMask[m.index] === " ") continue;
+      while ((m = routeRegex.exec(content)) !== null) {
+        if (codeMask[m.index] === " ") continue;
 
-    routes.push({
-      relativePath: file.relativePath,
-      routePattern: m[2],
-      framework: "express",
-      reason: `${m[1].toUpperCase()} ${m[2]}`,
-    });
-  }
-} catch {
-  // Skip files that can't be read.
-}
+        routes.push({
+          relativePath: file.relativePath,
+          routePattern: m[2],
+          framework: "express",
+          reason: `${m[1].toUpperCase()} ${m[2]}`,
+        });
+      }
+    } catch {
+      // Skip files that can't be read.
+    }
   }
 
   for (const file of scanResult.files) {
