@@ -36,7 +36,8 @@ function main() {
   run("repo-map fixture (json)", `${cli} repo-map ${fixture} --budget 8000 --format json`);
   run("report fixture", `${cli} report ${fixture} --catalog catalogs/models.json`);
   run("report fixture (json + repo map)", `${cli} report ${fixture} --catalog catalogs/models.json --format json --include-repo-map`);
-  run("catalog validate", `${cli} catalog validate catalogs/models.json`);
+  // Smoke checks the command runs; catalog age is data upkeep (run it without --max-age-days to check).
+  run("catalog validate", `${cli} catalog validate catalogs/models.json --max-age-days 36500`);
   run("catalog feed command registration", `${cli} catalog fetch --help`);
   run("goal compaction", `${cli} compact --goal debug --summary "Fixed parser" --changed-file src/parser.ts --format json`);
   run("MCP command registration", `${cli} mcp --help`);
