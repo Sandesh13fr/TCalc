@@ -75,9 +75,24 @@ export function generateMultiFormatRules(
       });
     case "all":
       return {
-        cursor: generateAgentRules({ target: "cursor", mode, workspaceTokens: options.workspaceTokens }),
-        claude: generateAgentRules({ target: "claude-code", mode, workspaceTokens: options.workspaceTokens }),
-        generic: generateAgentRules({ target: "generic", mode, workspaceTokens: options.workspaceTokens }),
+        cursor: generateAgentRules({
+          target: "cursor",
+          mode,
+          workspaceTokens: options.workspaceTokens,
+          modelRecommendations: options.modelRecommendations,
+        }),
+        claude: generateAgentRules({
+          target: "claude-code",
+          mode,
+          workspaceTokens: options.workspaceTokens,
+          modelRecommendations: options.modelRecommendations,
+        }),
+        generic: generateAgentRules({
+          target: "generic",
+          mode,
+          workspaceTokens: options.workspaceTokens,
+          modelRecommendations: options.modelRecommendations,
+        }),
         windsurf: generateWindsurfRules(options),
         copilot: generateCopilotInstructions(options),
         gemini: generateGeminiRules(options),
