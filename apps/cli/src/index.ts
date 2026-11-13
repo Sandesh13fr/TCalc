@@ -257,11 +257,13 @@ catalogCmd
   .command("validate [path]")
   .description("Validate model catalog JSON")
   .option("--format <format>", "Output format (table|json)", parseTableFormat, "table")
+  .option("--max-age-days <number>", "Maximum catalog age in days", parsePositiveInteger, 90)
   .action(async (target, opts) => {
     try {
       const result = await executeCatalogValidate({
         path: target,
         format: opts.format,
+        maxAgeDays: opts.maxAgeDays,
         debug: program.opts().debug,
       });
       console.log(result.message);
