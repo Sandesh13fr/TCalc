@@ -119,6 +119,23 @@ describe("classifyFile", () => {
 });
 
 describe("detectSecretRisk", () => {
+  it("should detect Stripe secret and restricted keys in content", () => {
+    for (const prefix of ["sk_live", "sk_test", "rk_live", "rk_test"]) {
+      const content = `const key = "${prefix}_AbCdEfGhIjKlMnOpQrStUvWxYz123456";`;
+      expect(detectSecretRisk("config.js", content), prefix).toContain("secret");
+    }
+  });
+
+  it("should keep flagging the dashed Stripe form", () => {
+    const content = 'const key = "sk-live_AbCdEfGhIjKlMnOpQrStUvWxYz123456";';
+    expect(detectSecretRisk("config.js", content)).toContain("secret");
+  });
+
+  it("should not flag Stripe publishable keys", () => {
+    const content = 'const key = "pk_live_AbCdEfGhIjKlMnOpQrStUvWxYz123456";';
+    expect(detectSecretRisk("config.js", content)).toEqual([]);
+  });
+
   it("should detect API key in content", () => {
     const content = 'const api_key = "sk-live_AbCdEfGhIjKlMnOpQrStUvWxYz123456";';
     const result = detectSecretRisk("config.js", content);

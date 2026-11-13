@@ -83,7 +83,7 @@ const SECRET_CONTENT_PATTERNS: RegExp[] = [
   /(?:api[_-]?key|apikey)\s*[:=]\s*['"][A-Za-z0-9_\-/+=]{16,}['"]/i,
   /(?:access[_-]?token|accesstoken)\s*[:=]\s*['"][A-Za-z0-9_\-]{16,}['"]/i,
   /gh[ps]_[A-Za-z0-9]{36,}/,
-  /sk-(?:live|test|prod|dev)_[A-Za-z0-9]{20,}/,
+  /(?:sk|rk)[_-](?:live|test|prod|dev)_[A-Za-z0-9]{20,}/,
   /AIza[0-9A-Za-z\-_]{35}/,
   /-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----/,
   /(?:password|passwd|pwd)\s*[:=]\s*['"][^'"]{8,}['"]/i,
