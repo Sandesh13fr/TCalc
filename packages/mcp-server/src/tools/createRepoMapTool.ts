@@ -29,7 +29,7 @@ export async function handleCreateRepoMap(input: Record<string, unknown>) {
 
   const repoMap = createRepoMap(scanResult, {
     tokenBudget,
-    goal: (policy?.defaultGoal ?? parsed.goal) as WorkspaceGoal | undefined,
+    goal: (parsed.goal ?? policy?.defaultGoal) as WorkspaceGoal | undefined,
     enableSymbolExtraction: parsed.enableSymbolExtraction ?? true,
     maxSymbols: parsed.maxSymbols ?? 500,
     maxParseFileBytes: 200000,
