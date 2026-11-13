@@ -73,4 +73,55 @@ describe("detectFrameworkRoutes", () => {
     const patterns = detectFrameworkRoutes(scan(files), files.map((f) => makeRepoMapFile(f.relativePath))).map((r) => r.routePattern);
     expect(patterns).toContain("/api/health"); expect(patterns).toContain("/api/data"); expect(patterns).toContain("/users");
   });
+
+  it("ignores Express routes inside comments and string literals", () => {
+    const content = `
+ // app.get("/api/commented", (req, res) => {});
+ const singleQuotedExample = 'app.post("/api/single-string", handler)';
+ const doubleQuotedExample = "router.delete('/api/double-string', handler)";
+ const templateExample = \`app.put("/api/template-string", handler)\`;
+
+ app.get("/api/real", (req, res) => {});
+`;
+    writeFileSync(join(tempDir, "server-examples.ts"), content, "utf-8");
+
+    const files = [makeFileInfo("server-examples.ts", ".ts", content)];
+    const routes = detectFrameworkRoutes(
+      scan(files),
+      files.map((f) => makeRepoMapFile(f.relativePath)),
+    );
+
+    expect(routes.map((route) => route.routePattern)).toEqual(["/api/real"]);
+  });
+
+  it("ignores Python decorator routes inside comments and strings", () => {
+    const content = `
+# @app.get("/commented")
+singleExample = '@app.post("/single-string")'
+doubleExample = "@router.delete('/double-string')"
+tripleExample = """
+@app.put("/triple-string")
+"""
+
+@app.get("/real-fastapi")
+def real_fastapi():
+    pass
+
+@app.route("/real-flask")
+def real_flask():
+    pass
+`;
+    writeFileSync(join(tempDir, "routes.py"), content, "utf-8");
+
+    const files = [makeFileInfo("routes.py", ".py", content)];
+    const routes = detectFrameworkRoutes(
+      scan(files),
+      files.map((f) => makeRepoMapFile(f.relativePath)),
+    );
+
+    expect(routes.map((route) => route.routePattern)).toEqual([
+      "/real-fastapi",
+      "/real-flask",
+    ]);
+  });
 });
