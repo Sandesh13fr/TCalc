@@ -21,7 +21,7 @@ jobs:
           script: |
             const trusted = new Set(['OWNER', 'MEMBER', 'COLLABORATOR']);
             const maxIssueReferences = 10;
-            const isExempt = (pull) => pull.draft || trusted.has(pull.author_association) || pull.user.type === 'Bot';
+            const isExempt = (pull) => trusted.has(pull.author_association) || pull.user.type === 'Bot';
             const parseIssueNumbers = (body) => [...body.matchAll(/\b(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)\b/gi)]
               .map((match) => Number(match[1]));
             const evaluate = ({ issueNumbers, invalidIssues, tooManyIssueReferences, otherPull }) => [
@@ -39,6 +39,8 @@ jobs:
             assert.equal(evaluate({ issueNumbers: Array(11).fill(1), invalidIssues: [], tooManyIssueReferences: true })[0].includes('at most'), true);
             assert.equal(isExempt({ draft: false, author_association: 'MEMBER', user: { type: 'User' } }), true);
             assert.equal(isExempt({ draft: false, author_association: 'NONE', user: { type: 'Bot' } }), true);
+            // Drafts are not exempt: opening PRs as drafts must not bypass the one-open-PR limit.
+            assert.equal(isExempt({ draft: true, author_association: 'NONE', user: { type: 'User' } }), false);
 
             const pull = context.payload.pull_request;
             if (isExempt(pull)) return;
