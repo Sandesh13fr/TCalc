@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 
 type ModelPick = { displayName?: string; modelId?: string; provider?: string; tier?: string; score?: number | { totalScore?: number } };
 type TCalcReport = {
@@ -46,13 +46,43 @@ export default function ReportViewer() {
   const [status, setStatus] = useState("Showing a safe example report.");
   const [error, setError] = useState("");
   const [savedReports, setSavedReports] = useState<SavedReport[]>([]);
+  const [needsUnlock, setNeedsUnlock] = useState(false);
+  const [unlockError, setUnlockError] = useState("");
 
-  useEffect(() => {
-    fetch("/api/reports")
-      .then((response) => response.ok ? response.json() : Promise.reject())
-      .then((items) => { if (Array.isArray(items)) setSavedReports(items); })
-      .catch(() => undefined);
-  }, []);
+  // Saved reports are private by default. A 401 means the operator can unlock reads by exchanging
+  // the dashboard token for an HttpOnly session cookie, so the token itself never lives in this bundle.
+  const loadSavedReports = async () => {
+    try {
+      const response = await fetch("/api/reports", { credentials: "same-origin" });
+      if (response.status === 401) { setNeedsUnlock(true); return; }
+      if (!response.ok) { setNeedsUnlock(false); return; }
+      const items = await response.json();
+      if (Array.isArray(items)) setSavedReports(items);
+      setNeedsUnlock(false);
+    } catch { /* The optional report service is not running. */ }
+  };
+
+  useEffect(() => { void loadSavedReports(); }, []);
+
+  const onUnlock = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const field = new FormData(form).get("token");
+    setUnlockError("");
+    try {
+      const response = await fetch("/api/session", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ token: typeof field === "string" ? field : "" }),
+      });
+      if (!response.ok) throw new Error(response.status === 401 ? "That dashboard token was not accepted." : "Could not start a session.");
+      form.reset();
+      await loadSavedReports();
+    } catch (caught) {
+      setUnlockError(caught instanceof Error ? caught.message : String(caught));
+    }
+  };
 
   const openReport = (value: unknown, message: string) => {
     if (!isReport(value)) throw new Error("This is not a valid TCalc report (schema 1.0.0). ");
@@ -108,9 +138,20 @@ export default function ReportViewer() {
           </ol>
         </>}
       </article>
+      {needsUnlock && <section className="saved-reports">
+        <h3>Saved team reports</h3>
+        <p>These reports are private. Enter the dashboard token to read them in this browser.</p>
+        <form onSubmit={(event) => void onUnlock(event)}>
+          <label className="visually-hidden" htmlFor="dashboard-token">Dashboard token</label>
+          <input id="dashboard-token" name="token" type="password" autoComplete="current-password" placeholder="Dashboard token" required />
+          <button className="button" type="submit">Unlock</button>
+        </form>
+        {unlockError ? <p className="report-error">{unlockError}</p> : null}
+      </section>}
       {savedReports.length > 0 && <section className="saved-reports"><h3>Saved team reports</h3>{savedReports.map((saved) => <button key={saved.id} type="button" onClick={async () => {
         try {
-          const response = await fetch(`/api/reports/${encodeURIComponent(saved.id)}`);
+          const response = await fetch(`/api/reports/${encodeURIComponent(saved.id)}`, { credentials: "same-origin" });
+          if (response.status === 401) { setNeedsUnlock(true); throw new Error("This session expired. Unlock saved reports again."); }
           if (!response.ok) throw new Error("Could not load that saved report.");
           openReport(await response.json(), `Opened saved report ${saved.title}.`);
         } catch (caught) { setError(caught instanceof Error ? caught.message : String(caught)); }

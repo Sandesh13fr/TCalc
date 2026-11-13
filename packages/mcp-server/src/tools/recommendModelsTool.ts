@@ -22,7 +22,7 @@ export async function handleRecommendModels(input: Record<string, unknown>) {
 
   const rootPath = validateRootPath(parsed.rootPath);
   const policy = await loadTeamPolicy(rootPath);
-  const goal = policy?.defaultGoal ?? parsed.goal ?? "build-mvp";
+  const goal = parsed.goal ?? policy?.defaultGoal ?? "build-mvp";
   const privacyMode = policy?.privacyMode ?? parsed.privacyMode ?? "local-first";
   let catalogPath: string;
   try {
@@ -56,11 +56,11 @@ export async function handleRecommendModels(input: Record<string, unknown>) {
 
   const recommendation = recommendModels({
     models,
+    preferredModelIds: profile?.preferredModelIds,
     workspaceTokens: scanResult.includedTokens,
     goal,
     privacyMode,
     budget: policy?.maxTokenBudget ? Math.min(parsed.tokenBudget ?? policy.maxTokenBudget, policy.maxTokenBudget) : parsed.tokenBudget,
-    preferredModelIds: profile?.preferredModelIds,
   });
 
   setLatestRecommendation(recommendation);

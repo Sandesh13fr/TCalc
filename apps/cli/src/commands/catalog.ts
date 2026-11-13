@@ -5,6 +5,8 @@ export interface CatalogValidateOptions {
   path?: string;
   format?: string;
   debug?: boolean;
+  maxAgeDays?: number;
+  now?: Date;
 }
 
 export async function executeCatalogFetch(url: string): Promise<string> {
@@ -26,7 +28,7 @@ export async function executeCatalogValidate(options: CatalogValidateOptions): P
     };
   }
 
-  const errors = [...validateModelCatalog(catalog.models), ...validateCatalogFreshness(catalog)];
+  const errors = [...validateModelCatalog(catalog.models), ...validateCatalogFreshness(catalog, options.maxAgeDays, options.now)];
   if (errors.length > 0) {
     const msg = options.format === "json"
       ? JSON.stringify({ valid: false, catalogPath, modelCount: catalog.models.length, errors }, null, 2)

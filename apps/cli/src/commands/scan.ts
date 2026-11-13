@@ -1,4 +1,5 @@
 import { scanWorkspace } from "@wma/scanner";
+import { escapeMarkdownText, markdownCode } from "@wma/core";
 import { formatScanTable, formatScanJson } from "../utils/output.js";
 import { resolveTargetPath } from "../utils/paths.js";
 import { loadWorkspaceConfig } from "../utils/loadWorkspaceConfig.js";
@@ -46,7 +47,7 @@ function formatScanMarkdown(scan: import("@wma/core").WorkspaceScanResult): stri
   const lines: string[] = [];
   lines.push("# Workspace Scan Report");
   lines.push("");
-  lines.push(`**Workspace Root:** \`${scan.rootPath}\``);
+  lines.push(`**Workspace Root:** ${markdownCode(scan.rootPath)}`);
   lines.push(`**Scanned At:** ${scan.scannedAt}`);
   lines.push("");
   lines.push("## Summary");
@@ -72,7 +73,7 @@ function formatScanMarkdown(scan: import("@wma/core").WorkspaceScanResult): stri
     lines.push("| --- | ---:| ---:|");
     for (const f of sortedFiles) {
       const pc = (scan.includedTokens > 0 ? (f.estimatedTokens / scan.includedTokens) * 100 : 0).toFixed(1);
-      lines.push(`| \`${f.relativePath}\` | ${f.estimatedTokens.toLocaleString()} | ${pc}% |`);
+      lines.push(`| ${markdownCode(f.relativePath)} | ${f.estimatedTokens.toLocaleString()} | ${pc}% |`);
     }
     lines.push("");
   }
@@ -85,7 +86,7 @@ function formatScanMarkdown(scan: import("@wma/core").WorkspaceScanResult): stri
     const sortedLangs = [...scan.languages].sort((a, b) => b.totalTokens - a.totalTokens);
     for (const l of sortedLangs) {
       const pc = (l.percentage * 100).toFixed(1);
-      lines.push(`| ${l.language} | ${l.fileCount} | ${l.totalTokens.toLocaleString()} | ${pc}% |`);
+      lines.push(`| ${escapeMarkdownText(l.language)} | ${l.fileCount} | ${l.totalTokens.toLocaleString()} | ${pc}% |`);
     }
     lines.push("");
   }
@@ -94,7 +95,7 @@ function formatScanMarkdown(scan: import("@wma/core").WorkspaceScanResult): stri
     lines.push("## Warnings");
     lines.push("");
     for (const w of scan.warnings) {
-      lines.push(`- ${w}`);
+      lines.push(`- ${escapeMarkdownText(w)}`);
     }
     lines.push("");
   }

@@ -13,7 +13,21 @@ import { registerQuickStartCommand } from "./commands/quickStartCommand.js";
 import { registerGenerateMcpConfigCommand } from "./commands/generateMcpConfigCommand.js";
 import { TCalcSidebarProvider } from "./views/sidebarProvider.js";
 
+export const VIRTUAL_WORKSPACE_ERROR =
+  "TCalc requires a local file-system workspace. Reopen this repository locally (File > Open Folder) to use TCalc.";
+
+export function isVirtualWorkspace(
+  folders: readonly vscode.WorkspaceFolder[] | undefined = vscode.workspace.workspaceFolders,
+): boolean {
+  return Boolean(folders?.some((folder) => folder.uri.scheme !== "file"));
+}
+
 export function activate(context: vscode.ExtensionContext) {
+  if (isVirtualWorkspace()) {
+    void vscode.window.showErrorMessage(VIRTUAL_WORKSPACE_ERROR);
+    return;
+  }
+
   const sidebar = new TCalcSidebarProvider(context);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider("tcalc.sidebar", sidebar, {

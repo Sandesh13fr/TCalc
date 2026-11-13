@@ -9,6 +9,7 @@ const ScanWorkspaceInputSchema = z.object({
   rootPath: z.string().optional(),
   goal: z.enum(WORKSPACE_GOALS).optional(),
   privacyMode: z.enum(PRIVACY_SETTINGS).optional(),
+  timeoutMs: z.number().int().positive().max(300_000).optional(),
 }).strict();
 
 export type ScanWorkspaceInput = z.infer<typeof ScanWorkspaceInputSchema>;
@@ -22,6 +23,7 @@ export async function handleScanWorkspace(input: Record<string, unknown>) {
   const scanResult = await scanWorkspace({
     rootPath,
     userExcludePatterns: policy?.exclude,
+    signal: AbortSignal.timeout(parsed.timeoutMs ?? 60_000),
   });
 
   setLatestScan(scanResult);

@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { executeScan } from "../src/commands/scan.js";
 import path from "node:path";
+import { mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 
 const fixturePath = path.resolve("fixtures/small-node-app");
 
@@ -38,6 +40,30 @@ describe("scan command", () => {
     expect(output).toContain("Excluded Files:");
   });
 
+  it("surfaces malformed workspace config instead of silently using defaults", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "tcalc-bad-config-"));
+    try {
+      await writeFile(path.join(root, "index.ts"), "export const value = 1;\n");
+      await writeFile(path.join(root, ".tcalc.json"), "{ \"exclude\": [\"secret/**\"], }");
+
+      await expect(executeScan({ target: root, format: "json" })).rejects.toThrow(/Failed to load workspace config/);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects invalid workspace config field types", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "tcalc-invalid-config-"));
+    try {
+      await writeFile(path.join(root, "index.ts"), "export const value = 1;\n");
+      await writeFile(path.join(root, ".tcalc.json"), JSON.stringify({ exclude: "dist/**" }));
+
+      await expect(executeScan({ target: root, format: "json" })).rejects.toThrow(/invalid exclude/);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("scan handles default path (cwd)", async () => {
     const cwd = vi.spyOn(process, "cwd").mockReturnValue(fixturePath);
     try {
@@ -47,6 +73,32 @@ describe("scan command", () => {
       expect(parsed.totalFiles).toBeGreaterThan(0);
     } finally {
       cwd.mockRestore();
+    }
+  });
+  it("escapes Markdown-sensitive paths and warnings", async () => {
+    const root = await mkdtemp(path.join(tmpdir(), "tcalc-markdown-"));
+    const target = await mkdtemp(path.join(tmpdir(), "tcalc-missing-"));
+
+    try {
+      await writeFile(path.join(root, "report`name.ts"), "export const value = 1;\n");
+
+      await symlink(
+        target,
+        path.join(root, "warning`link"),
+        process.platform === "win32" ? "junction" : "dir",
+      );
+      await rm(target, { recursive: true, force: true });
+
+      const output = await executeScan({
+        target: root,
+        format: "markdown",
+      });
+
+      expect(output).toContain("`` report`name.ts ``");
+      expect(output).toContain("warning\\`link");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(target, { recursive: true, force: true });
     }
   });
 });

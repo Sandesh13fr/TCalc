@@ -10,6 +10,22 @@ export interface EstimateCostOptions {
 export function estimateCost(options: EstimateCostOptions): CostEstimate {
   const { model, inputTokens, outputTokens, cachedInputTokens = 0 } = options;
 
+  if (!Number.isFinite(inputTokens) || inputTokens < 0) {
+    throw new RangeError(
+      `inputTokens must be a finite, non-negative number (got ${inputTokens})`,
+    );
+  }
+  if (!Number.isFinite(outputTokens) || outputTokens < 0) {
+    throw new RangeError(
+      `outputTokens must be a finite, non-negative number (got ${outputTokens})`,
+    );
+  }
+  if (!Number.isFinite(cachedInputTokens)) {
+    throw new RangeError(
+      `cachedInputTokens must be a finite number (got ${cachedInputTokens})`,
+    );
+  }
+
   if (cachedInputTokens < 0 || cachedInputTokens > inputTokens) {
     throw new RangeError(
       `cachedInputTokens (${cachedInputTokens}) must be between 0 and inputTokens (${inputTokens})`,

@@ -191,13 +191,14 @@ export const docs: DocGuide[] = [
       {
         title: "Run the optional report service",
         steps: [
-          "Set TCALC_DASHBOARD_TOKEN to enable authenticated uploads.",
+          "Set TCALC_DASHBOARD_TOKEN to enable authenticated uploads and reads.",
           "Start the dashboard package after building the Next.js export.",
           "POST schema-valid JSON to /api/reports with a Bearer token.",
+          "Read saved reports with the same Bearer token, or unlock them in the browser to exchange the token for a read-only HttpOnly session cookie.",
           "Set TCALC_DATA_DIR, TCALC_DASHBOARD_HOST, and PORT when the defaults do not fit the host.",
         ],
         code: "$env:TCALC_DASHBOARD_TOKEN = \"replace-with-a-secret\"\npnpm --filter @wma/dashboard build\npnpm --filter @wma/dashboard start",
-        note: "The optional service stores versioned report JSON only. It binds to 127.0.0.1 by default and does not receive source files.",
+        note: "The optional service stores versioned report JSON only. It binds to 127.0.0.1 by default and does not receive source files. Saved reports are private by default: listing and detail reads require the token, and unauthenticated reads happen only when a self-hoster deliberately sets TCALC_DASHBOARD_PUBLIC_READ.",
       },
     ],
   },

@@ -57,7 +57,7 @@ const EXTENSION_LANGUAGE_MAP: Record<string, string> = {
   ".lock": "Lockfile",
 };
 
-const GENERATED_EXTENSIONS = new Set([".min.js", ".min.css", ".bundle.js", ".chunk.js"]);
+const GENERATED_SUFFIXES = [".min.js", ".min.css", ".bundle.js", ".chunk.js"];
 const BINARY_EXTENSIONS = new Set([
   ".png", ".jpg", ".jpeg", ".gif", ".ico", ".webp",
   ".mp4", ".mp3", ".woff", ".woff2", ".ttf", ".eot",
@@ -105,9 +105,10 @@ function isSecretFile(relativePath: string): boolean {
 }
 
 function isGeneratedFile(relativePath: string): boolean {
-  const ext = path.extname(relativePath);
-  if (GENERATED_EXTENSIONS.has(ext)) return true;
-  return false;
+  // path.extname() only returns the final extension (".js" for "app.min.js"),
+  // so these compound suffixes have to be matched against the whole basename.
+  const name = path.basename(relativePath).toLowerCase();
+  return GENERATED_SUFFIXES.some(suffix => name.endsWith(suffix));
 }
 
 function isLockfile(relativePath: string): boolean {
@@ -121,8 +122,15 @@ function isBuildOutput(relativePath: string): boolean {
 }
 
 function isDatabaseDump(relativePath: string): boolean {
-  const ext = path.extname(relativePath);
-  return [".sql", ".dump", ".sqlite", ".db"].includes(ext) && !ext.includes(".proto");
+  const ext = path.extname(relativePath).toLowerCase();
+  if ([".dump", ".sqlite", ".db"].includes(ext)) return true;
+  if (ext !== ".sql") return false;
+
+  // Treat SQL as source unless its basename contains a delimited dump marker.
+  // We intentionally avoid content sniffing: valid migrations and seed scripts can contain
+  // the same DDL/INSERT statements as exports, so content is not a reliable dump signal.
+  const name = path.basename(relativePath).toLowerCase();
+  return /(?:^|[-_.])(backup|dump|export|snapshot|database)(?:[-_.]|$)/.test(name);
 }
 
 function isLogFile(relativePath: string): boolean {

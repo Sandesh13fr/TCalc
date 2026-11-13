@@ -32,7 +32,7 @@ function getFileName(target: AgentTarget): string {
   }
 }
 
-function getTokenBudget(mode: OptimizationMode): number {
+export function getTokenBudget(mode: OptimizationMode): number {
   switch (mode) {
     case "concise":
       return 16000;

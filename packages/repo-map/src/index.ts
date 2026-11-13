@@ -4,3 +4,5 @@ export { budgetRepoMap } from "./budgetRepoMap.js";
 export { formatRepoMapMarkdown } from "./formatRepoMapMarkdown.js";
 export { extractSymbols } from "./symbols/extractSymbols.js";
 export { parseFileSymbols } from "./symbols/parseFileSymbols.js";
+export { progressiveCompact, stripComments, collapseFunctionBodies, extractExportOutline } from "./compactor/progressiveCompactor.js";
+export type * from "./compactor/compactionLevels.js";

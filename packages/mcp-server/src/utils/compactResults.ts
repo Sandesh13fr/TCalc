@@ -12,27 +12,22 @@ export interface CompactWorkspaceSummary {
   warnings: string[];
 }
 
+export interface CompactModelRecommendation {
+  modelId: string;
+  displayName: string;
+  cost: string;
+  score: number;
+  overflowRisk: number;
+  warnings: string[];
+  optimizationSuggestions: string[];
+}
+
 export interface CompactRecommendationSummary {
   goal: string;
   workspaceTokens: number;
-  cheapestSufficient: {
-    modelId: string;
-    displayName: string;
-    cost: string;
-    score: number;
-  };
-  balanced: {
-    modelId: string;
-    displayName: string;
-    cost: string;
-    score: number;
-  };
-  highConfidence: {
-    modelId: string;
-    displayName: string;
-    cost: string;
-    score: number;
-  };
+  cheapestSufficient: CompactModelRecommendation;
+  balanced: CompactModelRecommendation;
+  highConfidence: CompactModelRecommendation;
   rejected: string[];
   assumptions: string[];
 }
@@ -87,18 +82,27 @@ export function createCompactRecommendationSummary(rec: RecommendationResult): C
       displayName: rec.cheapestSufficient.displayName,
       cost: formatCost(rec.cheapestSufficient.costEstimate.totalCost),
       score: rec.cheapestSufficient.score.totalScore,
+      overflowRisk: rec.cheapestSufficient.overflowRisk,
+      warnings: rec.cheapestSufficient.warnings,
+      optimizationSuggestions: rec.cheapestSufficient.optimizationSuggestions,
     },
     balanced: {
       modelId: rec.balanced.modelId,
       displayName: rec.balanced.displayName,
       cost: formatCost(rec.balanced.costEstimate.totalCost),
       score: rec.balanced.score.totalScore,
+      overflowRisk: rec.balanced.overflowRisk,
+      warnings: rec.balanced.warnings,
+      optimizationSuggestions: rec.balanced.optimizationSuggestions,
     },
     highConfidence: {
       modelId: rec.highConfidence.modelId,
       displayName: rec.highConfidence.displayName,
       cost: formatCost(rec.highConfidence.costEstimate.totalCost),
       score: rec.highConfidence.score.totalScore,
+      overflowRisk: rec.highConfidence.overflowRisk,
+      warnings: rec.highConfidence.warnings,
+      optimizationSuggestions: rec.highConfidence.optimizationSuggestions,
     },
     rejected: rec.rejected,
     assumptions: rec.assumptions,

@@ -15,6 +15,7 @@ import { handleError, CliError } from "./utils/errors.js";
 import { parseAgentTarget, parseGoal, parseMcpTarget, parseOptimizationMode, parsePositiveInteger, parsePrivacyMode, parseReportFormat, parseScanFormat, parseTableFormat } from "./utils/options.js";
 import { startServer } from "@wma/mcp-server";
 import { executeCompact } from "./commands/compact.js";
+import { executeInit } from "./commands/init.js";
 
 const program = new Command();
 
@@ -22,7 +23,38 @@ program
   .name("wma")
   .description("TCalc — local-first workspace analysis and AI agent optimization")
   .version("0.1.4")
-  .option("--debug", "Show stack traces on error");
+  .option("--debug", "Show stack traces on error")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  $ wma scan ./my-project
+  $ wma recommend ./my-project
+  $ wma repo-map ./my-project
+  $ wma rules ./my-project --target cursor
+`,
+  );
+program
+  .command("init [path]")
+  .description("Initialize a tailored .workspace-model-advisor.json config file")
+  .option("--goal <goal>", "Workspace goal", parseGoal)
+  .option("--privacy <mode>", "Privacy mode (local-first|cloud-ok)", parsePrivacyMode)
+  .option("--force", "Overwrite an existing configuration file")
+  .option("--dry-run", "Preview generated configuration without writing to disk")
+  .action(async (target, opts) => {
+    try {
+      const output = await executeInit({
+        target,
+        goal: opts.goal,
+        privacy: opts.privacy,
+        force: opts.force,
+        dryRun: opts.dryRun,
+      });
+      console.log(output);
+    } catch (err) {
+      handleError(err, program.opts().debug);
+    }
+  });
 
 program
   .command("scan [path]")
@@ -225,11 +257,13 @@ catalogCmd
   .command("validate [path]")
   .description("Validate model catalog JSON")
   .option("--format <format>", "Output format (table|json)", parseTableFormat, "table")
+  .option("--max-age-days <number>", "Maximum catalog age in days", parsePositiveInteger, 90)
   .action(async (target, opts) => {
     try {
       const result = await executeCatalogValidate({
         path: target,
         format: opts.format,
+        maxAgeDays: opts.maxAgeDays,
         debug: program.opts().debug,
       });
       console.log(result.message);

@@ -11,7 +11,21 @@ export interface SymbolExtractionResult {
   warnings: string[];
 }
 
-const SYMBOL_EXTS = new Set([".ts", ".tsx", ".js", ".jsx", ".py", ".java", ".kt", ".go", ".rs"]);
+const SYMBOL_EXTS = new Set([
+  ".ts",
+  ".tsx",
+  ".mts",
+  ".cts",
+  ".js",
+  ".jsx",
+  ".mjs",
+  ".cjs",
+  ".py",
+  ".java",
+  ".kt",
+  ".go",
+  ".rs",
+]);
 
 export function extractSymbols(
   scanResult: WorkspaceScanResult,

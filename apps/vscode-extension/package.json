@@ -63,7 +63,10 @@
     "untrustedWorkspaces": {
       "supported": "limited"
     },
-    "virtualWorkspaces": true
+    "virtualWorkspaces": {
+      "supported": false,
+      "description": "TCalc currently requires a local file-system workspace for scanning, configuration, catalogs, reports, and repo-map generation. Reopen the repository in a local file: workspace to use these features."
+    }
   },
   "contributes": {
     "commands": [
@@ -155,6 +158,7 @@
       "properties": {
         "wma.defaultGoal": {
           "type": "string",
+          "scope": "resource",
           "default": "build-mvp",
           "enum": [
             "build-mvp",
@@ -172,6 +176,7 @@
         },
         "wma.privacyMode": {
           "type": "string",
+          "scope": "resource",
           "default": "local-first",
           "enum": [
             "local-first",

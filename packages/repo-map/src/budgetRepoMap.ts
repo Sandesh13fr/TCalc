@@ -3,6 +3,9 @@ import { estimateTokens } from "@wma/tokenizers";
 import { formatRepoMapMarkdown } from "./formatRepoMapMarkdown.js";
 
 export function budgetRepoMap(repoMap: RepoMapResult, tokenBudget: number): RepoMapResult {
+  if (!Number.isFinite(tokenBudget) || tokenBudget <= 0) {
+    throw new RangeError(`tokenBudget must be a finite number > 0 (got ${tokenBudget})`);
+  }
   const result: RepoMapResult = {
     ...repoMap,
     importantFiles: [...repoMap.importantFiles],

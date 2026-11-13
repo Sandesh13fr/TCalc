@@ -5,7 +5,7 @@ Explain the problem, the approach, and any user-visible behavior. Link the issue
 ## Contribution prerequisite
 
 - [ ] I starred the [TCalc repository](https://github.com/Sandesh13fr/TCalc) before starting this contribution.
-- [ ] I checked the issue and existing PRs for overlapping work. I understand that assignment is not required and any contributor may propose a focused solution.
+- [ ] The linked issue is assigned to me, and this is my only open PR (drafts included).
 - [ ] This PR targets the `Development` branch (unless a maintainer explicitly approved another base).
 
 ## Affected areas
@@ -31,6 +31,7 @@ List the exact commands run and their results. If a relevant check was not run, 
 - [ ] `pnpm test`
 - [ ] `pnpm lint`
 - [ ] `pnpm typecheck`
+- [ ] The `CI Success` status check passes
 - [ ] CLI/MCP smoke, VSIX packaging, or JetBrains verification as applicable
 
 ## Review notes

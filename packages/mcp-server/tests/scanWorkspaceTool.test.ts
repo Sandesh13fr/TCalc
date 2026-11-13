@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeAll, vi } from "vitest";
 import { handleScanWorkspace } from "../src/tools/scanWorkspaceTool.js";
+import { createServer } from "../src/server.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -54,5 +57,36 @@ describe("scanWorkspaceTool", () => {
     await expect(
       handleScanWorkspace({ rootPath: fixturePath, privacyMode: "invalid" as any })
     ).rejects.toThrow();
+  });
+
+  it("should accept a configurable timeoutMs", async () => {
+    const result = await handleScanWorkspace({ rootPath: fixturePath, timeoutMs: 5000 });
+    expect(result).toBeDefined();
+  });
+
+  it("should reject out-of-range timeoutMs", async () => {
+    await expect(handleScanWorkspace({ rootPath: fixturePath, timeoutMs: 0 })).rejects.toThrow();
+    await expect(handleScanWorkspace({ rootPath: fixturePath, timeoutMs: 300001 })).rejects.toThrow();
+  });
+
+  it("should advertise timeoutMs in tool discovery with matching constraints", async () => {
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    const server = createServer();
+    const client = new Client({ name: "tcalc-test", version: "1.0.0" });
+    try {
+      await server.connect(serverTransport);
+      await client.connect(clientTransport);
+      const { tools } = await client.listTools();
+      const scanTool = tools.find((t) => t.name === "scan_workspace");
+      expect(scanTool).toBeDefined();
+      const props = (scanTool!.inputSchema as any).properties as Record<string, any>;
+      expect(props.timeoutMs).toBeDefined();
+      expect(props.timeoutMs.minimum).toBe(1);
+      expect(props.timeoutMs.maximum).toBe(300000);
+      expect(props.timeoutMs.description).toMatch(/60000/);
+    } finally {
+      await client.close();
+      await server.close();
+    }
   });
 });

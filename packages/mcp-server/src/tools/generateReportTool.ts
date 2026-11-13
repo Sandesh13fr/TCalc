@@ -24,7 +24,7 @@ export async function handleGenerateReport(input: Record<string, unknown>) {
 
   const rootPath = validateRootPath(parsed.rootPath);
   const policy = await loadTeamPolicy(rootPath);
-  const goal = policy?.defaultGoal ?? parsed.goal ?? "build-mvp";
+  const goal = parsed.goal ?? policy?.defaultGoal ?? "build-mvp";
   const privacyMode = policy?.privacyMode ?? parsed.privacyMode ?? "local-first";
   const format = parsed.format ?? "markdown";
   const includeRepoMap = parsed.includeRepoMap ?? false;
@@ -44,11 +44,11 @@ export async function handleGenerateReport(input: Record<string, unknown>) {
   if (models.length > 0) {
     recommendation = recommendModels({
       models,
+      preferredModelIds: profile?.preferredModelIds,
       workspaceTokens: scanResult.includedTokens,
       goal,
       privacyMode,
       budget: policy?.maxTokenBudget,
-      preferredModelIds: profile?.preferredModelIds,
     });
     setLatestRecommendation(recommendation);
   }

@@ -35,6 +35,7 @@ import {
   type ValidateModelCatalogInput,
 } from "./tools/validateModelCatalogTool.js";
 import { handleCompactCompletedGoal } from "./tools/compactCompletedGoalTool.js";
+import { handleEstimateFilesTokens } from "./tools/estimateFilesTokensTool.js";
 import { readWorkspaceSummary } from "./resources/workspaceSummaryResource.js";
 import { readModelCatalog } from "./resources/modelCatalogResource.js";
 import {
@@ -69,6 +70,7 @@ export function createServer(): Server {
               rootPath: { type: "string", description: "Root path to scan (defaults to current working directory)" },
               goal: { type: "string", enum: [...WORKSPACE_GOALS], description: "Workspace goal included in the summary" },
               privacyMode: { type: "string", enum: [...PRIVACY_SETTINGS] },
+              timeoutMs: { type: "integer", minimum: 1, maximum: 300000, description: "Scan timeout in milliseconds (default 60000, max 300000)" },
             },
           },
         },
@@ -156,6 +158,34 @@ export function createServer(): Server {
             },
           },
         },
+        {
+          name: "estimate_files_tokens",
+          description: "Estimate token count and context window fit for an explicit batch of workspace files.",
+          inputSchema: {
+            type: "object",
+            required: ["filePaths"],
+            properties: {
+              filePaths: {
+                type: "array",
+                items: { type: "string" },
+                description: "List of file paths relative to workspace root",
+              },
+              workspaceRoot: {
+                type: "string",
+                description: "Target workspace root path (defaults to current allowed root)",
+              },
+              targetModel: {
+                type: "string",
+                description: "Optional model name to evaluate context window compatibility",
+              },
+              contextBudget: {
+                type: "integer",
+                minimum: 1,
+                description: "Optional token budget to evaluate utilization percentage",
+              },
+            },
+          },
+        },
       ],
     };
   });
@@ -178,6 +208,8 @@ export function createServer(): Server {
         return handleValidateModelCatalog(args ?? {});
       case "compact_completed_goal":
         return handleCompactCompletedGoal(args ?? {});
+      case "estimate_files_tokens":
+        return handleEstimateFilesTokens(args ?? {});
       default:
         return {
           content: [

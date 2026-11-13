@@ -9,3 +9,4 @@ export type * from "./types/repoMap.js";
 export * from "./config/defaultConfig.js";
 export * from "./markdown.js";
 export * from "./teamPolicy.js";
+export type * from "./types/drift.js";

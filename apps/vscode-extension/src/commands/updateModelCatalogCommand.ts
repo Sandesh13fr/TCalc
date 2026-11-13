@@ -27,6 +27,8 @@ export function registerUpdateModelCatalogCommand(context: vscode.ExtensionConte
       const workspaceCatalogPath1 = path.join(rootPath, "catalogs", "models.json");
       const workspaceCatalogPath2 = path.join(rootPath, ".tcalc", "models.json");
 
+      // Missing files already return an empty catalog; only surface real
+      // load failures (syntax, permission, ...) as diagnostics.
       try {
         const wsCatalog1 = loadModelCatalog(workspaceCatalogPath1, { warnIfMissing: false });
         if (wsCatalog1.models.length > 0) {
@@ -36,17 +38,21 @@ export function registerUpdateModelCatalogCommand(context: vscode.ExtensionConte
             wsWarnings.forEach(w => messages.push(`  Workspace warning: ${w}`));
           }
         }
-      } catch {
-        // not found
+      } catch (error) {
+        messages.push(`Workspace override (catalogs/models.json) error: ${error instanceof Error ? error.message : String(error)}`);
       }
 
       try {
         const wsCatalog2 = loadModelCatalog(workspaceCatalogPath2, { warnIfMissing: false });
         if (wsCatalog2.models.length > 0) {
           messages.push(`Workspace override (.tcalc/models.json): ${wsCatalog2.models.length} model(s).`);
+          const wsWarnings2 = validateModelCatalog(wsCatalog2.models);
+          if (wsWarnings2.length > 0) {
+            wsWarnings2.forEach(w => messages.push(`  Workspace warning: ${w}`));
+          }
         }
-      } catch {
-        // not found
+      } catch (error) {
+        messages.push(`Workspace override (.tcalc/models.json) error: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
 

@@ -21,12 +21,12 @@ export function parseFileSymbols(file: WorkspaceFileInfo, includeImports: boolea
     let error: string | null = null;
 
     try {
-      if (ext === ".ts" || ext === ".tsx") {
+      if ([".ts", ".tsx", ".mts", ".cts"].includes(ext)) {
         symbols = extractTypeScriptSymbols(content, file.relativePath, ext);
         if (includeImports) {
           imports = extractTypeScriptImports(content, file.relativePath, ext);
         }
-      } else if (ext === ".js" || ext === ".jsx") {
+      } else if ([".js", ".jsx", ".mjs", ".cjs"].includes(ext)) {
         symbols = extractJavaScriptSymbols(content, file.relativePath, ext);
         if (includeImports) {
           imports = extractJavaScriptImports(content, file.relativePath, ext);
@@ -57,10 +57,20 @@ function extractJavaScriptImports(content: string, relativePath: string, ext: st
 function extractPythonImports(content: string, relativePath: string): RepoMapImport[] {
   const imports: RepoMapImport[] = [];
 
-  const importRegex = /^import\s+(\S+)/gm;
+  const importRegex = /^import[ \t]+([^#\r\n]*?)[ \t]*(?:#.*)?$/gm;
   let m: RegExpExecArray | null;
+
   while ((m = importRegex.exec(content)) !== null) {
-    imports.push({ source: m[1], relativePath, kind: "import" });
+    const modules = m[1].split(",").map((item) => {
+      const moduleName = item.trim().split(/\s+as\s+/)[0];
+      return moduleName;
+    });
+
+    for (const source of modules) {
+      if (source) {
+        imports.push({ source, relativePath, kind: "import" });
+      }
+    }
   }
 
   const fromImportRegex = /^from\s+(\S+)\s+import/gm;

@@ -64,6 +64,8 @@ See the [VSIX installation guide](./docs/install-vsix.md) for the local package 
 
 Build once, then scan, compare, or generate only the context you need:
 
+Building from source needs **Node.js 22** and **pnpm 11.5.2**. For the fork, clone, and setup walkthrough, see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
 ```bash
 pnpm install
 pnpm build
@@ -75,6 +77,40 @@ pnpm cli rules ./my-project --target codex --mode repo-map-first
 ```
 
 Other commands generate Markdown/JSON reports, validate model catalogs, create MCP configs, and start the local MCP server. Run `pnpm cli --help` for the complete command list.
+
+### Ignore sources and precedence
+
+TCalc applies ignore patterns in this order, with later matching rules taking precedence under normal gitignore semantics:
+
+1. root `.gitignore`;
+2. root `.cursorignore`;
+3. root `.aiderignore`;
+4. root `.continueignore`;
+5. root `.tcalcignore`;
+6. any explicit additional ignore files supplied by an integration;
+7. nested `.gitignore` files, scoped to their containing directory;
+8. workspace `exclude` patterns from TCalc configuration.
+
+Nested ignore discovery skips version-control metadata and directories already excluded by higher-level rules. As with Git, a file cannot be re-included when its parent directory remains ignored. File-size, binary, generated-file, secret, and other safety exclusions are applied separately after path ignores and cannot be weakened by a negated ignore rule.
+
+## Choose a privacy mode
+
+TCalc applies the same privacy setting in its CLI, VS Code UI, and shared configuration:
+
+| Mode | Recommendation guarantee |
+| --- | --- |
+| `local-first` (default) | Only catalog entries with `supportsLocal: true` are eligible. Cloud models and hybrid entries without a verified local execution path are rejected. If none qualify, TCalc reports that no eligible model is available instead of silently falling back to cloud execution. |
+| `cloud-ok` | Cloud, hybrid, and local catalog entries may be recommended according to fit, quality, and cost. This expands recommendation eligibility; it does not upload source code or invoke a provider by itself. |
+
+Set `privacyMode` in the workspace's `.tcalc.json` or use the corresponding privacy selector exposed by the CLI/VS Code integration. For example:
+
+```json
+{
+  "privacyMode": "local-first"
+}
+```
+
+Workspace scanning, token estimation, repo-map generation, and reports remain local in both modes. Selecting `cloud-ok` only permits cloud-capable models to appear in recommendations; any later provider execution and credentials are controlled by the user's chosen external tool.
 
 ## Connect your coding agent
 
@@ -128,6 +164,12 @@ pnpm cli mcp
 </details>
 
 ## Project guides
+
+### First contribution? Start here
+
+[![First-timers-only friendly](https://img.shields.io/badge/first--timers--only-friendly-blue.svg?style=flat-square)](https://www.firsttimersonly.com/)
+
+Browse [available beginner issues](https://github.com/Sandesh13fr/TCalc/issues?q=is%3Aissue%20is%3Aopen%20label%3A%22good%20first%20issue%22%20label%3Aup-for-grabs%20no%3Aassignee) and read the [first-contribution walkthrough](./CONTRIBUTING.md#your-first-open-source-contribution). Tasks labelled `first-timers-only` are reserved for your first open-source PR. Comment to request assignment before starting; maintainers can help with setup and review feedback.
 
 ### Troubleshooting VS Code test output
 

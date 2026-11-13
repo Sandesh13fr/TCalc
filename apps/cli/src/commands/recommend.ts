@@ -36,11 +36,11 @@ export async function executeRecommend(options: RecommendOptions): Promise<strin
 
   const result = recommendModels({
     models,
+    preferredModelIds: profile?.preferredModelIds,
     workspaceTokens: scanResult.includedTokens,
     goal,
     privacyMode: privacy,
     budget: options.tokenBudget,
-    preferredModelIds: profile?.preferredModelIds,
   });
 
   const fmt = options.format ?? "table";

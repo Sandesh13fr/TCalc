@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll } from "vitest";
 import { handleRecommendModels } from "../src/tools/recommendModelsTool.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync, readFileSync } from "node:fs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fixturePath = path.resolve(__dirname, "../../../fixtures/small-node-app");
@@ -25,6 +25,66 @@ describe("recommendModelsTool", () => {
     expect(parsed.highConfidence).toBeDefined();
     expect(parsed.rejected).toBeInstanceOf(Array);
     expect(parsed.assumptions).toBeInstanceOf(Array);
+    for (const tier of [
+      parsed.cheapestSufficient,
+      parsed.balanced,
+      parsed.highConfidence,
+    ]) {
+      expect(tier.overflowRisk).toBe(0);
+      expect(tier.warnings).toBeInstanceOf(Array);
+      expect(tier.optimizationSuggestions).toBeInstanceOf(Array);
+    }
+
+    expect(parsed).not.toHaveProperty("allScored");
+    expect(JSON.stringify(parsed).length).toBeLessThan(10_000);
+  });
+
+  it("preserves overflow warnings when no model fits", async () => {
+    const tempDir = mkdtempSync(
+      path.join(process.cwd(), ".tcalc-overflow-catalog-"),
+    );
+
+    try {
+      const catalog = JSON.parse(readFileSync(catalogPath, "utf-8"));
+
+      catalog.models = catalog.models.map((model: Record<string, unknown>) => ({
+        ...model,
+        contextWindow: 8,
+        maxOutputTokens: 4,
+      }));
+
+      const customCatalogPath = path.join(tempDir, "models.json");
+      writeFileSync(customCatalogPath, JSON.stringify(catalog));
+
+      const result = await handleRecommendModels({
+        rootPath: fixturePath,
+        goal: "build-mvp",
+        privacyMode: "cloud-ok",
+        catalogPath: customCatalogPath,
+      });
+
+      const parsed = JSON.parse(result.content[0].text);
+      const tiers = [
+        parsed.cheapestSufficient,
+        parsed.balanced,
+        parsed.highConfidence,
+      ];
+
+      for (const tier of tiers) {
+        expect(tier.overflowRisk).toBeGreaterThan(0);
+        expect(tier.warnings).toContain(
+          "Context window insufficient — overflow likely; consider repo-map-first strategy",
+        );
+        expect(tier.optimizationSuggestions).toContain(
+          "Use a repo map instead of full workspace to reduce context",
+        );
+      }
+
+      expect(parsed).not.toHaveProperty("allScored");
+      expect(JSON.stringify(parsed).length).toBeLessThan(10_000);
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
   });
 
   it("should handle missing catalog gracefully", async () => {

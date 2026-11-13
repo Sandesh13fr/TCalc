@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { parseFileSymbols } from "../../src/symbols/parseFileSymbols.js";
-import type { WorkspaceFileInfo } from "@wma/core";
+import { extractSymbols } from "../../src/symbols/extractSymbols.js";
+import type { RepoMapFile, WorkspaceFileInfo, WorkspaceScanResult } from "@wma/core";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -143,6 +144,48 @@ class MyService {
     expect(names).toContain("MyService");
     expect(result.imports.some((i) => i.source === "fs")).toBe(true);
   });
+
+  it.each([".mjs", ".cjs", ".mts", ".cts"])("extracts exported symbols and imports from %s files", (ext) => {
+    const name = `module${ext}`;
+    const content = `import { helper } from "./helper";\nexport function moduleEntry() { return helper(); }`;
+    writeFileSync(join(tempDir, name), content, "utf-8");
+
+    const result = parseFileSymbols(makeFileInfo(`src/${name}`, ext, name), true);
+
+    expect(result.error).toBeNull();
+    expect(result.symbols.find((symbol) => symbol.name === "moduleEntry")?.exported).toBe(true);
+    expect(result.imports).toContainEqual({ source: "./helper", relativePath: `src/${name}`, kind: "import" });
+  });
+
+  it.each([".mjs", ".cjs", ".mts", ".cts"])("includes %s files in workspace symbol extraction", (ext) => {
+    const name = `eligible${ext}`;
+    const relativePath = `src/${name}`;
+    const content = `import { helper } from "./helper";\nexport function eligibleEntry() { return helper(); }`;
+    writeFileSync(join(tempDir, name), content, "utf-8");
+    const file = makeFileInfo(relativePath, ext, name, Buffer.byteLength(content));
+    const selectedFile: RepoMapFile = { relativePath, estimatedTokens: 20, reason: "entrypoint", priority: 1 };
+    const scan: WorkspaceScanResult = {
+      rootPath: tempDir,
+      scannedAt: new Date().toISOString(),
+      totalFiles: 1,
+      includedFiles: 1,
+      excludedFiles: 0,
+      totalBytes: file.bytes,
+      includedBytes: file.bytes,
+      totalEstimatedTokens: 5,
+      includedTokens: 5,
+      files: [file],
+      folders: [],
+      languages: [],
+      warnings: [],
+      riskFiles: [],
+    };
+
+    const result = extractSymbols(scan, [selectedFile], { tokenBudget: 100 });
+
+    expect(result.symbols.find((symbol) => symbol.name === "eligibleEntry")?.exported).toBe(true);
+    expect(result.imports).toContainEqual(expect.objectContaining({ source: "./helper", relativePath }));
+  });
 });
 
 describe("parseFileSymbols - Python", () => {
@@ -176,6 +219,68 @@ async def fetch():
     expect(fetchSym.async).toBe(true);
     expect(result.imports.some((i) => i.source === "os")).toBe(true);
     expect(result.imports.some((i) => i.source === "typing")).toBe(true);
+  });
+  it("parses comma-separated Python imports and aliases", () => {
+    const content = `
+import os, sys
+import alpha as a, beta as b
+`;
+    const f = join(tempDir, "imports.py");
+    writeFileSync(f, content, "utf-8");
+    const file = makeFileInfo("src/imports.py", ".py", "imports.py");
+
+    const result = parseFileSymbols(file, true);
+
+    expect(result.imports.map((i) => i.source)).toEqual([
+      "os",
+      "sys",
+      "alpha",
+      "beta",
+    ]);
+  });
+
+  it("parses Python imports across multiple lines", () => {
+    const content = `
+import os
+import sys, json
+import alpha as a
+import beta as b
+`;
+    const f = join(tempDir, "multiline-imports.py");
+    writeFileSync(f, content, "utf-8");
+    const file = makeFileInfo("src/multiline-imports.py", ".py", "multiline-imports.py");
+
+    const result = parseFileSymbols(file, true);
+
+    expect(result.imports.map((i) => i.source)).toEqual([
+      "os",
+      "sys",
+      "json",
+      "alpha",
+      "beta",
+    ]);
+  });
+  it("ignores comments when parsing Python imports", () => {
+    const content = `
+import os # comment
+import os, sys # note, fake
+import alpha as a, beta as b # aliases
+import numpy.linalg as la # dotted module
+`;
+    const f = join(tempDir, "commented-imports.py");
+    writeFileSync(f, content, "utf-8");
+    const file = makeFileInfo("src/commented-imports.py", ".py", "commented-imports.py");
+
+    const result = parseFileSymbols(file, true);
+
+    expect(result.imports.map((i) => i.source)).toEqual([
+      "os",
+      "os",
+      "sys",
+      "alpha",
+      "beta",
+      "numpy.linalg",
+    ]);
   });
 });
 

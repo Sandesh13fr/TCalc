@@ -92,12 +92,32 @@ describe("generateJsonReport", () => {
     expect(parsed.recommendations.highConfidence.modelId).toBe("big");
   });
 
-  it("should handle null recommendation safely", () => {
-    const json = generateJsonReport(createMockScanResult(), null);
-    const parsed = JSON.parse(json);
-    expect(parsed.summary.totalFiles).toBe(10);
+  it("preserves scan insights when recommendations are unavailable", () => {
+    const scan = createMockScanResult();
+    const sourceFile = {
+      path: "/test/workspace/src/index.ts",
+      relativePath: "src/index.ts",
+      extension: ".ts",
+      language: "TypeScript",
+      bytes: 200000,
+      estimatedTokens: 60000,
+      included: true,
+      riskFlags: [],
+    };
+    scan.totalEstimatedTokens = 60000;
+    scan.includedTokens = 60000;
+    scan.files = [sourceFile];
+    scan.folders = [{ folderPath: "src", totalFiles: 1, totalBytes: 200000, totalTokens: 60000, includedFiles: 1, excludedFiles: 0 }];
+    scan.languages = [{ language: "TypeScript", fileCount: 1, totalBytes: 200000, totalTokens: 60000, percentage: 1 }];
+
+    const parsed = JSON.parse(generateJsonReport(scan, null));
+
     expect(parsed.recommendations).toBeNull();
     expect(parsed.goal).toBeNull();
+    expect(parsed.topTokenConsumers).toEqual([{ path: "src/index.ts", tokens: 60000, percentage: 1 }]);
+    expect(parsed.topFolders).toEqual([{ path: "src", tokens: 60000, percentage: 1 }]);
+    expect(parsed.languages).toEqual([{ language: "TypeScript", fileCount: 1, tokens: 60000, percentage: 1 }]);
+    expect(parsed.optimizationChecklist).toContain("Review 1 file(s) exceeding 50k tokens for splitting or exclusion");
   });
 
   it("uses zero percentages when included tokens are zero", () => {

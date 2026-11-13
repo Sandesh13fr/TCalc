@@ -31,7 +31,7 @@ export async function handleGenerateAgentRules(input: Record<string, unknown>) {
   const target = parsed.target ?? "generic";
   const mode = parsed.mode ?? "repo-map-first";
   const policy = await loadTeamPolicy(rootPath);
-  const goal = policy?.defaultGoal ?? parsed.goal ?? "build-mvp";
+  const goal = parsed.goal ?? policy?.defaultGoal ?? "build-mvp";
   const privacyMode = policy?.privacyMode ?? parsed.privacyMode ?? "local-first";
 
   const scanResult = await scanWorkspace({ rootPath, userExcludePatterns: policy?.exclude });
@@ -44,10 +44,10 @@ export async function handleGenerateAgentRules(input: Record<string, unknown>) {
   const recommendation = models.length > 0
     ? recommendModels({
         models,
+        preferredModelIds: profile?.preferredModelIds,
         workspaceTokens: scanResult.includedTokens,
         goal,
         privacyMode,
-        preferredModelIds: profile?.preferredModelIds,
       })
     : null;
 
