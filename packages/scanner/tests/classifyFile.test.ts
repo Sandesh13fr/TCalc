@@ -103,6 +103,12 @@ describe("classifyFile", () => {
     expect(result.riskFlags).toContain("secret");
   });
 
+  it("should flag secret file names regardless of case", () => {
+    for (const name of ["ID_RSA", "id_Rsa", ".ENV", ".Env.Local", "CERT.PEM", "Credentials.JSON", ".NETRC"]) {
+      expect(classifyFile(name, 100).riskFlags, name).toContain("secret");
+    }
+  });
+
   it("should classify .svg as non-binary text/XML-like file", () => {
     const result = classifyFile("icon.svg", 1000);
     expect(result.isBinary).toBe(false);

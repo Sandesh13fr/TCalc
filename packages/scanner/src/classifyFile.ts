@@ -91,9 +91,12 @@ const SECRET_CONTENT_PATTERNS: RegExp[] = [
 ];
 
 function matchesGlob(fileName: string, pattern: string): boolean {
-  if (pattern.startsWith("*.") && fileName.endsWith(pattern.slice(1))) return true;
-  if (pattern === fileName) return true;
-  return false;
+  // A secret is no less leaked for being named `ID_RSA` rather than `id_rsa`, and
+  // the file systems these scans run on are case-insensitive anyway.
+  const name = fileName.toLowerCase();
+  const glob = pattern.toLowerCase();
+  if (glob.startsWith("*.") && name.endsWith(glob.slice(1))) return true;
+  return glob === name;
 }
 
 function isSecretFile(relativePath: string): boolean {
