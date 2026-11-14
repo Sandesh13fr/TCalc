@@ -1,4 +1,10 @@
-import { fetchCatalogFeed, loadModelCatalog, validateCatalogFreshness, validateModelCatalog } from "@wma/model-catalog";
+import {
+  fetchCatalogFeed,
+  loadModelCatalog,
+  validateCatalogFreshness,
+  validateModelCatalog,
+} from "@wma/model-catalog";
+
 import type { ModelCatalog } from "@wma/core";
 
 export interface CatalogValidateOptions {
@@ -9,38 +15,131 @@ export interface CatalogValidateOptions {
   now?: Date;
 }
 
-export async function executeCatalogFetch(url: string): Promise<string> {
+interface CatalogValidateResult {
+  valid: boolean;
+  message: string;
+  exitCode: number;
+}
+
+function createValidationResult(
+  valid: boolean,
+  catalogPath: string,
+  modelCount: number,
+  errors: string[],
+  format?: string,
+): CatalogValidateResult {
+  const exitCode = valid ? 0 : 1;
+
+  const message =
+    format === "json"
+      ? JSON.stringify(
+          { valid, catalogPath, modelCount, errors },
+          null,
+          2,
+        )
+      : valid
+        ? `Catalog at "${catalogPath}" is VALID (${modelCount} models).`
+        : [
+            `Catalog at "${catalogPath}" is INVALID.`,
+            "",
+            ...errors.map((error) => `  - ${error}`),
+          ].join("\n");
+
+  return { valid, message, exitCode };
+}
+
+export async function executeCatalogFetch(
+  url: string,
+): Promise<string> {
   return JSON.stringify(await fetchCatalogFeed(url), null, 2);
 }
 
-export async function executeCatalogValidate(options: CatalogValidateOptions): Promise<{ valid: boolean; message: string; exitCode: number }> {
+export async function executeCatalogValidate(
+  options: CatalogValidateOptions,
+): Promise<CatalogValidateResult> {
   const catalogPath = options.path ?? "catalogs/models.json";
-  const catalog: ModelCatalog = loadModelCatalog(catalogPath);
 
-  if (catalog.models.length === 0) {
-    const errors = ["No models found"];
-    return {
-      valid: false,
-      message: options.format === "json"
-        ? JSON.stringify({ valid: false, catalogPath, modelCount: 0, errors }, null, 2)
-        : `No models found in catalog at "${catalogPath}".`,
-      exitCode: 1,
-    };
+  // Validate maxAgeDays before checking catalog freshness.
+  if (
+    options.maxAgeDays !== undefined &&
+    (!Number.isFinite(options.maxAgeDays) ||
+      options.maxAgeDays < 0)
+  ) {
+    return createValidationResult(
+      false,
+      catalogPath,
+      0,
+      ["maxAgeDays must be a non-negative finite number"],
+      options.format,
+    );
   }
 
-  const errors = [...validateModelCatalog(catalog.models), ...validateCatalogFreshness(catalog, options.maxAgeDays, options.now)];
-  if (errors.length > 0) {
-    const msg = options.format === "json"
-      ? JSON.stringify({ valid: false, catalogPath, modelCount: catalog.models.length, errors }, null, 2)
-      : [`Catalog at "${catalogPath}" is INVALID.`, "", ...errors.map((e: string) => `  - ${e}`)].join("\n");
-    return { valid: false, message: msg, exitCode: 1 };
+  // Validate the supplied date.
+  if (
+    options.now !== undefined &&
+    Number.isNaN(options.now.getTime())
+  ) {
+    return createValidationResult(
+      false,
+      catalogPath,
+      0,
+      ["Invalid date supplied in now option"],
+      options.format,
+    );
   }
 
-  return {
-    valid: true,
-    message: options.format === "json"
-      ? JSON.stringify({ valid: true, catalogPath, modelCount: catalog.models.length, errors: [] }, null, 2)
-      : `Catalog at "${catalogPath}" is VALID (${catalog.models.length} models).`,
-    exitCode: 0,
-  };
+  let catalog: ModelCatalog;
+
+  try {
+    catalog = loadModelCatalog(catalogPath);
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : String(error);
+
+    return createValidationResult(
+      false,
+      catalogPath,
+      0,
+      [`Failed to load catalog: ${errorMessage}`],
+      options.format,
+    );
+  }
+
+  if (!catalog.models || catalog.models.length === 0) {
+    return createValidationResult(
+      false,
+      catalogPath,
+      0,
+      ["No models found"],
+      options.format,
+    );
+  }
+
+  const errors = [
+    ...validateModelCatalog(catalog.models),
+    ...validateCatalogFreshness(
+      catalog,
+      options.maxAgeDays,
+      options.now,
+    ),
+  ];
+
+  const valid = errors.length === 0;
+
+  if (options.debug) {
+    console.debug("Catalog validation:", {
+      catalogPath,
+      modelCount: catalog.models.length,
+      errors,
+      valid,
+    });
+  }
+
+  return createValidationResult(
+    valid,
+    catalogPath,
+    catalog.models.length,
+    errors,
+    options.format,
+  );
 }
